@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>飞行日志 - 小泽航空</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: #f7f9fc;
+            color: #222;
+            line-height: 1.6;
+        }
+        header {
+            background: #165DFF;
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .logo {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .en-name {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        .container {
+            max-width: 700px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            margin-bottom: 24px;
+        }
+        h2 {
+            color: #165DFF;
+            margin-bottom: 20px;
+            font-size: 22px;
+            border-left: 6px solid #165DFF;
+            padding-left: 12px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e5ec;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: 0.2s;
+            background: #fafbfc;
+        }
+        input:focus {
+            outline: none;
+            border-color: #165DFF;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1);
+        }
+        .btn {
+            display: inline-block;
+            background: #165DFF;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 12px 28px;
+            border-radius: 30px;
+            text-decoration: none;
+            transition: 0.2s;
+            border: none;
+            cursor: pointer;
+            text-align: center;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0e4acf;
+            transform: scale(1.02);
+        }
+        .btn-outline {
+            background: transparent;
+            color: #165DFF;
+            border: 2px solid #165DFF;
+        }
+        .btn-outline:hover {
+            background: #edf4ff;
+            transform: scale(1.02);
+        }
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        .error-msg {
+            color: #d32f2f;
+            font-size: 14px;
+            margin-top: 5px;
+            min-height: 20px;
+        }
+        .log-list {
+            list-style: none;
+            margin: 15px 0;
+        }
+        .log-list li {
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.2s;
+        }
+        .log-list li:hover {
+            background: #eef7ff;
+        }
+        .log-name {
+            font-weight: 600;
+            color: #165DFF;
+        }
+        .log-meta {
+            font-size: 13px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .download-link {
+            color: #165DFF;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 10px;
+            color: #165DFF;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 12px;
+                margin: 20px auto;
+            }
+            .card {
+                padding: 20px 16px;
+            }
+            .logo {
+                font-size: 26px;
+            }
+            h2 {
+                font-size: 20px;
+            }
+            .btn {
+                font-size: 15px;
+                padding: 10px 22px;
+            }
+        }
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 22px;
+            }
+            .card {
+                padding: 16px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">小泽航空</div>
+        <div class="en-name">Air Xiao Ze (AXZ) · 飞行日志</div>
+    </header>
+
+    <div class="container">
+        <!-- 登录区域 -->
+        <div class="card" id="loginCard">
+            <h2>🔐 飞行员登录</h2>
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" placeholder="输入飞行员用户名" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" placeholder="输入密码">
+            </div>
+            <div class="error-msg" id="loginError"></div>
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="btn" onclick="login()">登录</button>
+            </div>
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="AXZ.html" class="btn-outline" style="display: inline-block; padding: 10px 24px; border-radius: 30px; text-decoration: none;">↩️ 返回主页</a>
+            </div>
+            <p style="text-align: center; margin-top: 15px; font-size: 13px; color: #888;">
+                此处不提供注册服务
+            </p>
+        </div>
+
+        <!-- 主功能区域（登录后显示） -->
+        <div class="card hidden" id="mainCard">
+            <h2>📋 飞行日志管理</h2>
+            <p style="text-align: center; color: #555; margin-bottom: 15px;">欢迎，<span id="pilotName" style="font-weight: 700; color: #165DFF;"></span></p>
+            <div class="btn-group">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">📤 提交飞行日志</button>
+                <input type="file" id="fileInput" accept=".axzlog" style="display: none;" onchange="handleFileUpload(this)">
+                <button class="btn btn-outline" onclick="showDownloadArea()">📥 下载飞行日志</button>
+            </div>
+            <p style="text-align: center; font-size: 14px; color: #666;">仅支持上传 .axzlog 格式，所有飞行员共享日志</p>
+            <div class="error-msg" id="uploadMsg"></div>
+
+            <!-- 下载区域（默认隐藏） -->
+            <div id="downloadArea" class="hidden" style="margin-top: 25px;">
+                <h3 style="color: #165DFF; margin-bottom: 10px;">📚 可用日志列表</h3>
+                <ul class="log-list" id="logList">
+                    <li style="justify-content: center; color: #888;">加载中…</li>
+                </ul>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn-outline btn" onclick="logout()">退出登录</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        小泽航空 Air Xiao Ze (AXZ) © 2026<br>
+        虚拟航司 仅用于模拟飞行
+    </footer>
+
+    <script>
+        // 页面初始化：检查是否已登录
+        window.onload = function() {
+            const loggedUser = sessionStorage.getItem('axz_pilot');
+            if (loggedUser) {
+                showMainInterface(loggedUser);
+            }
+        };
+
+        // 登录验证
+        async function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+
+            if (!username || !password) {
+                errorDiv.textContent = '请输入用户名和密码';
+                return;
+            }
+
+            try {
+                const response = await fetch(`users/${username}.txt`);
+                if (!response.ok) {
+                    throw new Error('用户不存在');
+                }
+                const storedPassword = (await response.text()).trim();
+                if (storedPassword === password) {
+                    sessionStorage.setItem('axz_pilot', username);
+                    showMainInterface(username);
+                } else {
+                    errorDiv.textContent = '密码错误';
+                }
+            } catch (err) {
+                errorDiv.textContent = '登录失败：用户不存在或网络错误';
+                console.error(err);
+            }
+        }
+
+        function showMainInterface(username) {
+            document.getElementById('loginCard').classList.add('hidden');
+            document.getElementById('mainCard').classList.remove('hidden');
+            document.getElementById('pilotName').textContent = username;
+            document.getElementById('loginError').textContent = '';
+        }
+
+        function logout() {
+            sessionStorage.removeItem('axz_pilot');
+            document.getElementById('mainCard').classList.add('hidden');
+            document.getElementById('loginCard').classList.remove('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('downloadArea').classList.add('hidden');
+        }
+
+        // 上传文件到服务器
+        function handleFileUpload(input) {
+            const msgDiv = document.getElementById('uploadMsg');
+            const file = input.files[0];
+            if (!file) return;
+
+            if (!file.name.toLowerCase().endsWith('.axzlog')) {
+                msgDiv.textContent = '❌ 仅允许上传 .axzlog 格式文件！';
+                input.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('logfile', file);
+
+            fetch('upload.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    msgDiv.textContent = `✅ ${data.message}`;
+                    // 如果下载区域已展开，自动刷新列表
+                    if (!document.getElementById('downloadArea').classList.contains('hidden')) {
+                        refreshLogList();
+                    }
+                } else {
+                    msgDiv.textContent = `❌ ${data.message}`;
+                }
+            })
+            .catch(err => {
+                msgDiv.textContent = '❌ 上传失败，服务器错误';
+                console.error(err);
+            })
+            .finally(() => {
+                input.value = ''; // 清空文件选择器
+            });
+        }
+
+        // 显示下载区域并加载列表
+        function showDownloadArea() {
+            document.getElementById('downloadArea').classList.remove('hidden');
+            refreshLogList();
+        }
+
+        // 从服务器获取日志列表
+        function refreshLogList() {
+            const listEl = document.getElementById('logList');
+            listEl.innerHTML = '<li style="justify-content: center; color: #888;">加载中…</li>';
+
+            fetch('list_logs.php')
+                .then(response => response.json())
+                .then(logs => {
+                    listEl.innerHTML = '';
+                    if (logs.length === 0) {
+                        listEl.innerHTML = '<li style="justify-content: center; color: #888;">暂无已上传的日志</li>';
+                        return;
+                    }
+
+                    logs.forEach(log => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <div>
+                                <span class="log-name">${log.name}</span>
+                                <div class="log-meta">上传时间：${log.time}　大小：${log.size}</div>
+                            </div>
+                            <a class="download-link" href="flightlog/${encodeURIComponent(log.name)}" download>⬇️ 下载</a>
+                        `;
+                        listEl.appendChild(li);
+                    });
+                })
+                .catch(err => {
+                    listEl.innerHTML = '<li style="justify-content: center; color: #888;">加载失败，请稍后重试</li>';
+                    console.error(err);
+                });
+        }
+    </script>
+</body>
+</html>

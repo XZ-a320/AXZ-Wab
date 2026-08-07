@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小泽航空留言区</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        /* 头部蓝底白字 */
+        .header {
+            background: #1e6eff;
+            padding: 2rem 1.5rem 1rem 1.5rem;
+            text-align: center;
+        }
+        .header h1 {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        /* 副标题蓝底橙字 */
+        .sub {
+            background: #1e6eff;
+            padding: 0 1.5rem 1.5rem 1.5rem;
+            text-align: center;
+        }
+        .sub p {
+            background: #ffa500;
+            display: inline-block;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            color: #fff;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        /* 留言列表区域 */
+        .comments-section {
+            padding: 1.5rem;
+        }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e0e0e0;
+            border-top-color: #1e6eff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .comment-item {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #1e6eff;
+        }
+        .comment-time {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+        .comment-content {
+            font-size: 1rem;
+            line-height: 1.5;
+            word-break: break-word;
+            color: #222;
+        }
+        .empty-msg {
+            text-align: center;
+            color: #aaa;
+            padding: 2rem;
+        }
+        /* 底部按钮 */
+        .action-bar {
+            padding: 1rem 1.5rem 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            border-top: 1px solid #eee;
+            flex-wrap: wrap;
+        }
+        .btn {
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9rem;
+            flex: 1 1 auto;
+            min-width: 120px;
+        }
+        .btn-primary {
+            background: #1e6eff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0a5adf;
+        }
+        .btn-secondary {
+            background: #e9ecef;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+        .modal-card {
+            background: white;
+            max-width: 500px;
+            width: 100%;
+            border-radius: 24px;
+            padding: 1.5rem;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.2);
+        }
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .modal textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ccc;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+        }
+        .char-counter {
+            text-align: right;
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.3rem;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.8rem;
+            margin-top: 1.2rem;
+            flex-wrap: wrap;
+        }
+        .modal-buttons .btn {
+            flex: 0 1 auto;
+            min-width: 80px;
+        }
+        .confirm-preview {
+            background: #f1f3f5;
+            padding: 0.8rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            color: #333;
+            word-break: break-word;
+        }
+        .warning-text {
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* ====== 移动端适配 ====== */
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem 0.5rem;
+            }
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            .sub p {
+                font-size: 0.8rem;
+                padding: 0.2rem 0.8rem;
+            }
+            .comments-section {
+                padding: 1rem;
+            }
+            .comment-item {
+                padding: 0.8rem;
+            }
+            .action-bar {
+                padding: 0.8rem 1rem 1.5rem;
+                gap: 0.6rem;
+            }
+            .btn {
+                font-size: 0.85rem;
+                padding: 0.6rem 1rem;
+                min-width: 100px;
+            }
+            .modal-card {
+                padding: 1.2rem;
+            }
+            .modal-title {
+                font-size: 1.1rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .header h1 {
+                font-size: 1.4rem;
+            }
+            .btn {
+                font-size: 0.8rem;
+                padding: 0.5rem 0.8rem;
+                min-width: 80px;
+            }
+            .modal textarea {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>小泽航空 留言区</h1>
+    </div>
+    <div class="sub">
+        <p>⚠️ 无用的留言将被删除！⚠️</p>
+    </div>
+
+    <div class="comments-section" id="commentsSection">
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            <div>加载留言中...</div>
+        </div>
+        <div id="commentsList"></div>
+    </div>
+
+    <div class="action-bar">
+        <button class="btn btn-primary" id="publishBtn">✍️ 发布留言</button>
+        <button class="btn btn-secondary" id="backBtn">🔙 返回首页</button>
+    </div>
+</div>
+
+<!-- 模态框：发布留言 -->
+<div id="modalPublish" class="modal">
+    <div class="modal-card">
+        <div class="modal-title">📝 写下你的留言</div>
+        <textarea id="msgContent" rows="4" maxlength="100" placeholder="请输入留言内容（最多100字）..."></textarea>
+        <div class="char-counter"><span id="charCount">0</span>/100</div>
+        <div class="modal-buttons">
+            <button class="btn btn-secondary" id="cancelPublishBtn">取消</button>
+            <button class="btn btn-primary" id="confirmPublishBtn">确定</button>
+        </div>
+    </div>
+</div>
+
+<!-- 模态框：二次确认（发布后无法修改） -->
+<div id="modalConfirm" class="modal">
+    <div class="modal-card">
+        <div class="modal-title">⚠️ 确认发布</div>
+        <div class="warning-text">发布后无法修改！请确认以下内容：</div>
+        <div class="confirm-preview" id="previewContent"></div>
+        <div class="modal-buttons">
+            <button class="btn btn-secondary" id="editBtn">✏️ 修改</button>
+            <button class="btn btn-primary" id="finalPublishBtn">✅ 确定发布</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 全局变量
+    let tempMessage = '';
+
+    // 加载留言列表
+    async function loadComments() {
+        const loadingDiv = document.getElementById('loadingIndicator');
+        const commentsListDiv = document.getElementById('commentsList');
+        loadingDiv.style.display = 'block';
+        commentsListDiv.innerHTML = '';
+
+        try {
+            const response = await fetch('get_comments.php');
+            const data = await response.json();
+            loadingDiv.style.display = 'none';
+            if (data.success && data.comments.length > 0) {
+                commentsListDiv.innerHTML = data.comments.map(comment => `
+                    <div class="comment-item">
+                        <div class="comment-time">📅 ${escapeHtml(comment.time)}</div>
+                        <div class="comment-content">${escapeHtml(comment.content)}</div>
+                    </div>
+                `).join('');
+            } else {
+                commentsListDiv.innerHTML = '<div class="empty-msg">✨ 还没有留言，来做第一个吧 ✨</div>';
+            }
+        } catch (err) {
+            loadingDiv.style.display = 'none';
+            commentsListDiv.innerHTML = '<div class="empty-msg">加载失败，请刷新页面重试</div>';
+            console.error(err);
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // 显示发布留言模态框
+    function showPublishModal() {
+        const modal = document.getElementById('modalPublish');
+        const textarea = document.getElementById('msgContent');
+        const charSpan = document.getElementById('charCount');
+        textarea.value = '';
+        charSpan.innerText = '0';
+        modal.style.display = 'flex';
+        textarea.focus();
+    }
+
+    // 更新字数统计
+    function updateCharCount() {
+        const textarea = document.getElementById('msgContent');
+        const len = textarea.value.length;
+        document.getElementById('charCount').innerText = len;
+    }
+
+    // 二次确认模态框
+    function showConfirmModal(content) {
+        const modal = document.getElementById('modalConfirm');
+        document.getElementById('previewContent').innerText = content;
+        modal.style.display = 'flex';
+    }
+
+    // 最终保存留言
+    async function saveComment(content) {
+        try {
+            const formData = new FormData();
+            formData.append('content', content);
+            const response = await fetch('save_comment.php', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('留言发布成功！');
+                closeAllModals();
+                loadComments();  // 刷新留言列表
+            } else {
+                alert('发布失败：' + (result.error || '未知错误'));
+            }
+        } catch (err) {
+            alert('网络错误，请稍后重试');
+            console.error(err);
+        }
+    }
+
+    function closeAllModals() {
+        document.getElementById('modalPublish').style.display = 'none';
+        document.getElementById('modalConfirm').style.display = 'none';
+    }
+
+    // 事件监听
+    document.getElementById('publishBtn').addEventListener('click', () => {
+        // 先弹出提示“发布无用的留言将被删除”
+        const confirmFirst = confirm('⚠️ 发布无用的留言将被删除！\n确定要继续吗？');
+        if (confirmFirst) {
+            showPublishModal();
+        }
+    });
+
+    document.getElementById('cancelPublishBtn').addEventListener('click', closeAllModals);
+    document.getElementById('msgContent').addEventListener('input', updateCharCount);
+
+    document.getElementById('confirmPublishBtn').addEventListener('click', () => {
+        const content = document.getElementById('msgContent').value.trim();
+        if (content === '') {
+            alert('留言内容不能为空');
+            return;
+        }
+        if (content.length > 100) {
+            alert('留言不能超过100字');
+            return;
+        }
+        tempMessage = content;
+        closeAllModals();       // 关闭发布模态框
+        showConfirmModal(tempMessage);
+    });
+
+    document.getElementById('editBtn').addEventListener('click', () => {
+        closeAllModals();
+        showPublishModal();
+        document.getElementById('msgContent').value = tempMessage;
+        updateCharCount();
+    });
+
+    document.getElementById('finalPublishBtn').addEventListener('click', () => {
+        saveComment(tempMessage);
+    });
+
+    // 返回按钮指向 AXZ.html
+    document.getElementById('backBtn').addEventListener('click', () => {
+        window.location.href = 'AXZ.html';
+    });
+
+    // 页面加载
+    loadComments();
+</script>
+</body>
+</html>

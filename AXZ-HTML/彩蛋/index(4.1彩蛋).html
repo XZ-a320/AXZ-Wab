@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚠️ 系统警告 - 小泽航空已被入侵 ⚠️</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', 'Fira Code', monospace;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: auto;
+            animation: flicker 0.15s infinite;
+        }
+        @keyframes flicker {
+            0% { opacity: 0.95; }
+            100% { opacity: 1; }
+        }
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.1;
+            pointer-events: none;
+            background: repeating-linear-gradient(0deg, #0f0 0px, #0f0 1px, transparent 1px, transparent 2px);
+        }
+        .container {
+            background: #000000aa;
+            backdrop-filter: blur(2px);
+            border: 2px solid #0f0;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 900px;
+            width: 100%;
+            z-index: 2;
+            box-shadow: 0 0 30px #0f0;
+            animation: glitch 0.5s infinite;
+        }
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 1px); }
+            40% { transform: translate(2px, -1px); }
+            60% { transform: translate(-1px, 2px); }
+            80% { transform: translate(1px, -2px); }
+            100% { transform: translate(0); }
+        }
+        h1 {
+            font-size: 2.2rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 5px #0f0;
+            word-break: break-word;
+        }
+        .ascii-art {
+            font-family: monospace;
+            white-space: pre;
+            font-size: 10px;
+            line-height: 1.2;
+            text-align: center;
+            margin: 20px 0;
+            color: #0f0;
+        }
+        .terminal {
+            background: #001000;
+            border: 1px solid #0f0;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+            border-radius: 6px;
+        }
+        .blink {
+            animation: blink 0.8s step-end infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .progress-bar {
+            width: 100%;
+            background: #111;
+            border: 1px solid #0f0;
+            height: 24px;
+            margin: 15px 0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: #0f0;
+            animation: fillProgress 6s linear forwards;
+        }
+        @keyframes fillProgress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        .button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-family: monospace;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: 0.2s;
+        }
+        .button:hover {
+            background: #0a0;
+            box-shadow: 0 0 10px #0f0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 12px;
+            color: #5f5;
+        }
+        .warning {
+            color: #ff5555;
+            text-shadow: 0 0 3px red;
+        }
+        .command-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 16px;
+            background: #0f0;
+            vertical-align: middle;
+            animation: blink 1s infinite;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 15px; }
+            h1 { font-size: 1.5rem; }
+            .ascii-art { font-size: 6px; }
+        }
+    </style>
+</head>
+<body>
+<div class="matrix-bg"></div>
+<div class="container">
+    <h1>⚠️ [!!!] 系统已被攻陷 [!!!] ⚠️</h1>
+    <div style="text-align:center; color:#ff0;">&lt; 暗夜黑客组织 - 代号: 红瞳 &gt;</div>
+    
+    <div class="ascii-art">
+        ███████╗ █████╗ ███████╗██╗   ██╗    ██╗███████╗    ██████╗ 
+        ██╔════╝██╔══██╗██╔════╝╚██╗ ██╔╝    ██║██╔════╝    ╚════██╗
+        █████╗  ███████║███████╗ ╚████╔╝     ██║█████╗       █████╔╝
+        ██╔══╝  ██╔══██║╚════██║  ╚██╔╝      ██║██╔══╝      ██╔═══╝ 
+        ██║     ██║  ██║███████║   ██║       ██║███████╗    ███████╗
+        ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝       ╚═╝╚══════╝    ╚══════╝
+    </div>
+
+    <div class="terminal">
+        <p>[>] 入侵防火墙............ <span style="color:#0f0;">[ 完成 ]</span></p>
+        <p>[>] 绕过IDS/IPS............ <span style="color:#0f0;">[ 成功 ]</span></p>
+        <p>[>] 提权至ROOT............ <span style="color:#0f0;">[ 已获得最高权限 ]</span></p>
+        <p>[>] 数据库脱敏............. <span style="color:#ff0;">[ 解密中 ]</span> <span id="decryptStatus">▮▮▮▮▮▮▮▮▮▯ 87%</span></p>
+        <p>[>] 篡改主页............. <span style="color:#f66;">[ 执行中 ]</span></p>
+        <p>[>] 植入永久后门......... <span class="blink">████████████ 完成 ████████████</span></p>
+    </div>
+
+    <div class="progress-bar">
+        <div class="progress-fill"></div>
+    </div>
+
+    <div class="terminal">
+        <p><span style="color:#ffaa00;">⚠️ 警告 ⚠️</span> 小泽航空 (Air Xiao Ze) 所有数据已被加密！</p>
+        <p>你的飞行计划、机队信息、航线图已被上传至暗网节点：<span style="background:#0f0; color:#000;">&nbsp;dark://xiaoze_ransom.onion&nbsp;</span></p>
+        <p>如需解锁，请支付 0.5 比特币至地址：<span style="background:#0f0; color:#000;"> 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa </span></p>
+        <p>支付后联系邮箱：<span style="color:#0f0;">hack@darkweb.xx</span> 并提供截图，24小时内恢复。</p>
+        <p style="margin-top:10px;"><span class="warning">► 剩余时间：23:59:47 ◄</span> <span class="blink">_</span></p>
+    </div>
+
+    <div class="command-line">
+        <span style="color:#0f0;">root@AXZ-Server:~#</span> 
+        <span id="fakeCmd">./入侵证据清除.sh --force</span>
+        <span class="cursor"></span>
+    </div>
+
+    <div style="text-align:center; margin-top: 20px;">
+        <button class="button" id="fakeDecryptBtn">尝试解密</button>
+        <button class="button" id="restoreBtn" style="background:#333; color:#0f0;">恢复原网站</button>
+    </div>
+
+    <div class="footer">
+        * 这是模拟入侵的恶搞页面，没有任何实际病毒或勒索行为。<br>
+        小泽航空 友情整蛊 | 仅供娱乐
+    </div>
+</div>
+
+<script>
+    let percent = 87;
+    const decryptSpan = document.getElementById('decryptStatus');
+    const fakeCmdSpan = document.getElementById('fakeCmd');
+    let cmdIndex = 0;
+    const cmdList = [
+        "./入侵证据清除.sh --force",
+        "rm -rf /var/log/hack*",
+        "echo 'I was here' > /home/axz/readme.txt",
+        "lastlog -u root",
+        "service apache2 stop",
+        "chattr +i /var/www/html/index.html"
+    ];
+
+    setInterval(() => {
+        cmdIndex = (cmdIndex + 1) % cmdList.length;
+        fakeCmdSpan.textContent = cmdList[cmdIndex];
+    }, 3000);
+
+    setInterval(() => {
+        if (percent < 100) {
+            percent += 1;
+            let bar = '▮'.repeat(Math.floor(percent/5)) + '▯'.repeat(20 - Math.floor(percent/5));
+            decryptSpan.innerText = bar + ' ' + percent + '%';
+        } else {
+            decryptSpan.innerText = '▮▮▮▮▮▮▮▮▮▮ 100% [解密失败，密钥无效]';
+        }
+    }, 400);
+
+    document.getElementById('fakeDecryptBtn').addEventListener('click', () => {
+        alert("无法解密！请支付赎金。\n（这是模拟页面，请点击“恢复原网站”按钮）");
+    });
+
+    // 恢复按钮：跳转到当前目录下的 AXZ.html
+    document.getElementById('restoreBtn').addEventListener('click', () => {
+        window.location.href = "AXZ.html";
+    });
+</script>
+</body>
+</html>
