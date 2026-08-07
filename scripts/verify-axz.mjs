@@ -56,8 +56,17 @@ console.log('\nkeyboard')
 console.log('\n.axzlog viewer')
 {
   const page = await ctx.newPage()
+  // The property that matters is that the LOG DATA never leaves the browser —
+  // not that the page makes zero POSTs. On xiaobrook.com Cloudflare injects a
+  // RUM beacon at the edge that POSTs paint timings; that is the host's, not
+  // ours, and it carries none of the file. Assert the real invariant.
   const uploads = []
-  page.on('request', r => { if (r.method() === 'POST') uploads.push(r.url()) })
+  page.on('request', r => {
+    if (r.method() === 'GET') return
+    const body = r.postData() || ''
+    const carriesLog = /AXZ001|B-737X|AXZLOG|axzlog|KSFO SID/.test(body)
+    if (carriesLog) uploads.push(`${r.url()} :: ${body.slice(0, 120)}`)
+  })
   await page.goto(BASE + '/axz/logbook/', { waitUntil: 'networkidle' })
   await page.click('[data-axzlog-sample]')
   await page.waitForSelector('[data-axzlog-out]:not([hidden])', { timeout: 5000 }).catch(() => {})
@@ -72,7 +81,7 @@ console.log('\n.axzlog viewer')
   none.length >= 1 ? ok(`备注 empty state rendered as "${none[0]}"`) : bad('CruiseRemarkNone did not render the 无 empty state')
   const remark = await page.textContent('.remark-cell').catch(() => '')
   remark.includes('示例文件') ? ok('post-flight 备注 rendered in the remarks column') : bad('post-flight remark missing')
-  uploads.length === 0 ? ok('nothing was uploaded (zero POST requests)') : bad(`${uploads.length} POST request(s) fired`)
+  uploads.length === 0 ? ok('the log data never leaves the browser (no request carries it)') : bad(`log data was transmitted: ${uploads.join(' / ')}`)
   await page.close()
 }
 
@@ -116,8 +125,15 @@ console.log('\nsafety')
   // hold is that it is INERT: no name, no form action, never persisted, never
   // sent, and cleared on submit. That is the property worth testing.
   for (const p of ['/axz/logbook/', '/axz/en/logbook/']) {
+    // Same reasoning as the log-data check: assert the CREDENTIALS are never
+    // transmitted, not that the page makes zero requests. The host's RUM
+    // beacon is not ours and carries none of this.
     const sent = []
-    page.on('request', r => { if (r.method() !== 'GET') sent.push(r.url()) })
+    page.on('request', r => {
+      if (r.method() === 'GET') return
+      const body = r.postData() || ''
+      if (/hunter2-canary/.test(body) || /hunter2-canary/.test(r.url())) sent.push(r.url())
+    })
     await page.goto(BASE + p, { waitUntil: 'networkidle' })
     const pw = await page.$('input[type="password"]')
     if (!pw) { bad(`${p} demo login is missing its password field (fidelity)`); continue }
@@ -137,7 +153,7 @@ console.log('\nsafety')
     const stored = await page.evaluate(() => JSON.stringify({ ls: { ...localStorage }, ss: { ...sessionStorage } }))
     !stored.includes('hunter2-canary') && !stored.includes('XZ')
       ? ok(`${p} nothing typed was persisted to storage`) : bad(`${p} persisted credentials: ${stored}`)
-    sent.length === 0 ? ok(`${p} nothing was transmitted`) : bad(`${p} sent ${sent.length} non-GET request(s)`)
+    sent.length === 0 ? ok(`${p} the typed password was never transmitted`) : bad(`${p} transmitted the password to ${sent.join(' / ')}`)
     page.removeAllListeners('request')
   }
   // The credential-fetch pattern itself must be gone from the shipped JS.

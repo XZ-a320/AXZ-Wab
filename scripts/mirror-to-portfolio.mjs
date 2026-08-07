@@ -39,51 +39,32 @@ function walk(d, base = '') {
 }
 const { n, bytes } = walk(DEST)
 
-/* --- Redirects ------------------------------------------------------------
-   Every internal link in the ORIGINAL site points at AXZ.html; nothing points
-   at index.html. Anyone who saved or shared a link in QQ/WeChat has the old
-   filenames, so ship the redirects or those links break.                    */
-const vjPath = join(PORTFOLIO, 'vercel.json')
-const vj = JSON.parse(readFileSync(vjPath, 'utf8'))
-const REDIRECTS = [
-  { source: '/axz/AXZ.html', destination: '/axz/', permanent: true },
-  { source: '/axz/index.html', destination: '/axz/', permanent: true },
-  { source: '/axz/message.html', destination: '/axz/guestbook/', permanent: true },
-  { source: '/axz/flightlog.html', destination: '/axz/logbook/', permanent: true },
-  { source: '/axz/%E5%BD%A9%E8%9B%8B/:path*', destination: '/axz/aprilfools/', permanent: true },
-  { source: '/axz/彩蛋/:path*', destination: '/axz/aprilfools/', permanent: true },
-]
-vj.redirects = [
-  ...(vj.redirects || []).filter(r => !r.source.startsWith('/axz/')),
-  ...REDIRECTS,
-]
+/* --- vercel.json ---------------------------------------------------------
+   VERIFY, never rewrite. JSON.stringify would reformat the whole file — the
+   portfolio's vercel.json uses a compact one-line style for header entries,
+   and reflowing it produced a 65-line diff across unrelated security headers.
+   The /axz/ config is committed by hand; this only checks it is still there.
 
-/* Fonts need a long-lived immutable header like the CSS/JS already have.
-   The filenames are content-hashed, so this is safe. */
-const FONT_HEADER = {
-  source: '/axz/fonts/(.*)',
-  headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+   The redirects matter because every internal link in the ORIGINAL site points
+   at AXZ.html and nothing points at index.html, so links already circulating
+   in QQ and WeChat carry the old filenames.                                  */
+const vj = JSON.parse(readFileSync(join(PORTFOLIO, 'vercel.json'), 'utf8'))
+const wantRedirects = ['/axz/AXZ.html', '/axz/index.html', '/axz/message.html', '/axz/flightlog.html']
+const haveRedirects = (vj.redirects || []).map(r => r.source)
+const missing = wantRedirects.filter(r => !haveRedirects.includes(r))
+const hasFontHeader = (vj.headers || []).some(h => h.source === '/axz/fonts/(.*)')
+
+if (missing.length || !hasFontHeader) {
+  console.error('✗ vercel.json is missing required /axz/ config — add by hand, do not let a script reflow this file:')
+  for (const m of missing) console.error(`    redirect ${m}`)
+  if (!hasFontHeader) console.error('    header  /axz/fonts/(.*)  Cache-Control immutable')
+  process.exit(1)
 }
-vj.headers = [...(vj.headers || []).filter(h => h.source !== FONT_HEADER.source), FONT_HEADER]
 
-writeFileSync(vjPath, JSON.stringify(vj, null, 2) + '\n')
-
-/* --- .vercelignore --------------------------------------------------------
-   Source, scripts and unsubset originals must not deploy. Comments go on
-   their OWN line — a trailing `# note` becomes part of the pattern and
-   silently stops matching.                                                  */
-const viPath = join(PORTFOLIO, '.vercelignore')
-let vi = existsSync(viPath) ? readFileSync(viPath, 'utf8') : ''
-const BLOCK = `
-# AXZ standalone case: ship the built output only
-axz-src
-axz-wab-source
-`
-if (!vi.includes('axz-wab-source')) {
-  vi = vi.replace(/\s*$/, '\n') + BLOCK
-  writeFileSync(viPath, vi)
-}
+/* Nothing to add to .vercelignore: only the built axz/ is ever copied into the
+   portfolio. axz-src/, scripts/ and fonts-src/ live in this repo and never
+   reach the deploy, so a pattern for them there would guard nothing. */
 
 console.log(`✓ mirrored ${n} files (${(bytes / 1024).toFixed(0)} KB) to ${DEST}`)
-console.log(`✓ ${REDIRECTS.length} redirects + font cache header written to vercel.json`)
+console.log(`✓ vercel.json verified: ${haveRedirects.filter(r => r.startsWith('/axz/')).length} /axz/ redirects + font cache header`)
 console.log(`  live at https://xiaobrook.com/axz/  (zh) and /axz/en/ (en)`)
