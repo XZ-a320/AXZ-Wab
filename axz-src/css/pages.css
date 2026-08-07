@@ -1,0 +1,254 @@
+/* ==========================================================================
+   AXZ pages — masthead, nav, sectors, hotspot print, guestbook, logbook, footer
+   ========================================================================== */
+
+/* --- Top bar -------------------------------------------------------------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--paper);
+  border-block-end: 1px solid var(--rule-struct);
+}
+.topbar__in {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 56px;
+  flex-wrap: wrap;
+}
+.topbar__mark { display: inline-flex; align-items: center; text-decoration: none; }
+/* The owner's own wordmark, finally on the site — it appeared on no page
+   before. Two rasters rather than a recolour: the mark is black + cyan, so
+   a filter would take the cyan with it. */
+.mark { width: 76px; height: auto; }
+.mark--dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="day"]) .mark--light { display: none; }
+  :root:not([data-theme="day"]) .mark--dark { display: block; }
+}
+:root[data-theme="night"] .mark--light { display: none; }
+:root[data-theme="night"] .mark--dark { display: block; }
+:root[data-theme="day"] .mark--light { display: block; }
+:root[data-theme="day"] .mark--dark { display: none; }
+.nav { display: flex; gap: var(--s-3); flex-wrap: wrap; margin-inline-start: auto; }
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  text-decoration: none;
+  border-block-end: 2px solid transparent;
+}
+.nav a:hover { color: var(--ink); border-block-end-color: var(--ink); }
+.nav a[aria-current="page"] { color: var(--ink); border-block-end-color: var(--remark); }
+
+.controls { display: flex; gap: var(--s-2); align-items: center; }
+.controls .lang { display: flex; gap: var(--s-1); font-size: var(--fs-sm); }
+.controls .lang a { min-height: var(--tap); display: inline-flex; align-items: center; }
+.ctrl-btn {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding-inline: var(--s-15);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .1em;
+  color: var(--ink-2);
+  border: 1px solid var(--rule-struct);
+}
+.ctrl-btn:hover { background: var(--ink); color: var(--paper); }
+
+/* --- Masthead ------------------------------------------------------------- */
+.masthead { padding-block: var(--s-12) var(--s-8); border-block-end: 2px solid var(--ink); }
+.masthead__tagline {
+  font-family: var(--font-mono);
+  font-size: var(--fs-display);
+  font-weight: 600;
+  line-height: .92;
+  letter-spacing: -.02em;
+  margin: 0;
+}
+/* The disclaimer, promoted out of a 3.36:1 footer into the hero — where it is
+   also the first thing the remarks column says. */
+.masthead__remark {
+  color: var(--remark);
+  font-family: var(--font-kai);
+  font-size: var(--fs-md);
+  margin-block-start: var(--s-3);
+  padding-inline-start: var(--s-2);
+  border-inline-start: 2px solid var(--remark);
+}
+.masthead__sub {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-block-start: var(--s-4);
+}
+
+/* --- Sector heading ------------------------------------------------------- */
+.sector { padding-block: var(--s-8); }
+.sector__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin-block-end: var(--s-4);
+  padding-block-end: var(--s-2);
+  border-block-end: 2px solid var(--ink);
+}
+.sector__no {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  color: var(--remark);
+  letter-spacing: .1em;
+}
+
+/* --- Hotspot: the one print, the one hard offset -------------------------- */
+.print { margin-block: var(--s-4); max-width: 62ch; }
+.print img { box-shadow: var(--print-offset); }
+.print figcaption {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  color: var(--ink-3);
+  margin-block-start: var(--s-3);
+  letter-spacing: .06em;
+}
+
+/* --- Guestbook ------------------------------------------------------------ */
+.notice {
+  border: 1px solid var(--rule-struct);
+  border-inline-start: 3px solid var(--remark);
+  padding: var(--s-3);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  margin-block-end: var(--s-6);
+}
+.entry { border-block-end: 1px solid var(--rule-struct); padding-block: var(--s-3); }
+.entry:last-child { border-block-end: 0; }
+.entry time {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  color: var(--ink-3);
+  letter-spacing: .08em;
+  margin-block-end: var(--s-1);
+}
+.entry blockquote { font-size: var(--fs-md); }
+
+/* --- Logbook -------------------------------------------------------------- */
+.dropzone {
+  border: 2px dashed var(--rule-struct);
+  padding: var(--s-8) var(--s-3);
+  text-align: center;
+  transition: background-color var(--t-1) var(--ease-ink), border-color var(--t-1) var(--ease-ink);
+}
+.dropzone[data-over="true"] { border-color: var(--remark); background: var(--paper-2); }
+.dropzone__hint { color: var(--ink-2); margin-block-end: var(--s-3); }
+
+.field { margin-block-end: var(--s-3); }
+.field label { display: block; font-size: var(--fs-sm); font-weight: 700; margin-block-end: var(--s-1); }
+.field input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s-15);
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  background: var(--paper-2);
+  border: 1px solid var(--rule-struct);
+}
+.field input:focus-visible { border-color: var(--focus-outer); }
+
+.status { min-height: 1.6em; font-size: var(--fs-sm); }
+.status[data-kind="error"] { color: var(--remark); }
+
+.band { border-block-start: 1px solid var(--rule-struct); padding-block: var(--s-3); }
+.band__name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-block-end: var(--s-2);
+}
+
+/* --- Footer --------------------------------------------------------------- */
+.foot {
+  border-block-start: 2px solid var(--ink);
+  margin-block-start: var(--s-12);
+  padding-block: var(--s-6) var(--s-8);
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+}
+.foot__nav { display: flex; gap: var(--s-3); flex-wrap: wrap; margin-block-end: var(--s-3); }
+.foot__nav a { min-height: var(--tap); display: inline-flex; align-items: center; }
+
+/* --- Reveal: motion that always has a complete static state --------------- */
+.reveal { opacity: 0; transform: translateY(8px); }
+.reveal[data-shown="true"] {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--t-3) var(--ease-page), transform var(--t-3) var(--ease-page);
+}
+/* No JS, no observer, no support: the content is simply present. */
+.no-js .reveal, :root[data-motion="off"] .reveal { opacity: 1; transform: none; }
+
+/* --- April Fools ----------------------------------------------------------
+   Deliberately does NOT match the design system. The original page was crude
+   and that crudeness is the joke; a tasteful version would not be the same
+   artifact. What changed: no 6.67 Hz body flicker (SC 2.2.2 vestibular
+   hazard), every animation behind prefers-reduced-motion and the stop toggle,
+   a working exit, and the BTC address / onion / contact email removed.      */
+.aprilfools {
+  background: #000;
+  color: #0f0;
+  font-family: 'Courier New', monospace;
+  padding: var(--s-4) var(--s-2);
+}
+.aprilfools .af-box {
+  max-width: 900px;
+  margin-inline: auto;
+  border: 2px solid #0f0;
+  padding: var(--s-3);
+}
+.aprilfools .af-h { color: #f66; font-size: var(--fs-lg); text-align: center; text-transform: none; letter-spacing: 0; }
+.aprilfools .af-org { color: #ff0; text-align: center; margin-block-end: var(--s-3); }
+.aprilfools .af-ascii {
+  color: #0f0;
+  font-size: clamp(5px, 1.5vw, 11px);
+  line-height: 1.15;
+  overflow-x: auto;
+  margin-block: var(--s-3);
+}
+.aprilfools .af-term { border: 1px solid #0f0; padding: var(--s-2); margin-block: var(--s-3); }
+.aprilfools .af-term p { margin-block-end: var(--s-h); }
+.aprilfools .af-ok { color: #0f0; }
+/* The removed strings keep the original's inverted-highlight treatment, so the
+   redaction reads as part of the page rather than as damage. */
+.aprilfools .af-mark { background: #0f0; color: #000; padding-inline: var(--s-h); }
+.aprilfools .af-cmd { margin-block: var(--s-3); }
+.aprilfools .af-foot { color: #6f6; font-size: var(--fs-xs); margin-block-start: var(--s-3); text-align: center; }
+.aprilfools .af-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: var(--s-15) var(--s-3);
+  margin-inline-end: var(--s-2);
+  background: #0f0;
+  color: #000;
+  font-family: inherit;
+  font-weight: 700;
+  text-decoration: none;
+}
+.aprilfools .af-btn:hover { background: #6f6; }
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) .aprilfools .af-box { animation: af-glitch .5s steps(2) infinite; }
+}
+@keyframes af-glitch {
+  0%, 100% { transform: translate(0); }
+  40% { transform: translate(-2px, 1px); }
+  80% { transform: translate(1px, -2px); }
+}

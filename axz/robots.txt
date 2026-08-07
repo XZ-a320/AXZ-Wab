@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /axz/
+Disallow: /axz/aprilfools/
+Disallow: /axz/en/aprilfools/
+
+Sitemap: https://xiaobrook.com/axz/sitemap.xml

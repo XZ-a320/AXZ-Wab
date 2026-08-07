@@ -1,0 +1,454 @@
+{
+  "_note": "源语言目录。中文为唯一真源，英文由此生成。带 locked 的键有固定译法，见 en.json 与构建校验。",
+  "lang": "en",
+  "langName": "English",
+  "dir": "ltr",
+  "meta": {
+    "siteName": "Air Xiao Ze",
+    "siteNameEn": "Air Xiao Ze",
+    "code": "AXZ",
+    "tagline": "FLY ON TIME",
+    "disclaimer": "A virtual airline. For flight simulation only.",
+    "copyright": "Air Xiao Ze (AXZ) © 2026",
+    "description": "Air Xiao Ze (AXZ) is a virtual airline founded in 2026, with its main base at San Francisco International Airport. Two routes, four aircraft, and a complete flight record."
+  },
+  "nav": {
+    "label": "Main navigation",
+    "home": "Ops Log",
+    "guestbook": "Guestbook",
+    "logbook": "Flight Log",
+    "accessibility": "Accessibility",
+    "skip": "Skip to main content",
+    "themeDay": "Day",
+    "themeNight": "Night",
+    "themeLabel": "Toggle day and night mode",
+    "motionStop": "Stop animation",
+    "motionResume": "Resume animation",
+    "langSwitch": "中文"
+  },
+  "home": {
+    "title": "Air Xiao Ze (AXZ)",
+    "sectors": {
+      "routes": {
+        "no": "01",
+        "name": "Core Routes"
+      },
+      "fleet": {
+        "no": "02",
+        "name": "Fleet in Service"
+      },
+      "record": {
+        "no": "03",
+        "name": "Air Xiao Ze · The Full Record"
+      },
+      "hotspot": {
+        "no": "04",
+        "name": "Top Story"
+      },
+      "guestbook": {
+        "no": "05",
+        "name": "Guestbook and Pilot Tools"
+      }
+    },
+    "routesMore": "More routes",
+    "fleetMore": "More aircraft",
+    "routeListTitle": "All Routes",
+    "routeHint": "👆 Click an airport code to see the route map",
+    "routeNote": "Note: the map above shows the outbound routing",
+    "originalImage": "Original",
+    "originalImageClose": "Close"
+  },
+  "routes": {
+    "_order": [
+      "ksfo-ksns",
+      "zspd-zsnj"
+    ],
+    "labels": {
+      "distance": "Distance",
+      "duration": "Flight time",
+      "altitude": "Cruise altitude",
+      "plan": "Routing",
+      "landmarks": "Landmarks",
+      "outbound": "Outbound",
+      "inbound": "Return"
+    },
+    "ksfo-ksns": {
+      "from": "KSFO",
+      "to": "KSNS",
+      "pair": "San Francisco International ↔ Salinas Municipal",
+      "fromName": "San Francisco International Airport",
+      "toName": "Salinas Municipal Airport",
+      "distance": "About 110 km",
+      "duration": "About 30 min",
+      "altitude": "5,500 ft",
+      "landmarks": "Santa Cruz Mountains (mid-route), Monterey Bay coast",
+      "legs": [
+        {
+          "id": "axz001",
+          "dir": "Outbound",
+          "flight": "AXZ001",
+          "plan": "KSFO SID OSI V25 SAPID T259 SANTY STAR KSNS"
+        },
+        {
+          "id": "axz002",
+          "dir": "Return",
+          "flight": "AXZ002",
+          "plan": "KSNS SID SNS V111 BSR STAR KSFO"
+        }
+      ],
+      "chartAlt": "Route map from KSFO to KSNS, with the outbound routing via OSI, SAPID and SANTY."
+    },
+    "zspd-zsnj": {
+      "from": "ZSPD",
+      "to": "ZSNJ",
+      "pair": "Shanghai Pudong International ↔ Nanjing Lukou International",
+      "fromName": "Shanghai Pudong International Airport",
+      "toName": "Nanjing Lukou International Airport",
+      "distance": "About 280 km",
+      "duration": "About 50 min",
+      "altitude": "31,100 ft (9,500 m)",
+      "landmarks": "Yangtze River Delta, Lake Tai, Zhenjiang",
+      "legs": [
+        {
+          "id": "axz003",
+          "dir": "Outbound",
+          "flight": "AXZ003",
+          "plan": "ZSPD SID SASAN R343 ESBAG STAR ZSNJ"
+        },
+        {
+          "id": "axz004",
+          "dir": "Return",
+          "flight": "AXZ004",
+          "plan": "ZSNJ SID ESBAG R343 SASAN STAR ZSPD"
+        }
+      ],
+      "chartAlt": "Route map from ZSPD to ZSNJ, with the outbound routing via SASAN and ESBAG."
+    }
+  },
+  "fleet": {
+    "_order": [
+      "b-737x",
+      "b-321x",
+      "b-1717",
+      "b-0001f"
+    ],
+    "groups": {
+      "pax": "Passenger aircraft",
+      "cargo": "Cargo aircraft"
+    },
+    "listTitle": "All Aircraft · Fleet overview (by entry into service)",
+    "labels": {
+      "reg": "Registration",
+      "history": "History",
+      "events": "Notable Events",
+      "funny": "Incidents"
+    },
+    "b-737x": {
+      "group": "pax",
+      "name": "Boeing 737-800",
+      "nameFull": "Boeing 737-800 ✈️ AXZ's first aircraft",
+      "reg": "B-737X",
+      "dossierTitle": "Boeing 737-800 B-737X · File: AXZ's first aircraft",
+      "history": "B-737X was Air Xiao Ze's first aircraft, and the type the company launched with. Through the first months of 2026 it flew every AXZ001/AXZ002 rotation on KSFO↔KSNS by itself. It saw the airline start from nothing, and it is still a veteran mainstay of the fleet.",
+      "events": [
+        "Operated AXZ001, the first flight in Air Xiao Ze's history.",
+        "The fleet's only aircraft in the opening period, flying several round trips a day.",
+        "Completed abnormal-procedures training: crosswinds, engine-out handling, rejected takeoffs."
+      ],
+      "funny": [
+        "Lands steadily, if a little on the \"hard\" side. The ground crew calls it the Runway Shaker.",
+        "Once flew the wrong route and had to loop back around. The FO quietly screenshotted it and turned it into a meme.",
+        "Holds the highest standing in the fleet. Everyone has to call it the old-timer."
+      ]
+    },
+    "b-321x": {
+      "group": "pax",
+      "name": "Airbus A321",
+      "nameFull": "Airbus A321",
+      "reg": "B-321X",
+      "dossierTitle": "Airbus A321 B-321X · File: mainstay passenger aircraft",
+      "history": "B-321X is the second mainstay passenger type Air Xiao Ze brought in, an Airbus A321. Its job is to take pressure off B-737X and add frequencies, and it flies the core AXZ001/AXZ002 rotations. It carries a good share of the passenger flying.",
+      "events": [
+        "Frequencies on the route went up sharply once it entered service.",
+        "Has flown a number of extra sections at peak times.",
+        "Went along while crews ran abnormal-procedures drills, including a simulated engine failure."
+      ],
+      "funny": [
+        "Barely arrived before it put in a hard landing. People joked it had come to take someone's job.",
+        "On one training flight the crew forgot the flaps and flew the approach anyway. The whole cabin went awkwardly quiet for a full minute.",
+        "It calls itself the elegant people-mover. In practice the landings are rough now and then."
+      ]
+    },
+    "b-1717": {
+      "group": "pax",
+      "name": "Boeing 737-800 (MC collab)",
+      "nameFull": "Boeing 737-800 B-1717 · File: MC collab aircraft",
+      "reg": "B-1717",
+      "dossierTitle": "Boeing 737-800 B-1717 · File: MC collab aircraft",
+      "history": "B-1717 is Air Xiao Ze's collab aircraft with Minecraft, and it swore it would never lose its paint!",
+      "events": [
+        "Entered service as the first Air Xiao Ze collab aircraft.",
+        "Completed its first KSFO↔KSNS passenger flight on March 20, 2026.",
+        "It is also the best-maintained aircraft in the Air Xiao Ze fleet."
+      ],
+      "funny": [
+        "While the livery was being sprayed, a waterproofing problem made it lose its paint.",
+        "Had a hard landing on day one of its inaugural service.",
+        "On June 11, 2026 the captain pushed straight through the turbulence. Passengers said it felt like they'd been \"painted\" onto the cabin wall."
+      ]
+    },
+    "b-0001f": {
+      "group": "cargo",
+      "name": "Boeing 737-800BCF",
+      "nameFull": "Boeing 737-800BCF",
+      "reg": "B-0001F",
+      "dossierTitle": "Boeing 737-800BCF B-0001F · File: freighter",
+      "history": "B-0001F is Air Xiao Ze's first dedicated freighter, a 737-800BCF. It flies the virtual cargo services, carrying simulated supplies and small parcels. With it the airline started running passenger and cargo operations side by side.",
+      "events": [
+        "Completed Air Xiao Ze's first commercial cargo flight.",
+        "Passed demanding tests: takeoffs and landings at heavy weights, and simulated off-center loading.",
+        "Has flown night cargo services steadily over a long period."
+      ],
+      "funny": [
+        "A loading error sent the nose up far too sharply. People joked that \"the cargo was making a break for it.\"",
+        "Taxis so slowly that the tower keeps telling it to expedite.",
+        "Does the fleet's grunt work. Hauls the boxes, never says a word."
+      ]
+    }
+  },
+  "record": {
+    "labels": {
+      "history": "Airline History",
+      "events": "Notable Events",
+      "blackHistory": "Incidents We'd Rather Not Discuss"
+    },
+    "history": "Air Xiao Ze (AXZ) was founded in 2026, with its main base at San Francisco International Airport (KSFO). In its early period the company ran one premium return route, KSFO ↔ KSNS, with the Boeing 737-800 as its only type. The A321 passenger type came in later, then the 737-800BCF freighter. That gave the airline a lean, efficient fleet carrying both passengers and cargo. It is a niche airline that concentrates on flying. Some of the main fleet later moved to the Chinese market, and the ZSPD ↔ ZSNJ return route opened.",
+    "events": [
+      "Formally founded in 2026. B-737X operated AXZ001, the inaugural flight.",
+      "Brought in A321 B-321X to expand passenger capacity and add frequencies.",
+      "Put the newly acquired B-1717 into a long-running collab with Minecraft to raise the airline's profile.",
+      "Freighter B-0001F entered service and opened Air Xiao Ze's cargo business.",
+      "A full year of safe simulated operations, with no major accidents."
+    ],
+    "blackHistory": [
+      "On the day of the inaugural flight the captain taxied over the speed limit and took one warning after another from virtual ATC. An instant classic.",
+      "B-737X has put in a number of gentle hard landings and was duly awarded the title \"the Runway Masseur.\"",
+      "The A321 had barely entered service before it delivered the forgot-the-flaps classic. The whole crew went quiet.",
+      "Freighter B-0001F pitched up much too hard because the loading was off, and the joke went round that \"the parcels were eloping.\""
+    ]
+  },
+  "hotspot": {
+    "body": "On the afternoon of April 18, 2026, an Air China 747 (B-2472) appeared out of nowhere at Shanghai Hongqiao Airport (ZSSS), and the camera happened to catch the whole thing!",
+    "status": "Latest: still developing",
+    "imageAlt": "An Air China Boeing 747-400, registration B-2472, on the apron at Shanghai Hongqiao Airport."
+  },
+  "guestbook": {
+    "title": "Air Xiao Ze Guestbook",
+    "docTitle": "Air Xiao Ze Guestbook",
+    "back": "Back to home",
+    "warning": "⚠️ Useless messages will be deleted! ⚠️",
+    "homeTitle": "Leave a message, say hello",
+    "homeBody": "Leave your good wishes for Air Xiao Ze and for everyone else here.",
+    "cta": "Go to the guestbook",
+    "archiveNotice": "This page is a guestbook archive. The original board ran on a server, and this site is static, so the messages are kept here in full and no new ones can be posted for now.",
+    "empty": "No messages yet. Be the first.",
+    "ceremonyTitle": "How posting worked on the original board",
+    "ceremonyNote": "The interface text from the original board, kept here as a record.",
+    "ceremony": [
+      "Post a message",
+      "⚠️ Useless messages will be deleted! Are you sure you want to continue?",
+      "Write your message",
+      "Type your message (100 characters max)...",
+      "You cannot edit after posting! Please check the following:",
+      "Confirm your post",
+      "Edit",
+      "Post",
+      "Cancel",
+      "Your message cannot be empty",
+      "Your message cannot be longer than 100 characters",
+      "Message posted!"
+    ],
+    "entries": [
+      {
+        "time": "2026-07-28 12:48:27",
+        "content": "做的网站真好"
+      },
+      {
+        "time": "2026-07-10 03:33:48",
+        "content": "⭐⭐⭐ ⭐ ⭐小泽棒棒哒！继续加油"
+      },
+      {
+        "time": "2026-07-09 07:15:26",
+        "content": "⭐️⭐️⭐️⭐️⭐️五星好评，737宽敞舒适，令人愉悦，登机流畅，航班没有延误"
+      }
+    ]
+  },
+  "tools": {
+    "title": "Pilot Tools",
+    "routeQuery": "Route finder",
+    "routeQueryUrl": "https://route.hkrscoc.com",
+    "logUpload": "Log upload",
+    "externalNote": "External link"
+  },
+  "logbook": {
+    "title": "Flight Log · Readout Desk",
+    "headerSub": "Air Xiao Ze (AXZ) · Flight Log",
+    "intro": "Drop a .axzlog file into the box below and this page will read it out. The file is not uploaded anywhere. It all happens in your own browser.",
+    "dropzone": "Drop a .axzlog file here, or click to choose one",
+    "dropzoneButton": "Choose log file",
+    "sampleButton": "Load sample file",
+    "sampleNotice": "Sample file · generated by this site, not a real flight record",
+    "clearButton": "Clear",
+    "errorFormat": "Invalid log file format.",
+    "errorEmpty": "No data",
+    "errorRead": "Could not read the file. Check that it was saved by the AXZ flight log recorder.",
+    "unsupported": "Your browser cannot decompress .axzlog files locally. Update your browser, or open the file with the AXZ flight log recorder.",
+    "noRemark": "None",
+    "legacyTitle": "The original log system",
+    "legacyNote": "The original flight log page ran on a server, and the .axzlog files pilots uploaded were stored there for everyone to download. This site is static and has no such server, so this page reads the file directly in your own browser instead. The interface text from the original page is kept below as a record.",
+    "legacy": [
+      "Flight Log Management",
+      "Submit flight log",
+      "Download flight log",
+      "Only .axzlog uploads. All pilots share the same logs",
+      "Available logs",
+      "Download"
+    ],
+    "formatTitle": "What .axzlog is",
+    "formatBody": "The file starts with six ASCII bytes, AXZLOG, followed by gzip-compressed UTF-8 JSON. Browsers can decompress that on their own, so this readout desk does not need a server.",
+    "loginTitle": "Pilot Login",
+    "loginUser": "Username",
+    "loginPass": "Password",
+    "loginUserPlaceholder": "Enter pilot username",
+    "loginPassPlaceholder": "Enter password",
+    "loginButton": "Log in",
+    "loginBack": "Back to home",
+    "loginNoRegister": "No sign-up here",
+    "loginDemoNotice": "This is a decorative door. The site is static, with no server and no account database, so nothing you type here is sent, stored or checked. Please do not enter a password you actually use. Type anything you like and you are in.",
+    "loginEmpty": "Enter a username and password",
+    "welcome": "Welcome",
+    "logout": "Log out",
+    "manageTitle": "Flight Log Management",
+    "bands": {
+      "pre": "Preflight",
+      "takeoff": "Takeoff",
+      "cruise": "Cruise",
+      "landing": "Landing",
+      "post": "Postflight"
+    },
+    "fields": {
+      "FlightNumber": "Flight number",
+      "AircraftType": "Aircraft type",
+      "Registration": "Registration",
+      "Date": "Date",
+      "DepartureAirport": "Departure airport",
+      "DepartureGate": "Gate",
+      "DepartureTime": "Time",
+      "DepartureWeather": "Airport weather",
+      "FlightPlan": "Flight plan",
+      "V1": "V1",
+      "VR": "VR",
+      "V2": "V2",
+      "TakeoffConfig": "Config",
+      "TakeoffRunway": "Runway",
+      "CruiseRemark": "Remarks",
+      "ArrivalAirport": "Arrival airport",
+      "LandingRunway": "Runway",
+      "LandingMethod": "Approach type",
+      "LandingConfig": "Config",
+      "LandingWeather": "Weather",
+      "LandingTime": "Time",
+      "ArrivalGate": "Gate",
+      "PostFlightRemark": "Remarks"
+    },
+    "welcomeNote": "This door just copies the look of the original page. The readout desk is above, and anyone can use it without logging in."
+  },
+  "aprilfools": {
+    "date": "April 1, 2026",
+    "title": "April Fools' Easter Egg",
+    "docTitle": "April Fools' Easter Egg (simulated hack page) - Air Xiao Ze",
+    "gateHeading": "This is an April Fools' joke page",
+    "gateBody": "Below is the prank page Air Xiao Ze put up on April 1, 2026, pretending the site had been hacked. Everything on it is fake: no virus, no ransom, no data encrypted. The bitcoin address, dark web address and contact email from the original page have been removed here.",
+    "gateButton": "Got it, let me take a look",
+    "exitButton": "Restore the real site",
+    "removedBtc": "[bitcoin address removed]",
+    "removedEmail": "hack@[removed]",
+    "removedOnion": "[removed]",
+    "docTitleOriginal": "⚠️ SYSTEM WARNING - AIR XIAO ZE HAS BEEN BREACHED ⚠️",
+    "heading": "⚠️ [!!!] SYSTEM COMPROMISED [!!!] ⚠️",
+    "org": "< DARK NIGHT HACKER GROUP - CODENAME: CRIMSON EYE >",
+    "asciiAlt": "ASCII art spelling out EASY IE 2",
+    "terminal": [
+      {
+        "task": "[>] Breaching firewall................",
+        "state": "[ DONE ]"
+      },
+      {
+        "task": "[>] Bypassing IDS/IPS.................",
+        "state": "[ SUCCESS ]"
+      },
+      {
+        "task": "[>] Escalating to ROOT................",
+        "state": "[ FULL PRIVILEGES OBTAINED ]"
+      },
+      {
+        "task": "[>] Sanitizing database...............",
+        "state": "[ DECRYPTING ]"
+      },
+      {
+        "task": "[>] Defacing homepage.................",
+        "state": "[ RUNNING ]"
+      },
+      {
+        "task": "[>] Planting permanent backdoor.......",
+        "state": "████████████ DONE ████████████"
+      }
+    ],
+    "ransom": [
+      "⚠️ WARNING ⚠️ All Air Xiao Ze (AXZ) data has been encrypted!",
+      "Your flight plans, fleet information and route maps have been uploaded to a dark web node:",
+      "To unlock, pay 0.5 bitcoin to this address:",
+      "After payment, contact this email:",
+      "Include a screenshot and everything will be restored within 24 hours.",
+      "► TIME REMAINING: 23:59:47 ◄"
+    ],
+    "prompt": "root@AXZ-Server:~#",
+    "commands": [
+      "./入侵证据清除.sh --force",
+      "rm -rf /var/log/hack*",
+      "echo 'I was here' > /home/axz/readme.txt",
+      "lastlog -u root",
+      "service apache2 stop",
+      "chattr +i /var/www/html/index.html"
+    ],
+    "decryptButton": "Try to decrypt",
+    "decryptAlert": "Cannot decrypt! Pay the ransom. (This is a simulated page. Click the \"Restore the real site\" button.)",
+    "decryptFail": "▮▮▮▮▮▮▮▮▮▮ 100% [DECRYPTION FAILED, INVALID KEY]",
+    "footerNote": "* This is a prank page simulating a hack. There is no actual virus and no ransom.",
+    "footerSign": "A friendly prank from Air Xiao Ze | For entertainment only"
+  },
+  "accessibility": {
+    "title": "Accessibility Statement",
+    "target": "This site aims to meet WCAG 2.2 Level AA.",
+    "sections": {
+      "status": "Current status",
+      "tested": "How it was tested",
+      "known": "Known issues",
+      "contact": "Feedback"
+    },
+    "statusBody": "This is a static site. All content is present when the page loads and can be read without scripts. Every interactive element is a native button or link and works with a keyboard. The Chinese and English versions are each marked with their language.",
+    "testedBody": "Keyboard walkthrough of every page; proofread with VoiceOver; automated checks with axe-core; contrast calculated one value at a time using the WCAG formula rather than estimated; checked on a real device at 375 pixels wide.",
+    "knownBody": "The route maps are graphics, and the same information is given in the text table right next to them. The April Fools' page keeps its original rough styling, which is part of the content. Animation on that page is off by default and can be turned on manually.",
+    "contactBody": "If you run into a barrier while using this site, please tell us in the guestbook.",
+    "motionNote": "This site respects the system \"Reduce Motion\" setting. You can also turn animation off at any time with the \"Stop animation\" button at the top of the page."
+  },
+  "ui": {
+    "sector": "Sector",
+    "backToTop": "Back to top",
+    "externalLink": "Opens in a new window",
+    "chartCaption": "Route map",
+    "viewOriginal": "View original",
+    "notFound": "Page not found",
+    "footerNav": "Footer navigation"
+  }
+}

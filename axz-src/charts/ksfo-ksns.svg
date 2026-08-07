@@ -1,0 +1,65 @@
+<!-- KSFO -> KSNS 示意图. Geometry measured off the project's own chart render
+     (Pictures/KSFO-KSNS.jpg, 927x627) and normalised. This is a 示意图 — the
+     owner's own word — not a navigation chart, and must never be labelled as
+     one. The original render stays available beside it, unmodified. -->
+<svg viewBox="0 0 927 627" role="img" aria-labelledby="t-sfo d-sfo" class="plate-svg">
+  <title id="t-sfo">KSFO 至 KSNS 航线示意图</title>
+  <desc id="d-sfo">去程航路自旧金山国际机场向东南，依次经过 OSI、SAPID、SANTY 三个航路点，抵达萨利纳斯机场。全程约110公里，巡航高度5,500英尺。</desc>
+
+  <!-- terrain hatching: the Santa Cruz range along the west of the track -->
+  <g class="plate-terrain" aria-hidden="true">
+    <path d="M150 90 L210 150 M180 70 L250 140 M120 140 L190 210 M150 190 L230 270
+             M100 230 L180 310 M130 290 L210 370 M90 330 L170 410 M120 390 L200 470
+             M260 330 L320 390 M290 390 L350 450 M240 440 L300 500"/>
+  </g>
+
+  <!-- airways: V25 then T259 -->
+  <g class="plate-airway" aria-hidden="true">
+    <path d="M292 40 L332 166 L378 282"/>
+    <path d="M378 282 L425 404 L645 583"/>
+  </g>
+
+  <!-- the flown track -->
+  <path class="plate-track track-path" d="M292 40 L332 166 L378 282 L425 404 L645 583"/>
+
+  <g aria-hidden="true">
+    <!-- departure -->
+    <circle class="plate-dep" cx="292" cy="40" r="7"/>
+    <!-- circled waypoints -->
+    <g class="plate-wpt">
+      <circle cx="332" cy="166" r="6"/><path d="M332 161 l5 8 h-10 z"/>
+      <circle cx="378" cy="282" r="6"/><path d="M378 277 l5 8 h-10 z"/>
+      <circle cx="425" cy="404" r="6"/><path d="M425 399 l5 8 h-10 z"/>
+    </g>
+    <!-- arrival -->
+    <circle class="plate-arr" cx="645" cy="583" r="7"/>
+    <!-- plain fixes off-route -->
+    <g class="plate-fix">
+      <path d="M540 210 l6 10 h-12 z"/><path d="M700 330 l6 10 h-12 z"/>
+      <path d="M240 480 l6 10 h-12 z"/>
+    </g>
+  </g>
+
+  <g class="plate-label">
+    <text x="308" y="36">KSFO</text>
+    <text x="661" y="588">KSNS</text>
+  </g>
+  <g class="plate-label plate-label--wpt">
+    <text x="346" y="163">OSI</text>
+    <text x="392" y="279">SAPID</text>
+    <text x="439" y="401">SANTY</text>
+  </g>
+  <g class="plate-label plate-label--awy">
+    <text x="300" y="118" transform="rotate(72 300 118)">V25</text>
+    <text x="398" y="345" transform="rotate(68 398 345)">T259</text>
+  </g>
+  <g class="plate-label plate-label--arr">
+    <text x="661" y="606">SALINAS</text>
+  </g>
+
+  <!-- scale bar, derived from the stated 110 km leg length -->
+  <g aria-hidden="true">
+    <path class="plate-fix" d="M60 590 h120 M60 585 v10 M180 585 v10"/>
+    <text class="plate-label" x="60" y="580">50 km</text>
+  </g>
+</svg>

@@ -1,0 +1,151 @@
+/* ==========================================================================
+   AXZ ledger — the site's central component.
+
+   Every record on this site is a row with two columns: what the airline says
+   happened (the record), and what actually happened (备注 / remarks, in red).
+   The adjacency IS the argument. 重大事件 ends on "全年模拟飞行安全运行，无重大事故"
+   and 搞笑黑历史 sits on the same baseline band, in red, immediately beside it.
+
+   The 备注 column comes from the owner's own C# logger, which has two remarks
+   fields, each with an explicit 无 (none) checkbox — so the empty state is
+   part of the schema, not an afterthought.
+   ========================================================================== */
+
+.ledger {
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+
+.ledger__row {
+  display: grid;
+  grid-template-columns: [rec] minmax(0, 1fr) [rem] minmax(0, 21rem);
+  gap: 0 var(--s-6);
+  padding-block: var(--s-4);
+  border-block-end: 1px solid var(--rule-struct);
+}
+.ledger__row:last-child { border-block-end: 0; }
+
+/* Row index — the sector/serial number, mono, hung in the margin. */
+.ledger__no {
+  grid-column: rec;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  margin-block-end: var(--s-1);
+}
+
+.ledger__record { grid-column: rec; min-width: 0; }
+
+/* --- The 备注 column ------------------------------------------------------
+   Red, serif, opened by a proof-reader's caret. Never italic on hanzi.      */
+.ledger__remarks {
+  grid-column: rem;
+  min-width: 0;
+  color: var(--remark);
+  font-family: var(--font-kai);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  border-inline-start: 1px solid var(--rule-struct);
+  padding-inline-start: var(--s-3);
+}
+
+.ledger__remarks-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--remark);
+  margin-block-end: var(--s-15);
+}
+
+.remark-cell { position: relative; padding-inline-start: var(--s-2); }
+.remark-cell + .remark-cell { margin-block-start: var(--s-15); }
+/* U+2038 CARET — opens every cell in the remarks column. */
+.remark-cell::before {
+  content: '\2038';
+  position: absolute;
+  inset-inline-start: 0;
+  color: var(--remark);
+  font-family: var(--font-mono);
+}
+
+/* The empty state the schema already has a rule for. */
+.remark-none {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .1em;
+}
+
+/* --- Record-column internals --------------------------------------------- */
+.record__title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: 1.25;
+  margin-block-end: var(--s-1);
+}
+.record__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  color: var(--ink-3);
+  letter-spacing: .08em;
+  margin-block-end: var(--s-2);
+}
+.record__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-block: var(--s-3) var(--s-1);
+}
+
+/* Numbered event list — the deadpan half of the pair. */
+.record__events { counter-reset: ev; }
+.record__events > li {
+  counter-increment: ev;
+  position: relative;
+  padding-inline-start: var(--s-4);
+  margin-block-end: var(--s-15);
+}
+.record__events > li::before {
+  content: counter(ev, decimal-leading-zero);
+  position: absolute;
+  inset-inline-start: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  color: var(--ink-3);
+  line-height: 1.9;
+}
+
+/* --- Definition rows for route data --------------------------------------- */
+.spec { display: grid; grid-template-columns: minmax(6rem, auto) 1fr; gap: var(--s-1) var(--s-3); }
+.spec dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-block-start: 3px;
+}
+.spec dd { margin: 0; }
+
+/* --- Mobile: the remarks column breaks out as a margin note ---------------
+   Not a degradation — the note keeps its red, its serif and its caret, and
+   gains a rule on the inline start so it still reads as a marginal hand.    */
+@media (max-width: 900px) {
+  .ledger__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-3);
+  }
+  .ledger__no, .ledger__record, .ledger__remarks { grid-column: 1; }
+  .ledger__remarks {
+    border-inline-start: 2px solid var(--remark);
+    padding-inline-start: var(--s-2);
+    margin-block-start: var(--s-1);
+    font-size: var(--fs-base);
+  }
+}

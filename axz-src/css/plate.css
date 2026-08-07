@@ -1,0 +1,94 @@
+/* ==========================================================================
+   AXZ plate — the route chart.
+   These are night charts and do NOT remap on theme change: --plate is 16.64:1
+   against day paper, so it reads as an inset object in both modes.
+
+   TIERING: values sampled from the original charts are MARKS. A token marked
+   "mark only" in tokens.css may never appear in a color: declaration — the
+   build fails on it (scripts/check-axz-contrast.mjs).
+   ========================================================================== */
+
+.plate {
+  background: var(--plate);
+  color: var(--plate-ink);
+  border: 1px solid var(--rule-struct);
+  padding: var(--s-3);
+}
+.plate svg { width: 100%; height: auto; }
+
+.plate__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--plate-ink-2);
+  margin-block-end: var(--s-2);
+  padding-block-end: var(--s-1);
+  border-block-end: 1px solid var(--plate-ink-2);
+}
+.plate__pair { color: var(--plate-ink); font-size: var(--fs-sm); letter-spacing: .1em; }
+
+.plate__note {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  color: var(--plate-ink-2);
+  margin-block-start: var(--s-2);
+  padding-block-start: var(--s-1);
+  border-block-start: 1px solid var(--plate-ink-2);
+}
+
+/* Chart marks. Square caps — the source charts have square caps. */
+.plate-track {
+  fill: none;
+  stroke: var(--track);
+  stroke-width: 2;
+  stroke-linecap: square;
+  stroke-dasharray: 5 4;
+}
+.plate-airway {
+  fill: none;
+  stroke: var(--airway);
+  stroke-width: 1;
+  stroke-dasharray: 8 6;
+  opacity: .85;
+}
+.plate-fix { fill: none; stroke: var(--fix); stroke-width: 1.25; }
+.plate-wpt { fill: none; stroke: var(--plate-cyan); stroke-width: 1.5; }
+.plate-dep { fill: var(--dep); }
+.plate-arr { fill: var(--arr); }
+.plate-terrain { fill: none; stroke: var(--terrain); stroke-width: .75; }
+
+.plate-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  fill: var(--plate-ink);
+}
+.plate-label--wpt { fill: var(--plate-cyan); }
+.plate-label--arr { fill: var(--arr-text); }   /* text tier, never --arr */
+.plate-label--awy { fill: var(--airway); font-size: 9px; }
+
+/* The route draw. A track flies at constant speed, so: linear.
+   Reduced motion and the stop toggle declare stroke-dashoffset: 0 (base.css). */
+.track-path {
+  stroke-dasharray: var(--len);
+  stroke-dashoffset: var(--len);
+  animation: track-draw var(--t-4) var(--ease-track) forwards;
+}
+@keyframes track-draw { to { stroke-dashoffset: 0; } }
+
+/* The original renders stay available and unmodified. */
+.plate__original {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  margin-block-start: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .1em;
+  color: var(--plate-cyan);
+}

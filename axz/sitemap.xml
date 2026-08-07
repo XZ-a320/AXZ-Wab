@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url><loc>https://xiaobrook.com/axz/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/"/>
+  </url>
+  <url><loc>https://xiaobrook.com/axz/en/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/"/>
+  </url>
+  <url><loc>https://xiaobrook.com/axz/guestbook/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/guestbook/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/guestbook/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/guestbook/"/>
+  </url>
+  <url><loc>https://xiaobrook.com/axz/en/guestbook/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/guestbook/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/guestbook/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/guestbook/"/>
+  </url>
+  <url><loc>https://xiaobrook.com/axz/logbook/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/logbook/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/logbook/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/logbook/"/>
+  </url>
+  <url><loc>https://xiaobrook.com/axz/en/logbook/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/logbook/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/logbook/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/logbook/"/>
+  </url>
+  <url><loc>https://xiaobrook.com/axz/accessibility/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/accessibility/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/accessibility/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/accessibility/"/>
+  </url>
+  <url><loc>https://xiaobrook.com/axz/en/accessibility/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/accessibility/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/accessibility/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/accessibility/"/>
+  </url>
+</urlset>
