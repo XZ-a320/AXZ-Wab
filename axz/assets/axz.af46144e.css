@@ -1176,3 +1176,18 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .ctrl-btn--icon .icon { width: 1.25em; height: 1.25em; vertical-align: middle; }
 .btn .icon { margin-inline-end: 2px; }
 .sector__head .icon--head { align-self: center; }
+
+/* --- Button rows -----------------------------------------------------------
+   The pilot-tool buttons sat on different baselines because one carries an
+   icon and the other did not, and inline-flex children in a <p> align on the
+   text baseline. A flex row aligns them by box instead, so their tops and
+   bottoms line up whatever is inside them. */
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--s-2);
+  margin-block-start: var(--s-2);
+}
+.btn-row .btn { flex: 0 1 auto; }
+.btn-row--foot { margin-block-start: var(--s-6); }

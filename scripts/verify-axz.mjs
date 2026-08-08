@@ -200,6 +200,25 @@ console.log('\nicons')
   await page.close()
 }
 
+/* 2f. The recorder download must actually resolve, and must not be served from
+      this domain: it is 108 MB and unsigned, so it lives on GitHub Releases. */
+{
+  const page = await ctx.newPage()
+  await page.goto(BASE + '/axz/logbook/', { waitUntil: 'domcontentloaded' })
+  const href = await page.getAttribute('a[href*="AXZ-FlightLogRecorder"]', 'href')
+  href && href.startsWith('https://github.com/')
+    ? ok('recorder download points at GitHub Releases, not this domain')
+    : bad(`recorder download href is ${href}`)
+  if (href) {
+    const r = await page.request.fetch(href, { method: 'HEAD', maxRedirects: 5 })
+    r.ok() ? ok(`recorder asset resolves (${r.status()})`) : bad(`recorder asset returned ${r.status()}`)
+  }
+  const meta = await page.innerText('main')
+  meta.includes('108 MB') && meta.includes('Windows')
+    ? ok('size and platform are stated before the click') : bad('download size/platform not disclosed')
+  await page.close()
+}
+
 /* 3. April Fools: sanitized, gated, exit works, noindex. */
 console.log('\napril fools')
 {

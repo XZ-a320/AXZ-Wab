@@ -151,8 +151,7 @@
       "funny": "Incidents",
       "length": "Length",
       "span": "Wingspan",
-      "silhouette": "Plan view",
-      "silhouetteNote": "The four types drawn to one scale from the manufacturers’ published dimensions, so they can be compared directly. These are figures for the types themselves, not Air Xiao Ze operating data."
+      "silhouette": "Plan view"
     },
     "b-737x": {
       "group": "pax",
@@ -372,7 +371,13 @@
       "ArrivalGate": "Gate",
       "PostFlightRemark": "Remarks"
     },
-    "welcomeNote": "This login box only mirrors the old page. The viewer above is open to anyone and needs no login."
+    "welcomeNote": "This login box only mirrors the old page. The viewer above is open to anyone and needs no login.",
+    "backHome": "Back to home",
+    "toolTitle": "Flight log recorder",
+    "toolDownload": "Download the flight log recorder",
+    "toolNote": "A Windows program for producing .axzlog files. Record a flight with it, then drop the file back into the viewer above.",
+    "toolMeta": "Windows 64-bit · about 108 MB · unsigned, so Windows may show a SmartScreen prompt",
+    "toolHost": "Hosted on GitHub Releases, not on this site"
   },
   "aprilfools": {
     "date": "April 1, 2026",
@@ -462,7 +467,6 @@
     "notFound": "Page not found",
     "footerNav": "Footer navigation",
     "profileNote": "Both cruise altitudes drawn to one scale. Shanghai to Nanjing sits at 31,100 ft; San Francisco to Salinas only reaches 5,500 ft, nearly six times lower.",
-    "aircraftMoving": "On the route map, the aircraft flies the outbound routing",
-    "stripNote": "The four flight numbers laid out the way a real ATC flight progress strip is."
+    "aircraftMoving": "On the route map, the aircraft flies the outbound routing"
   }
 }

@@ -19,6 +19,12 @@ const SRC = join(ROOT, 'axz-src')
 const OUT = join(ROOT, 'axz')
 const BASE = '/axz'
 
+/* The recorder is a 108 MB self-contained .NET build — over GitHub's 100 MiB
+   per-file limit, so it cannot live in either repo, and an unsigned .exe served
+   from the portfolio domain would trip SmartScreen and browser warnings there.
+   It ships as a GitHub Release asset on the owner's own repo instead. */
+const RECORDER_URL = 'https://github.com/XZ-a320/AXZ-Wab/releases/download/v1.0-recorder/AXZ-FlightLogRecorder.exe'
+
 const zh = JSON.parse(readFileSync(join(SRC, 'content', 'zh.json'), 'utf8'))
 const enPath = join(SRC, 'content', 'en.json')
 const en = existsSync(enPath) ? JSON.parse(readFileSync(enPath, 'utf8')) : null
@@ -298,7 +304,6 @@ function fleetScale(c, lang) {
 
   return `<figure class="fleet-scale">
   <ul class="af-list">${rows}</ul>
-  <figcaption>${parts(c.fleet.labels.silhouetteNote, lang)}</figcaption>
 </figure>`
 }
 
@@ -339,7 +344,6 @@ function flightStrips(c, lang) {
   </li>`).join('')
   return `<figure class="strips">
     <ul class="strip-list">${strips}</ul>
-    <figcaption>${parts(c.ui.stripNote, lang)}</figcaption>
   </figure>`
 }
 
@@ -504,11 +508,11 @@ function home(c, lang) {
 <section class="sector wrap" aria-labelledby="s-guest">
   <div class="sector__head"><span class="sector__no">${esc(S.guestbook.no)}</span>${icon('i-guestbook', 'icon--head')}<h2 id="s-guest">${P(S.guestbook.name)}</h2></div>
   <p class="prose">${P(c.guestbook.homeBody)}</p>
-  <p><a class="btn" href="${urlFor('guestbook', lang)}">${esc(c.guestbook.cta)}</a></p>
+  <p class="btn-row"><a class="btn" href="${urlFor('guestbook', lang)}">${icon('i-guestbook')}${esc(c.guestbook.cta)}</a></p>
   <h3 class="record__label">${esc(c.tools.title)}</h3>
-  <p>
+  <p class="btn-row">
     <a class="btn" href="${esc(c.tools.routeQueryUrl)}" target="_blank" rel="noopener noreferrer" hreflang="zh">${icon('i-external')}${esc(c.tools.routeQuery)}<span class="sr-only"> (${esc(c.tools.externalNote)})</span></a>
-    <a class="btn" href="${urlFor('logbook', lang)}">${esc(c.logbook.title)}</a>
+    <a class="btn" href="${urlFor('logbook', lang)}">${icon('i-logbook')}${esc(c.logbook.title)}</a>
   </p>
 </section>`
 
@@ -606,6 +610,17 @@ function logbook(c, lang) {
     <p class="notice">${P(c.logbook.legacyNote)}</p>
     <ul class="record__events">${c.logbook.legacy.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
   </div>
+
+  <h2>${esc(c.logbook.toolTitle)}</h2>
+  <p class="prose">${P(c.logbook.toolNote)}</p>
+  <p class="btn-row">
+    <a class="btn" href="${RECORDER_URL}" rel="noopener noreferrer">${icon('i-drop')}${esc(c.logbook.toolDownload)}</a>
+  </p>
+  <p class="record__meta">${esc(c.logbook.toolMeta)} &middot; ${esc(c.logbook.toolHost)}</p>
+
+  <p class="btn-row btn-row--foot">
+    <a class="btn" href="${urlFor('home', lang)}">${icon('i-home')}${esc(c.logbook.backHome)}</a>
+  </p>
 </section>`
   return shell({ c, lang, key: 'logbook', title: `${c.logbook.title} — ${c.meta.siteName}`, desc: c.logbook.intro, body })
 }

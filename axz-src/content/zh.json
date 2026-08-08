@@ -151,8 +151,7 @@
       "funny": "搞笑史",
       "length": "机身长度",
       "span": "翼展",
-      "silhouette": "俯视图",
-      "silhouetteNote": "四种机型按官方公布的尺寸、用同一个比例画在一起，可以直接互相比。这里是机型本身的数据，不是小泽航空的运营数据。"
+      "silhouette": "俯视图"
     },
     "b-737x": {
       "group": "pax",
@@ -372,7 +371,13 @@
       "ArrivalGate": "停机位",
       "PostFlightRemark": "备注"
     },
-    "welcomeNote": "这个登录框只是还原原页面的样子。上面的查看器谁都能直接用，不用登录。"
+    "welcomeNote": "这个登录框只是还原原页面的样子。上面的查看器谁都能直接用，不用登录。",
+    "backHome": "返回首页",
+    "toolTitle": "飞行日志生成工具",
+    "toolDownload": "下载飞行日志记录程序",
+    "toolNote": "用来生成 .axzlog 文件的 Windows 程序。用它记录完一次飞行，再把生成的文件拖回上面的查看器就能看。",
+    "toolMeta": "Windows 64 位 · 约 108 MB · 程序未签名，Windows 可能弹 SmartScreen 提示",
+    "toolHost": "文件放在 GitHub 的发布页上，不在本站"
   },
   "aprilfools": {
     "date": "2026年4月1日",
@@ -462,7 +467,6 @@
     "notFound": "页面不存在",
     "footerNav": "页脚导航",
     "profileNote": "两条航线的巡航高度按同一个比例画在一起。上海到南京在 9,500 米，旧金山到萨利纳斯只有 1,676 米，差了将近六倍。",
-    "aircraftMoving": "示意图上的飞机沿去程航路飞",
-    "stripNote": "四个航班号的进程条，格式仿照真实管制用的飞行进程单。"
+    "aircraftMoving": "示意图上的飞机沿去程航路飞"
   }
 }
