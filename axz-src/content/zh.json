@@ -10,7 +10,9 @@
     "tagline": "FLY ON TIME",
     "disclaimer": "虚拟航司 仅用于模拟飞行",
     "copyright": "小泽航空 Air Xiao Ze (AXZ) © 2026",
-    "description": "小泽航空（AXZ）是一家虚拟航空公司，成立于2026年，主运营基地为旧金山国际机场。两条航线，四架飞机，以及一份完整的飞行记录。"
+    "description": "小泽航空（AXZ）是一家虚拟航空公司，成立于2026年，主运营基地为旧金山国际机场。两条航线，四架飞机，以及一份完整的飞行记录。",
+    "artCredit": "机型俯视图：Julien.scavini，取自维基共享资源，CC BY-SA 3.0，本站做了裁切与重新上色。",
+    "artCreditLink": "https://commons.wikimedia.org/wiki/File:Boeing_737-800_v1.0.png"
   },
   "nav": {
     "label": "主导航",

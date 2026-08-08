@@ -117,6 +117,7 @@ const IMAGES = [
   'B-2472-480.webp', 'B-2472-800.webp', 'B-2472-1200.webp', 'B-2472-1600.webp',
   'B-2472-1200.jpg',              // <picture> fallback
   'wordmark-light.webp', 'wordmark-dark.webp',
+  'b738-top-480.webp', 'b738-top-800.webp', 'b738-top-1200.webp',
 ]
 const imgSrc = join(SRC, 'img')
 for (const f of IMAGES) {
@@ -210,6 +211,7 @@ ${body}
     <nav class="foot__nav" aria-label="${esc(c.ui.footerNav)}">${nav}</nav>
     <p>${P(c.meta.copyright)}</p>
     <p>${P(c.meta.disclaimer)}</p>
+    <p class="foot__credit">${P(c.meta.artCredit)} <a href="${esc(c.meta.artCreditLink)}" rel="license noopener noreferrer" target="_blank">${esc(c.ui.externalLink)}</a></p>
   </div>
 </footer>
 <script src="${BASE}/assets/${jsName}" defer></script>
@@ -323,18 +325,16 @@ function fleetScale(c, lang) {
 }
 
 /* --- Masthead aircraft ----------------------------------------------------
-   B-737X, the airline's first aircraft, drawn large beside the tagline. Purely
-   decorative here — the same geometry appears labelled and dimensioned in
-   sector 02 — so it is aria-hidden and adds nothing for a screen reader to
-   wade through before reaching the content.                                 */
+   A real technical drawing, not a generated outline: the top view from
+   Julien.scavini's four-view of the 737-800 (Wikimedia Commons, CC BY-SA 3.0),
+   isolated from the sheet and shipped as an alpha matte.
+
+   Painted with CSS mask-image so the line colour comes from --ink and follows
+   the theme, instead of baking a grey into the asset that would drift from the
+   palette. Decorative — the fleet section carries the labelled, dimensioned
+   drawings — so it is aria-hidden.                                          */
 function mastheadShip() {
-  const a = airframe(TYPES['b-737x'])
-  const P = a.paths
-  const solid = [P.fuse, ...P.wings, ...P.stabs, ...P.nacelles]
-    .map(d => `<path class="af-part" d="${d}"/>`).join('')
-  return `<div class="masthead__ship" aria-hidden="true">
-    <svg viewBox="${a.viewBox}" focusable="false">${solid}<path class="af-fin" d="${P.fin}"/></svg>
-  </div>`
+  return `<div class="masthead__ship" aria-hidden="true"></div>`
 }
 
 /* --- Flight progress strips -----------------------------------------------

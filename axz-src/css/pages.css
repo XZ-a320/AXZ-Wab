@@ -387,6 +387,101 @@
 .af-ground { fill: none; stroke: var(--rule-struct); stroke-width: .9; }
 
 /* --- Masthead aircraft -----------------------------------------------------
+   Julien.scavini's 737-800 top view, shipped as an alpha matte and painted
+   through mask-image so the ink colour is the real --ink token in both themes.
+   A plain <img> would bake one colour in and need inverting for night.
+
+   @supports guard: without mask support the element would paint as a solid
+   rectangle, which is far worse than simply not showing it.                  */
+.masthead__in { position: relative; }
+.masthead__ship { display: none; }
+
+@supports ((mask-image: url(#m)) or (-webkit-mask-image: url(#m))) {
+  .masthead__ship {
+    display: block;
+    position: absolute;
+    inset-block-start: 2%;
+    inset-inline-end: clamp(-56px, -3vw, 0px);
+    width: clamp(300px, 44vw, 720px);
+    aspect-ratio: 1205 / 1041;
+    pointer-events: none;
+    z-index: -1;
+    background-color: var(--ink);
+    opacity: .13;
+    -webkit-mask-image: image-set(url("/axz/img/b738-top-1200.webp") 1x);
+    mask-image: image-set(url("/axz/img/b738-top-1200.webp") 1x);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+  /* Below the tagline's column it would sit on top of the type, and at full
+     width it ate an entire phone screen. Smaller, and it stays out of the way. */
+  @media (max-width: 900px) {
+    .masthead__ship {
+      position: static;
+      width: min(78%, 340px);
+      margin-block-start: var(--s-3);
+      opacity: .22;
+      -webkit-mask-image: image-set(url("/axz/img/b738-top-800.webp") 1x);
+      mask-image: image-set(url("/axz/img/b738-top-800.webp") 1x);
+    }
+  }
+}
+
+.foot__credit { font-size: var(--fs-xs); margin-block-start: var(--s-2); max-inline-size: 74ch; }
+
+/* --- Flight progress strips ------------------------------------------------
+   Modelled on a real ATC strip: fixed blocks, hard rules between them, mono
+   throughout, no rounding. The form is the point — a simmer reads it instantly. */
+.strips { margin-block: var(--s-2) var(--s-6); }
+.strip-list { display: grid; gap: var(--s-2); }
+.strip {
+  display: grid;
+  grid-template-columns: minmax(0, 8.5rem) minmax(0, 8rem) minmax(0, 1fr);
+  border: 1px solid var(--rule-struct);
+  border-inline-start: 3px solid var(--remark);
+  background: var(--paper-2);
+}
+.strip > * {
+  padding: var(--s-15) var(--s-2);
+  border-inline-end: 1px solid var(--rule-struct);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  min-width: 0;
+}
+.strip > *:last-child { border-inline-end: 0; }
+.strip__no { font-size: var(--fs-md); font-weight: 600; letter-spacing: .06em; }
+.strip__dir,
+.strip__t {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .12em;
+  color: var(--ink-3);
+}
+.strip__lvl .code { font-size: var(--fs-sm); color: var(--remark); }
+.strip__pair { font-family: var(--font-mono); font-size: var(--fs-sm); letter-spacing: .08em; }
+.strip .route-string { color: var(--ink-2); }
+.strips figcaption {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  margin-block-start: var(--s-2);
+}
+@media (max-width: 720px) {
+  .strip { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .strip__rte { grid-column: 1 / -1; border-block-start: 1px solid var(--rule-struct); }
+  .strip > * { border-inline-end: 0; }
+  .strip__call { border-inline-end: 1px solid var(--rule-struct); }
+}
+
+/* Side elevation sits under the plan view in the same drawing track. */
+.af-draw svg + svg { margin-block-start: var(--s-1); }
+.af-line { fill: none; stroke: var(--ink-2); stroke-width: .9; }
+.af-ground { fill: none; stroke: var(--rule-struct); stroke-width: .9; }
+
+/* --- Masthead aircraft -----------------------------------------------------
    Sits behind and to the side of the tagline. Hairline weight so it reads as a
    drawing on the page rather than an illustration pasted onto it.           */
 .masthead__in { position: relative; }
@@ -413,4 +508,21 @@
 @media (max-width: 900px) {
   .masthead__ship { position: static; width: 100%; margin-block-start: var(--s-4); }
   .masthead__ship svg { opacity: .28; }
+}
+
+/* --- Compact top bar on small screens --------------------------------------
+   At 390px the bar wrapped to three rows and took ~44% of the viewport before
+   any content appeared. Same elements, same 44px targets, one row less.     */
+@media (max-width: 720px) {
+  .topbar__in { gap: var(--s-15); row-gap: var(--s-1); padding-block: var(--s-1); }
+  .mark { width: 56px; }
+  .nav { gap: var(--s-2); margin-inline-start: 0; order: 3; width: 100%; }
+  .nav a { font-size: var(--fs-xs); min-height: 40px; }
+  .controls { margin-inline-start: auto; gap: var(--s-1); }
+  .controls .lang { font-size: var(--fs-xs); }
+  .controls .lang a { min-height: 40px; }
+  /* 40px, not the site-wide 44px token: it buys back a whole row on a 390px
+     screen. Still well clear of SC 2.5.8's 24px floor, and stated here rather
+     than left as an unexplained drift from the token. */
+  .ctrl-btn { min-height: 40px; padding-inline: var(--s-1); font-size: 10px; letter-spacing: .06em; }
 }

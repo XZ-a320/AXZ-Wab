@@ -10,7 +10,9 @@
     "tagline": "FLY ON TIME",
     "disclaimer": "A virtual airline. For flight simulation only.",
     "copyright": "Air Xiao Ze (AXZ) © 2026",
-    "description": "Air Xiao Ze (AXZ) is a virtual airline founded in 2026, with its main base at San Francisco International Airport. Two routes, four aircraft, and a complete flight record."
+    "description": "Air Xiao Ze (AXZ) is a virtual airline founded in 2026, with its main base at San Francisco International Airport. Two routes, four aircraft, and a complete flight record.",
+    "artCredit": "Aircraft plan view by Julien.scavini via Wikimedia Commons, CC BY-SA 3.0, cropped and recoloured for this site.",
+    "artCreditLink": "https://commons.wikimedia.org/wiki/File:Boeing_737-800_v1.0.png"
   },
   "nav": {
     "label": "Main navigation",
