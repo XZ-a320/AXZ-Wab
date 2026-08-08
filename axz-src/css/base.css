@@ -153,8 +153,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
-  .track-path { stroke-dashoffset: 0 !important; }
-  .plate-label, .reveal { opacity: 1 !important; transform: none !important; }
+  .reveal { opacity: 1 !important; transform: none !important; }
   .remark-cell { opacity: 1 !important; }
 }
 
@@ -167,8 +166,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   animation-iteration-count: 1 !important;
   transition-duration: 1ms !important;
 }
-:root[data-motion="off"] .track-path { stroke-dashoffset: 0 !important; }
-:root[data-motion="off"] .plate-label,
 :root[data-motion="off"] .reveal { opacity: 1 !important; transform: none !important; }
 
 /* --- Screen-reader-only --------------------------------------------------- */

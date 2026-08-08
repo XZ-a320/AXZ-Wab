@@ -389,10 +389,20 @@
 /* --- Masthead aircraft -----------------------------------------------------
    Julien.scavini's 737-800 top view, shipped as an alpha matte and painted
    through mask-image so the ink colour is the real --ink token in both themes.
-   A plain <img> would bake one colour in and need inverting for night.
+
+   Sized by HEIGHT, not width: with the width driving it the drawing grew past
+   the masthead's bottom rule on wide screens. Height-bounded plus
+   inset-inline-end: 0 keeps it inside its frame on both axes, and the masthead
+   clips anything left over.
+
+   Opacity is per-theme and measured, not eyeballed. At 0.13 the night
+   watermark computed 1.34:1 against #0B0D10 — effectively invisible, which is
+   what it looked like. Night is 0.30 (2.34:1); day stays lighter at 0.15
+   because dark ink on light paper already reads at low alpha.
 
    @supports guard: without mask support the element would paint as a solid
    rectangle, which is far worse than simply not showing it.                  */
+.masthead { overflow: hidden; }
 .masthead__in { position: relative; }
 .masthead__ship { display: none; }
 
@@ -400,31 +410,42 @@
   .masthead__ship {
     display: block;
     position: absolute;
-    inset-block-start: 2%;
-    inset-inline-end: clamp(-56px, -3vw, 0px);
-    width: clamp(300px, 44vw, 720px);
+    inset-block-start: 6%;
+    inset-inline-end: 0;
+    height: min(74%, 520px);
     aspect-ratio: 1205 / 1041;
     pointer-events: none;
     z-index: -1;
     background-color: var(--ink);
-    opacity: .13;
-    -webkit-mask-image: image-set(url("/axz/img/b738-top-1200.webp") 1x);
-    mask-image: image-set(url("/axz/img/b738-top-1200.webp") 1x);
+    opacity: .15;
+    -webkit-mask-image: url("/axz/img/b738-top-1200.webp");
+    mask-image: url("/axz/img/b738-top-1200.webp");
     -webkit-mask-size: contain;
     mask-size: contain;
+    -webkit-mask-position: center right;
+    mask-position: center right;
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
   }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="day"]) .masthead__ship { opacity: .30; }
+  }
+  :root[data-theme="night"] .masthead__ship { opacity: .30; }
+  :root[data-theme="day"] .masthead__ship { opacity: .15; }
+
   /* Below the tagline's column it would sit on top of the type, and at full
-     width it ate an entire phone screen. Smaller, and it stays out of the way. */
+     width it ate an entire phone screen. Static, smaller, out of the way. */
   @media (max-width: 900px) {
     .masthead__ship {
       position: static;
+      height: auto;
       width: min(78%, 340px);
       margin-block-start: var(--s-3);
-      opacity: .22;
-      -webkit-mask-image: image-set(url("/axz/img/b738-top-800.webp") 1x);
-      mask-image: image-set(url("/axz/img/b738-top-800.webp") 1x);
+      -webkit-mask-image: url("/axz/img/b738-top-800.webp");
+      mask-image: url("/axz/img/b738-top-800.webp");
+      -webkit-mask-position: center;
+      mask-position: center;
     }
   }
 }
@@ -526,3 +547,18 @@
      than left as an unexplained drift from the token. */
   .ctrl-btn { min-height: 40px; padding-inline: var(--s-1); font-size: 10px; letter-spacing: .06em; }
 }
+
+/* --- Logbook gate + drop zone ---------------------------------------------- */
+.gate { margin-block-end: var(--s-6); }
+/* The zone is a <label> around a hidden input, so it is the control itself and
+   a click anywhere in it opens the picker. :focus-within carries the ring,
+   because the focused element is the visually hidden input. */
+.dropzone { display: block; cursor: pointer; }
+.dropzone:hover { border-color: var(--ink-2); }
+.dropzone:focus-within {
+  outline: 3px solid var(--focus-outer);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus-inner);
+}
+.dropzone__hint { display: block; color: var(--ink-2); }
+.dropzone__alt { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-block: var(--s-2); }

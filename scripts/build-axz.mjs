@@ -118,6 +118,10 @@ const IMAGES = [
   'B-2472-1200.jpg',              // <picture> fallback
   'wordmark-light.webp', 'wordmark-dark.webp',
   'b738-top-480.webp', 'b738-top-800.webp', 'b738-top-1200.webp',
+  'ksfo-ksns-480.jpg', 'ksfo-ksns-900.jpg', 'ksfo-ksns-927.jpg',
+  'ksfo-ksns-480.webp', 'ksfo-ksns-900.webp', 'ksfo-ksns-927.webp',
+  'zspd-zsnj-480.jpg', 'zspd-zsnj-900.jpg', 'zspd-zsnj-915.jpg',
+  'zspd-zsnj-480.webp', 'zspd-zsnj-900.webp', 'zspd-zsnj-915.webp',
 ]
 const imgSrc = join(SRC, 'img')
 for (const f of IMAGES) {
@@ -125,8 +129,7 @@ for (const f of IMAGES) {
   if (!existsSync(from)) { console.error(`✗ missing image ${f} in axz-src/img/`); process.exit(1) }
   copyFileSync(from, join(OUT, 'img', f))
 }
-// The owner's own chart renders, served unmodified. Kept under axz-src/ so the
-// build does not depend on the legacy AXZ-HTML/ tree surviving.
+// Full-size untouched copies stay available alongside the responsive variants.
 const origSrc = join(SRC, 'reference')
 for (const f of ['KSFO-KSNS.jpg', 'ZSPD-ZSNJ.jpg']) {
   if (!existsSync(join(origSrc, f))) { console.error(`✗ missing reference render ${f}`); process.exit(1) }
@@ -220,61 +223,6 @@ ${body}
 }
 
 /* --- Home ----------------------------------------------------------------- */
-function chartSvg(id) {
-  const p = join(SRC, 'charts', `${id}.svg`)
-  return existsSync(p) ? readFileSync(p, 'utf8') : ''
-}
-
-// Maps a route id to the original chart render shipped alongside the SVG.
-const ORIGINAL = { 'ksfo-ksns': 'KSFO-KSNS.jpg', 'zspd-zsnj': 'ZSPD-ZSNJ.jpg' }
-
-function routeRow(c, lang, id) {
-  const r = c.routes[id], L = c.routes.labels, P = s => parts(s, lang)
-  // The source says "click an airport code to see the route map". The modal
-  // that did that is gone, so rather than delete the owner's sentence, the
-  // codes now open the original chart render — which has detail the traced
-  // SVG omits, so the sentence is true and the click is worth making.
-  const orig = `${BASE}/img/original/${ORIGINAL[id]}`
-  const codeLink = code =>
-    `<a class="code" href="${orig}" aria-label="${esc(code)} — ${esc(c.ui.viewOriginal)}">${esc(code)}</a>`
-  const legs = r.legs.map(leg => `
-      <dt id="${leg.id}">${esc(leg.dir)} <span class="code">${esc(leg.flight)}</span></dt>
-      <dd><span class="route-string">${esc(leg.plan).split(' ').map(t => `<span class="tok">${t}</span>`).join(' ')}</span></dd>`).join('')
-
-  return `<article class="ledger__row reveal" id="${id}">
-  <p class="ledger__no">${esc(r.from)} &#8596; ${esc(r.to)}</p>
-  <div class="ledger__record">
-    <h3 class="record__title">${codeLink(r.from)} <span aria-hidden="true">&#8596;</span> ${codeLink(r.to)}</h3>
-    <p class="record__meta">${P(r.pair)}</p>
-    <figure class="plate">
-      <div class="plate__head"><span>${esc(c.ui.chartCaption)}</span><span class="plate__pair">${esc(r.from)}&#8202;&#8596;&#8202;${esc(r.to)}</span></div>
-      ${chartSvg(id)}
-      <figcaption class="plate__note">${esc(c.home.routeNote)}</figcaption>
-      <a class="plate__original" href="${orig}">${esc(c.home.originalImage)}</a>
-    </figure>
-    <dl class="spec">
-      <dt>${esc(L.distance)}</dt><dd>${esc(r.distance)}</dd>
-      <dt>${esc(L.duration)}</dt><dd>${esc(r.duration)}</dd>
-      <dt>${esc(L.altitude)}</dt><dd>${esc(r.altitude)}</dd>
-      <dt>${esc(L.landmarks)}</dt><dd>${P(r.landmarks)}</dd>
-      ${legs}
-    </dl>
-  </div>
-  <aside class="ledger__remarks">
-    <span class="ledger__remarks-label">${esc(L.plan)}</span>
-    <p class="remark-cell">${P(c.home.routeHint.replace(/^\s*\p{Emoji_Presentation}\s*/u, ''))}</p>
-  </aside>
-</article>`
-}
-
-/* --- Airframe plan view ---------------------------------------------------
-   All four types share one scale, so the A321 is drawn genuinely longer than
-   the 737-800 rather than merely labelled so. Width is set as a percentage of
-   the longest type in the fleet.
-
-   Motion: the outline draws itself in on first view. It has an exact static
-   state — stroke-dashoffset 0 is the finished drawing — so it satisfies the
-   site's motion rule and simply appears complete under reduced motion.      */
 const FLEET_BASE = scaleBase(Object.keys(TYPES))
 
 function fleetScale(c, lang) {
@@ -327,12 +275,8 @@ function fleetScale(c, lang) {
 /* --- Masthead aircraft ----------------------------------------------------
    A real technical drawing, not a generated outline: the top view from
    Julien.scavini's four-view of the 737-800 (Wikimedia Commons, CC BY-SA 3.0),
-   isolated from the sheet and shipped as an alpha matte.
-
-   Painted with CSS mask-image so the line colour comes from --ink and follows
-   the theme, instead of baking a grey into the asset that would drift from the
-   palette. Decorative — the fleet section carries the labelled, dimensioned
-   drawings — so it is aria-hidden.                                          */
+   isolated from the sheet and shipped as an alpha matte. Painted with CSS
+   mask-image so the line colour comes from --ink and follows the theme.     */
 function mastheadShip() {
   return `<div class="masthead__ship" aria-hidden="true"></div>`
 }
@@ -375,8 +319,8 @@ function flightStrips(c, lang) {
    hides completely; drawn to one scale it is the most striking fact here.   */
 function altitudeProfile(c, lang) {
   const legs = [
-    { id: 'ksfo-ksns', ft: 5500, m: 1676 },
-    { id: 'zspd-zsnj', ft: 31100, m: 9500 },
+    { id: 'ksfo-ksns', ft: 5500 },
+    { id: 'zspd-zsnj', ft: 31100 },
   ]
   const W = 720, H = 210, PAD = 34
   const maxFt = 31100
@@ -387,7 +331,6 @@ function altitudeProfile(c, lang) {
     const w = (W - PAD * 2) / 2 - 40
     const top = y(leg.ft)
     const base = H - PAD
-    // climb - cruise - descent, as one profile line
     const d = `M ${x0} ${base} L ${x0 + w * 0.22} ${top.toFixed(1)} L ${x0 + w * 0.78} ${top.toFixed(1)} L ${x0 + w} ${base}`
     return `<g class="prof-leg">
       <path class="prof-path" d="${d}"/>
@@ -403,6 +346,46 @@ function altitudeProfile(c, lang) {
   </svg>
   <figcaption>${parts(c.ui.profileNote, lang)}</figcaption>
 </figure>`
+}
+
+const CHART = {
+  'ksfo-ksns': { base: 'ksfo-ksns', full: 927, orig: 'KSFO-KSNS.jpg', w: 927, h: 627 },
+  'zspd-zsnj': { base: 'zspd-zsnj', full: 915, orig: 'ZSPD-ZSNJ.jpg', w: 915, h: 633 },
+}
+
+function routeRow(c, lang, id) {
+  const r = c.routes[id], L = c.routes.labels, P = s => parts(s, lang)
+  const ch = CHART[id]
+  const legs = r.legs.map(leg => `
+      <dt id="${leg.id}">${esc(leg.dir)} <span class="code">${esc(leg.flight)}</span></dt>
+      <dd><span class="route-string">${esc(leg.plan).split(' ').map(t => `<span class="tok">${t}</span>`).join(' ')}</span></dd>`).join('')
+
+  return `<article class="ledger__row reveal" id="${id}">
+  <p class="ledger__no">${esc(r.from)} &#8596; ${esc(r.to)}</p>
+  <div class="ledger__record">
+    <h3 class="record__title"><span class="code">${esc(r.from)}</span> <span aria-hidden="true">&#8596;</span> <span class="code">${esc(r.to)}</span></h3>
+    <p class="record__meta">${P(r.pair)}</p>
+    <figure class="plate">
+      <div class="plate__head"><span>${esc(c.ui.chartCaption)}</span><span class="plate__pair">${esc(r.from)}&#8202;&#8596;&#8202;${esc(r.to)}</span></div>
+      <picture>
+        <source type="image/webp" srcset="${BASE}/img/${ch.base}-480.webp 480w, ${BASE}/img/${ch.base}-900.webp 900w, ${BASE}/img/${ch.base}-${ch.full}.webp ${ch.full}w" sizes="(max-width: 700px) 100vw, 640px">
+        <img class="plate__img" src="${BASE}/img/${ch.base}-900.jpg" alt="${esc(r.chartAlt)}" width="${ch.w}" height="${ch.h}" loading="lazy" decoding="async">
+      </picture>
+      <figcaption class="plate__note">${esc(c.home.routeNote)}</figcaption>
+    </figure>
+    <dl class="spec">
+      <dt>${esc(L.distance)}</dt><dd>${esc(r.distance)}</dd>
+      <dt>${esc(L.duration)}</dt><dd>${esc(r.duration)}</dd>
+      <dt>${esc(L.altitude)}</dt><dd>${esc(r.altitude)}</dd>
+      <dt>${esc(L.landmarks)}</dt><dd>${P(r.landmarks)}</dd>
+      ${legs}
+    </dl>
+  </div>
+  <aside class="ledger__remarks">
+    <span class="ledger__remarks-label">${esc(L.plan)}</span>
+    ${r.legs.map(leg => `<p class="remark-cell"><span class="code">${esc(leg.flight)}</span> ${esc(leg.dir)}</p>`).join('')}
+  </aside>
+</article>`
 }
 
 function fleetRow(c, lang, id) {
@@ -524,7 +507,15 @@ function guestbook(c, lang) {
   return shell({ c, lang, key: 'guestbook', title: `${c.guestbook.title} — ${c.meta.siteName}`, desc: c.guestbook.archiveNotice, body })
 }
 
-/* --- Logbook -------------------------------------------------------------- */
+/* --- Logbook --------------------------------------------------------------
+   Pilot login first, then the reader. The login is a MOCK: anything gets you
+   in, nothing is checked, nothing is sent. It is kept because the original
+   page had one, and the notice above it says plainly that it verifies nothing
+   so that nobody types a password they actually use.
+
+   The gate is applied BY JAVASCRIPT, not in the markup. With scripts off both
+   sections simply render and the reader still works — a login that cannot be
+   passed without JS would be a dead end, not a feature.                     */
 function logbook(c, lang) {
   const P = s => parts(s, lang)
   const strings = JSON.stringify({
@@ -538,44 +529,52 @@ function logbook(c, lang) {
   <h1>${P(c.logbook.title)}</h1>
   <p class="prose">${P(c.logbook.intro)}</p>
 
-  <div class="dropzone" data-axzlog-zone>
-  <div class="dropzone" data-axzlog-zone>
-    <p class="dropzone__hint" id="dz-hint">${esc(c.logbook.dropzone)}</p>
-    <label class="btn" for="axzfile">${esc(c.logbook.dropzoneButton)}</label>
-    <input id="axzfile" type="file" accept=".axzlog" class="sr-only" data-axzlog-input>
-    <button class="btn" type="button" data-axzlog-sample="${BASE}/fixtures/sample.axzlog">${esc(c.logbook.sampleButton)}</button>
-    <button class="btn" type="button" data-axzlog-clear>${esc(c.logbook.clearButton)}</button>
+  <section class="gate" data-gate>
+    <h2>${esc(c.logbook.loginTitle)}</h2>
+    <div class="notice">${P(c.logbook.loginDemoNotice)}</div>
+    <form class="demo-gate" data-demo-gate autocomplete="off" novalidate
+          data-welcome="${esc(c.logbook.welcome)}" data-note="${esc(c.logbook.welcomeNote)}">
+      <div class="field">
+        <label for="pilot">${esc(c.logbook.loginUser)}</label>
+        <input id="pilot" name="pilot" type="text" autocomplete="off" placeholder="${esc(c.logbook.loginUserPlaceholder)}">
+      </div>
+      <div class="field">
+        <label for="pilotpw">${esc(c.logbook.loginPass)}</label>
+        <!-- Inert by construction: no name, no form action, never read, never
+             stored, never sent. autocomplete/data-1p-ignore stop password
+             managers offering to save anything typed here. -->
+        <input id="pilotpw" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true"
+               placeholder="${esc(c.logbook.loginPassPlaceholder)}">
+      </div>
+      <p class="status" role="status" data-demo-status></p>
+      <button class="btn" type="submit">${esc(c.logbook.loginButton)}</button>
+      <p class="record__meta">${esc(c.logbook.loginNoRegister)}</p>
+    </form>
+  </section>
+
+  <div data-viewer>
+    <h2 class="sr-only" id="viewer-h" tabindex="-1">${P(c.logbook.title)}</h2>
+    <!-- The whole zone is the file control: a <label> wrapping a visually
+         hidden input, so a click anywhere opens the picker and the file loads
+         the moment it is chosen. No separate "load" step. -->
+    <label class="dropzone" data-axzlog-zone>
+      <input id="axzfile" type="file" accept=".axzlog" class="sr-only" data-axzlog-input>
+      <span class="dropzone__hint">${esc(c.logbook.dropzone)}</span>
+    </label>
+    <p class="dropzone__alt">
+      <button class="btn" type="button" data-axzlog-sample="${BASE}/fixtures/sample.axzlog">${esc(c.logbook.sampleButton)}</button>
+      <button class="btn" type="button" data-axzlog-clear>${esc(c.logbook.clearButton)}</button>
+    </p>
+    <p class="status" role="status" data-axzlog-status></p>
+    <div class="ledger" data-axzlog-out hidden></div>
+
+    <h2>${esc(c.logbook.formatTitle)}</h2>
+    <p class="prose">${P(c.logbook.formatBody)}</p>
+
+    <h2>${esc(c.logbook.legacyTitle)}</h2>
+    <p class="notice">${P(c.logbook.legacyNote)}</p>
+    <ul class="record__events">${c.logbook.legacy.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
   </div>
-  <p class="status" role="status" data-axzlog-status></p>
-  <div class="ledger" data-axzlog-out hidden></div>
-
-  <h2>${esc(c.logbook.formatTitle)}</h2>
-  <p class="prose">${P(c.logbook.formatBody)}</p>
-
-  <h2>${esc(c.logbook.loginTitle)}</h2>
-  <div class="notice">${P(c.logbook.loginDemoNotice)}</div>
-  <form class="demo-gate" data-demo-gate autocomplete="off" novalidate
-        data-welcome="${esc(c.logbook.welcome)}" data-note="${esc(c.logbook.welcomeNote)}">
-    <div class="field">
-      <label for="pilot">${esc(c.logbook.loginUser)}</label>
-      <input id="pilot" name="pilot" type="text" autocomplete="off" placeholder="${esc(c.logbook.loginUserPlaceholder)}">
-    </div>
-    <div class="field">
-      <label for="pilotpw">${esc(c.logbook.loginPass)}</label>
-      <!-- Inert by construction: no name, no form action, never read, never
-           stored, never sent. autocomplete/data-1p-ignore keep password
-           managers from offering to save anything typed here. -->
-      <input id="pilotpw" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true"
-             placeholder="${esc(c.logbook.loginPassPlaceholder)}">
-    </div>
-    <p class="status" role="status" data-demo-status></p>
-    <button class="btn" type="submit">${esc(c.logbook.loginButton)}</button>
-    <p class="record__meta">${esc(c.logbook.loginNoRegister)}</p>
-  </form>
-
-  <h2>${esc(c.logbook.legacyTitle)}</h2>
-  <p class="notice">${P(c.logbook.legacyNote)}</p>
-  <ul class="record__events">${c.logbook.legacy.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
 </section>`
   return shell({ c, lang, key: 'logbook', title: `${c.logbook.title} — ${c.meta.siteName}`, desc: c.logbook.intro, body })
 }

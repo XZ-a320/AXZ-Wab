@@ -55,7 +55,6 @@
     "routesMore": "查看更多航线",
     "fleetMore": "查看更多飞机",
     "routeListTitle": "全部航线",
-    "routeHint": "👆 点击机场代码可查看航线示意图",
     "routeNote": "注：上方示意图为去程航路",
     "originalImage": "原图",
     "originalImageClose": "关闭"
@@ -304,7 +303,7 @@
     "title": "飞行日志查看器",
     "headerSub": "Air Xiao Ze (AXZ) · 飞行日志",
     "intro": "把 .axzlog 文件拖进下面的区域，页面会当场把里面的内容读出来。文件不会上传到任何服务器，整个过程都在你自己的浏览器里完成。",
-    "dropzone": "把 .axzlog 文件拖到这里，也可以点下面的按钮选文件",
+    "dropzone": "把 .axzlog 文件拖到这里，或者点一下这块区域选文件",
     "dropzoneButton": "选择日志文件",
     "sampleButton": "载入示例文件",
     "sampleNotice": "示例文件 · 由本站生成，非真实飞行记录",

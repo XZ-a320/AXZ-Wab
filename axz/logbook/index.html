@@ -18,7 +18,7 @@
 <link rel="preload" as="font" type="font/woff2" href="/axz/fonts/axz-sans-400-zh.966e9de8.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="/axz/fonts/axz-mono-400.6fc3e157.woff2" crossorigin>
 <style>@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-400-zh.966e9de8.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-700-zh.b140c00d.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Serif";src:url("/axz/fonts/axz-serif-400-zh.18350178.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-400.6fc3e157.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-600.4d4d2e8c.woff2") format("woff2");font-weight:600;font-style:normal;font-display:swap;}</style>
-<link rel="stylesheet" href="/axz/assets/axz.cec66e7f.css">
+<link rel="stylesheet" href="/axz/assets/axz.e01a87ec.css">
 </head>
 <body>
 <a class="skip" href="#main">跳到主要内容</a>
@@ -51,44 +51,52 @@
   <h1>飞行日志查看器</h1>
   <p class="prose">把 .axzlog 文件拖进下面的区域，页面会当场把里面的内容读出来。文件不会上传到任何服务器，整个过程都在你自己的浏览器里完成。</p>
 
-  <div class="dropzone" data-axzlog-zone>
-  <div class="dropzone" data-axzlog-zone>
-    <p class="dropzone__hint" id="dz-hint">把 .axzlog 文件拖到这里，也可以点下面的按钮选文件</p>
-    <label class="btn" for="axzfile">选择日志文件</label>
-    <input id="axzfile" type="file" accept=".axzlog" class="sr-only" data-axzlog-input>
-    <button class="btn" type="button" data-axzlog-sample="/axz/fixtures/sample.axzlog">载入示例文件</button>
-    <button class="btn" type="button" data-axzlog-clear>清除</button>
+  <section class="gate" data-gate>
+    <h2>飞行员登录</h2>
+    <div class="notice">这个登录框只是把原来页面的样子留了下来，它不会真的核对任何东西。本站是静态网站，没有服务器，也没有账号；你在这里输入的内容不会被发送、保存或校验。别用你真在用的密码，随便填就能进。</div>
+    <form class="demo-gate" data-demo-gate autocomplete="off" novalidate
+          data-welcome="欢迎" data-note="这个登录框只是还原原页面的样子。上面的查看器谁都能直接用，不用登录。">
+      <div class="field">
+        <label for="pilot">用户名</label>
+        <input id="pilot" name="pilot" type="text" autocomplete="off" placeholder="输入飞行员用户名">
+      </div>
+      <div class="field">
+        <label for="pilotpw">密码</label>
+        <!-- Inert by construction: no name, no form action, never read, never
+             stored, never sent. autocomplete/data-1p-ignore stop password
+             managers offering to save anything typed here. -->
+        <input id="pilotpw" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true"
+               placeholder="输入密码">
+      </div>
+      <p class="status" role="status" data-demo-status></p>
+      <button class="btn" type="submit">登录</button>
+      <p class="record__meta">此处不提供注册服务</p>
+    </form>
+  </section>
+
+  <div data-viewer>
+    <h2 class="sr-only" id="viewer-h" tabindex="-1">飞行日志查看器</h2>
+    <!-- The whole zone is the file control: a <label> wrapping a visually
+         hidden input, so a click anywhere opens the picker and the file loads
+         the moment it is chosen. No separate "load" step. -->
+    <label class="dropzone" data-axzlog-zone>
+      <input id="axzfile" type="file" accept=".axzlog" class="sr-only" data-axzlog-input>
+      <span class="dropzone__hint">把 .axzlog 文件拖到这里，或者点一下这块区域选文件</span>
+    </label>
+    <p class="dropzone__alt">
+      <button class="btn" type="button" data-axzlog-sample="/axz/fixtures/sample.axzlog">载入示例文件</button>
+      <button class="btn" type="button" data-axzlog-clear>清除</button>
+    </p>
+    <p class="status" role="status" data-axzlog-status></p>
+    <div class="ledger" data-axzlog-out hidden></div>
+
+    <h2>.axzlog 是什么</h2>
+    <p class="prose">文件开头是 6 个字节的 ASCII 字符 AXZLOG，后面接一段 gzip 压缩过的 UTF-8 JSON。浏览器自己就能解压，所以这个页面不需要服务器。</p>
+
+    <h2>原来的日志系统</h2>
+    <p class="notice">原来的飞行日志页要有服务器才能用：飞行员上传的 .axzlog 存在服务器上，大家一起下载。本站是静态网站，没有这台服务器，所以改成在你自己的浏览器里直接读文件。下面是原页面上的文字，留在这里作个记录。</p>
+    <ul class="record__events"><li>飞行日志管理</li><li>提交飞行日志</li><li>下载飞行日志</li><li>仅支持上传 .axzlog 格式，所有飞行员共享日志</li><li>可用日志列表</li><li>下载</li></ul>
   </div>
-  <p class="status" role="status" data-axzlog-status></p>
-  <div class="ledger" data-axzlog-out hidden></div>
-
-  <h2>.axzlog 是什么</h2>
-  <p class="prose">文件开头是 6 个字节的 ASCII 字符 AXZLOG，后面接一段 gzip 压缩过的 UTF-8 JSON。浏览器自己就能解压，所以这个页面不需要服务器。</p>
-
-  <h2>飞行员登录</h2>
-  <div class="notice">这个登录框只是把原来页面的样子留了下来，它不会真的核对任何东西。本站是静态网站，没有服务器，也没有账号；你在这里输入的内容不会被发送、保存或校验。别用你真在用的密码，随便填就能进。</div>
-  <form class="demo-gate" data-demo-gate autocomplete="off" novalidate
-        data-welcome="欢迎" data-note="这个登录框只是还原原页面的样子。上面的查看器谁都能直接用，不用登录。">
-    <div class="field">
-      <label for="pilot">用户名</label>
-      <input id="pilot" name="pilot" type="text" autocomplete="off" placeholder="输入飞行员用户名">
-    </div>
-    <div class="field">
-      <label for="pilotpw">密码</label>
-      <!-- Inert by construction: no name, no form action, never read, never
-           stored, never sent. autocomplete/data-1p-ignore keep password
-           managers from offering to save anything typed here. -->
-      <input id="pilotpw" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true"
-             placeholder="输入密码">
-    </div>
-    <p class="status" role="status" data-demo-status></p>
-    <button class="btn" type="submit">登录</button>
-    <p class="record__meta">此处不提供注册服务</p>
-  </form>
-
-  <h2>原来的日志系统</h2>
-  <p class="notice">原来的飞行日志页要有服务器才能用：飞行员上传的 .axzlog 存在服务器上，大家一起下载。本站是静态网站，没有这台服务器，所以改成在你自己的浏览器里直接读文件。下面是原页面上的文字，留在这里作个记录。</p>
-  <ul class="record__events"><li>飞行日志管理</li><li>提交飞行日志</li><li>下载飞行日志</li><li>仅支持上传 .axzlog 格式，所有飞行员共享日志</li><li>可用日志列表</li><li>下载</li></ul>
 </section>
 </main>
 <footer class="foot">
@@ -99,6 +107,6 @@
     <p class="foot__credit">机型俯视图：Julien.scavini，取自维基共享资源，CC BY-SA 3.0，本站做了裁切与重新上色。 <a href="https://commons.wikimedia.org/wiki/File:Boeing_737-800_v1.0.png" rel="license noopener noreferrer" target="_blank">在新窗口打开</a></p>
   </div>
 </footer>
-<script src="/axz/assets/axz.1c58d59d.js" defer></script>
+<script src="/axz/assets/axz.ff804a8f.js" defer></script>
 </body>
 </html>

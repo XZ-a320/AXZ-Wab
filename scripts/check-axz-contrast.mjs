@@ -66,19 +66,12 @@ const CASES = [
   [night, '--focus-outer', '--paper', 3.0, 'focus ring (1.4.11)'],
 
   [plate, '--plate-ink', '--plate', 4.5, 'plate text'],
-  [plate, '--plate-ink-2', '--plate', 4.5, 'plate secondary text'],
-  [plate, '--plate-cyan', '--plate', 4.5, 'plate waypoint labels'],
-  [plate, '--arr-text', '--plate', 4.5, 'arrival label (text tier)'],
-  [plate, '--track', '--plate', 3.0, 'route track (mark)'],
-  [plate, '--fix', '--plate', 3.0, 'fix triangles (mark)'],
-  [plate, '--airway', '--plate', 3.0, 'airway dashes (mark)'],
-  [plate, '--dep', '--plate', 3.0, 'departure glyph (mark)'],
-  [plate, '--arr', '--plate', 3.0, 'arrival glyph (mark)'],
-  [plate, '--terrain', '--plate', 3.0, 'terrain hatching (mark)'],
+  [plate, '--plate-ink-2', '--plate', 4.5, 'plate caption text'],
 ]
 
 // Tokens that may only ever be used as marks, never in a `color:` declaration.
-const MARK_ONLY = ['--arr', '--terrain']
+// The traced chart is gone, so no mark-only tokens remain to police.
+const MARK_ONLY = []
 
 const fails = []
 const rows = []

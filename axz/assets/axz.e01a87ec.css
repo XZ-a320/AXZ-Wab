@@ -127,25 +127,20 @@
 }
 
 /* --- PLATE ---------------------------------------------------------------
-   These are night charts. They do NOT remap on theme change: --plate is
-   16.64:1 against day paper and reads as an inset object in both modes.
+   The frame around the owner's own chart render. Night values that do NOT
+   remap on theme change: --plate is 16.64:1 against day paper, so the chart
+   reads as an inset object in both modes.
 
-   TIERING RULE: values sampled from the original charts are MARKS. A token
-   marked "mark only" appearing in a `color:` declaration fails the build.   */
+   The mark tokens that used to live here (track, fix, airway, terrain...)
+   described the traced SVG. That trace is gone, so they went with it rather
+   than sit here as values a gate pretends to verify.                        */
 
 .plate {
   --plate:       #0E1114;
   --plate-ink:   #E9E5DC;   /* 15.06 on plate - text */
   --plate-ink-2: #9AA3AC;   /*  7.40 on plate - text */
-  --plate-cyan:  #00A2E8;   /*  6.61 - text + mark (circled waypoints) */
-  --track:       #D8E04A;   /* 13.24 - mark: the flown route */
-  --fix:         #C8CDD4;   /* 11.85 - mark: triangle fixes */
-  --airway:      #E0A93B;   /*  8.93 - mark: dashed airways */
-  --dep:         #4CC97A;   /*  8.97 - mark: departure glyph */
-  --arr:         #F2554A;   /*  5.57 - MARK ONLY */
-  --arr-text:    #FF8A7E;   /*  8.29 - text tier of the same red */
-  --terrain:     #676F79;   /*  3.72 - MARK ONLY, terrain hatching */
 }
+
 
 /* ==========================================================================
    AXZ base — reset, typography, focus, landmarks, motion
@@ -302,8 +297,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
-  .track-path { stroke-dashoffset: 0 !important; }
-  .plate-label, .reveal { opacity: 1 !important; transform: none !important; }
+  .reveal { opacity: 1 !important; transform: none !important; }
   .remark-cell { opacity: 1 !important; }
 }
 
@@ -316,8 +310,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   animation-iteration-count: 1 !important;
   transition-duration: 1ms !important;
 }
-:root[data-motion="off"] .track-path { stroke-dashoffset: 0 !important; }
-:root[data-motion="off"] .plate-label,
 :root[data-motion="off"] .reveal { opacity: 1 !important; transform: none !important; }
 
 /* --- Screen-reader-only --------------------------------------------------- */
@@ -485,12 +477,14 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* ==========================================================================
    AXZ plate — the route chart.
-   These are night charts and do NOT remap on theme change: --plate is 16.64:1
-   against day paper, so it reads as an inset object in both modes.
 
-   TIERING: values sampled from the original charts are MARKS. A token marked
-   "mark only" in tokens.css may never appear in a color: declaration — the
-   build fails on it (scripts/check-axz-contrast.mjs).
+   The chart is the owner's OWN render, shown directly. It replaced a traced
+   SVG: the original carries detail the trace omitted, and showing it removes
+   any chance of the drawing disagreeing with its source.
+
+   The plate does NOT remap on theme change. These are night charts, and
+   --plate is 16.64:1 against day paper, so it reads as an inset object in
+   both modes. No motion here — the chart is a document, not an animation.
    ========================================================================== */
 
 .plate {
@@ -499,7 +493,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   border: 1px solid var(--rule-struct);
   padding: var(--s-3);
 }
-.plate svg { width: 100%; height: auto; }
 
 .plate__head {
   display: flex;
@@ -517,6 +510,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .plate__pair { color: var(--plate-ink); font-size: var(--fs-sm); letter-spacing: .1em; }
 
+.plate__img { width: 100%; height: auto; display: block; }
+
 .plate__note {
   font-family: var(--font-mono);
   font-size: var(--fs-mono-xs);
@@ -524,90 +519,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   margin-block-start: var(--s-2);
   padding-block-start: var(--s-1);
   border-block-start: 1px solid var(--plate-ink-2);
-}
-
-/* Chart marks. Square caps — the source charts have square caps. */
-.plate-track {
-  fill: none;
-  stroke: var(--track);
-  stroke-width: 2;
-  stroke-linecap: square;
-  stroke-dasharray: 5 4;
-}
-.plate-airway {
-  fill: none;
-  stroke: var(--airway);
-  stroke-width: 1;
-  stroke-dasharray: 8 6;
-  opacity: .85;
-}
-.plate-fix { fill: none; stroke: var(--fix); stroke-width: 1.25; }
-.plate-wpt { fill: none; stroke: var(--plate-cyan); stroke-width: 1.5; }
-.plate-dep { fill: var(--dep); }
-.plate-arr { fill: var(--arr); }
-.plate-terrain { fill: none; stroke: var(--terrain); stroke-width: .75; }
-
-.plate-label {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: .08em;
-  fill: var(--plate-ink);
-}
-.plate-label--wpt { fill: var(--plate-cyan); }
-.plate-label--arr { fill: var(--arr-text); }   /* text tier, never --arr */
-.plate-label--awy { fill: var(--airway); font-size: 9px; }
-
-/* The route draw. A track flies at constant speed, so: linear.
-   Reduced motion and the stop toggle declare stroke-dashoffset: 0 (base.css). */
-.track-path {
-  stroke-dasharray: var(--len);
-  stroke-dashoffset: var(--len);
-  animation: track-draw var(--t-4) var(--ease-track) forwards;
-}
-@keyframes track-draw { to { stroke-dashoffset: 0; } }
-
-/* The original renders stay available and unmodified. */
-.plate__original {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--tap);
-  margin-block-start: var(--s-2);
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono-xs);
-  letter-spacing: .1em;
-  color: var(--plate-cyan);
-}
-
-/* --- The aircraft on the chart --------------------------------------------
-   Follows the same path data as the track, so the drawing and the motion can
-   never disagree. offset-rotate: auto keeps the heading correct through every
-   turn — the aircraft banks into the airway the way the routing actually does.
-
-   STATIC STATE: offset-distance 100% — parked at the destination. Removing the
-   animation leaves an aircraft sitting at the arrival airport, which is a
-   complete and truthful picture of the leg, not a broken frame.             */
-.plate-ship {
-  offset-path: var(--track-d);
-  offset-rotate: auto;
-  offset-distance: 100%;
-}
-.plate-ship-glyph {
-  fill: var(--plate-ink);
-  stroke: var(--plate);
-  stroke-width: 1.2;
-  paint-order: stroke fill;   /* a thin plate-coloured halo lifts it off the track */
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  :root:not([data-motion="off"]) .plate-ship {
-    animation: ship-fly 9s var(--ease-track) infinite;
-  }
-}
-@keyframes ship-fly {
-  0%        { offset-distance: 0%;   opacity: 0; }
-  4%        { opacity: 1; }
-  86%       { opacity: 1; }
-  92%, 100% { offset-distance: 100%; opacity: 0; }
 }
 
 /* --- Altitude profile ------------------------------------------------------
@@ -1040,10 +951,20 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* --- Masthead aircraft -----------------------------------------------------
    Julien.scavini's 737-800 top view, shipped as an alpha matte and painted
    through mask-image so the ink colour is the real --ink token in both themes.
-   A plain <img> would bake one colour in and need inverting for night.
+
+   Sized by HEIGHT, not width: with the width driving it the drawing grew past
+   the masthead's bottom rule on wide screens. Height-bounded plus
+   inset-inline-end: 0 keeps it inside its frame on both axes, and the masthead
+   clips anything left over.
+
+   Opacity is per-theme and measured, not eyeballed. At 0.13 the night
+   watermark computed 1.34:1 against #0B0D10 — effectively invisible, which is
+   what it looked like. Night is 0.30 (2.34:1); day stays lighter at 0.15
+   because dark ink on light paper already reads at low alpha.
 
    @supports guard: without mask support the element would paint as a solid
    rectangle, which is far worse than simply not showing it.                  */
+.masthead { overflow: hidden; }
 .masthead__in { position: relative; }
 .masthead__ship { display: none; }
 
@@ -1051,31 +972,42 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   .masthead__ship {
     display: block;
     position: absolute;
-    inset-block-start: 2%;
-    inset-inline-end: clamp(-56px, -3vw, 0px);
-    width: clamp(300px, 44vw, 720px);
+    inset-block-start: 6%;
+    inset-inline-end: 0;
+    height: min(74%, 520px);
     aspect-ratio: 1205 / 1041;
     pointer-events: none;
     z-index: -1;
     background-color: var(--ink);
-    opacity: .13;
-    -webkit-mask-image: image-set(url("/axz/img/b738-top-1200.webp") 1x);
-    mask-image: image-set(url("/axz/img/b738-top-1200.webp") 1x);
+    opacity: .15;
+    -webkit-mask-image: url("/axz/img/b738-top-1200.webp");
+    mask-image: url("/axz/img/b738-top-1200.webp");
     -webkit-mask-size: contain;
     mask-size: contain;
+    -webkit-mask-position: center right;
+    mask-position: center right;
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
   }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="day"]) .masthead__ship { opacity: .30; }
+  }
+  :root[data-theme="night"] .masthead__ship { opacity: .30; }
+  :root[data-theme="day"] .masthead__ship { opacity: .15; }
+
   /* Below the tagline's column it would sit on top of the type, and at full
-     width it ate an entire phone screen. Smaller, and it stays out of the way. */
+     width it ate an entire phone screen. Static, smaller, out of the way. */
   @media (max-width: 900px) {
     .masthead__ship {
       position: static;
+      height: auto;
       width: min(78%, 340px);
       margin-block-start: var(--s-3);
-      opacity: .22;
-      -webkit-mask-image: image-set(url("/axz/img/b738-top-800.webp") 1x);
-      mask-image: image-set(url("/axz/img/b738-top-800.webp") 1x);
+      -webkit-mask-image: url("/axz/img/b738-top-800.webp");
+      mask-image: url("/axz/img/b738-top-800.webp");
+      -webkit-mask-position: center;
+      mask-position: center;
     }
   }
 }
@@ -1177,3 +1109,18 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
      than left as an unexplained drift from the token. */
   .ctrl-btn { min-height: 40px; padding-inline: var(--s-1); font-size: 10px; letter-spacing: .06em; }
 }
+
+/* --- Logbook gate + drop zone ---------------------------------------------- */
+.gate { margin-block-end: var(--s-6); }
+/* The zone is a <label> around a hidden input, so it is the control itself and
+   a click anywhere in it opens the picker. :focus-within carries the ring,
+   because the focused element is the visually hidden input. */
+.dropzone { display: block; cursor: pointer; }
+.dropzone:hover { border-color: var(--ink-2); }
+.dropzone:focus-within {
+  outline: 3px solid var(--focus-outer);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus-inner);
+}
+.dropzone__hint { display: block; color: var(--ink-2); }
+.dropzone__alt { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-block: var(--s-2); }

@@ -52,8 +52,9 @@ console.log('\nkeyboard')
   await page.close()
 }
 
-/* 2. The .axzlog viewer decodes the sample entirely client-side. */
-console.log('\n.axzlog viewer')
+/* 2. Pilot gate then reader. The gate is a mock — anything gets in — and the
+      reader loads a file the moment it is chosen, with no extra step. */
+console.log('\nlogbook: mock gate then reader')
 {
   const page = await ctx.newPage()
   // The property that matters is that the LOG DATA never leaves the browser —
@@ -64,25 +65,51 @@ console.log('\n.axzlog viewer')
   page.on('request', r => {
     if (r.method() === 'GET') return
     const body = r.postData() || ''
-    const carriesLog = /AXZ001|B-737X|AXZLOG|axzlog|KSFO SID/.test(body)
-    if (carriesLog) uploads.push(`${r.url()} :: ${body.slice(0, 120)}`)
+    if (/AXZ001|B-737X|AXZLOG|axzlog|KSFO SID/.test(body)) uploads.push(`${r.url()} :: ${body.slice(0, 120)}`)
   })
   await page.goto(BASE + '/axz/logbook/', { waitUntil: 'networkidle' })
-  await page.click('[data-axzlog-sample]')
+
+  // Gate first.
+  const gateSeen = await page.isVisible('[data-gate]')
+  const viewerHidden = !(await page.isVisible('[data-viewer]'))
+  gateSeen && viewerHidden ? ok('pilot login is shown first, reader is gated')
+    : bad(`gate visible=${gateSeen}, reader hidden=${viewerHidden}`)
+
+  // Mock: arbitrary input gets in.
+  await page.fill('#pilot', 'zzzz-not-a-real-user')
+  await page.fill('#pilotpw', 'anything-at-all')
+  await page.click('[data-demo-gate] button[type=submit]')
+  await page.waitForTimeout(200)
+  const inNow = await page.isVisible('[data-viewer]')
+  inNow ? ok('any credentials get in (mock gate)') : bad('mock gate did not open the reader')
+  const gateGone = !(await page.isVisible('[data-gate]'))
+  gateGone ? ok('the login form is dismissed once through') : bad('login form still showing after entry')
+
+  // Choosing a file loads it immediately — no second button to press.
+  await page.setInputFiles('[data-axzlog-input]', 'axz-src/fixtures/sample.axzlog')
   await page.waitForSelector('[data-axzlog-out]:not([hidden])', { timeout: 5000 }).catch(() => {})
   const out = await page.textContent('[data-axzlog-out]').catch(() => '')
-  out.includes('AXZ001') ? ok('sample decodes: flight number rendered') : bad('sample did not decode')
+  out.includes('AXZ001') ? ok('file renders immediately on selection, no extra load step') : bad('selection did not load the file')
   out.includes('B-737X') ? ok('registration rendered') : bad('registration missing')
   out.includes('KSFO SID OSI V25') ? ok('filed route string rendered intact') : bad('route string missing/altered')
   const bands = await page.$$eval('.band__name', ns => ns.map(n => n.textContent.trim()))
   bands.length === 5 ? ok(`all five flight bands rendered: ${bands.join(' / ')}`) : bad(`${bands.length} bands, expected 5`)
-  // CruiseRemarkNone: true must render the 无 empty state the schema defines.
   const none = await page.$$eval('.remark-none', ns => ns.map(n => n.textContent.trim()))
   none.length >= 1 ? ok(`备注 empty state rendered as "${none[0]}"`) : bad('CruiseRemarkNone did not render the 无 empty state')
-  const remark = await page.textContent('.remark-cell').catch(() => '')
-  remark.includes('示例文件') ? ok('post-flight 备注 rendered in the remarks column') : bad('post-flight remark missing')
   uploads.length === 0 ? ok('the log data never leaves the browser (no request carries it)') : bad(`log data was transmitted: ${uploads.join(' / ')}`)
   await page.close()
+}
+
+/* 2b. With scripts off the gate must not lock anyone out: both the login and
+      the reader render, because a mock gate that cannot be passed is a dead end. */
+{
+  const c2 = await browser.newContext({ javaScriptEnabled: false })
+  const page = await c2.newPage()
+  await page.goto(BASE + '/axz/logbook/', { waitUntil: 'domcontentloaded' })
+  const both = (await page.isVisible('[data-gate]')) && (await page.isVisible('[data-viewer]'))
+  both ? ok('no JavaScript: reader is not locked behind the mock gate')
+       : bad('no JavaScript: the reader is unreachable')
+  await page.close(); await c2.close()
 }
 
 /* 3. April Fools: sanitized, gated, exit works, noindex. */
@@ -196,10 +223,6 @@ console.log('\nbilingual')
       leave the graphics fully drawn rather than blank. */
 console.log('\nmotion')
 {
-  // suppressed=true means the visitor has ASKED for motion to stop, so the
-  // aircraft must be parked too. With JS merely absent, nobody asked for that —
-  // the CSS animation is welcome to keep running; what must not happen is a
-  // blank figure. So only the first two scenarios require shipAnim: none.
   async function drawnState(label, makeCtx, prep, suppressed) {
     const c = await makeCtx()
     const page = await c.newPage()
@@ -210,29 +233,42 @@ console.log('\nmotion')
     const r = await page.evaluate(() => {
       const af = document.querySelector('.af-part')
       const pf = document.querySelector('.prof-path')
-      const ship = document.querySelector('.plate-ship')
       const cs = el => el ? getComputedStyle(el) : null
-      const a = cs(af), p = cs(pf), s = cs(ship)
+      const a = cs(af), p = cs(pf)
       return {
         // "drawn" means: no dash offset hiding the stroke, and fill visible.
         afHidden: a ? (parseFloat(a.strokeDashoffset) > 1 || parseFloat(a.fillOpacity) < 0.99) : null,
         profHidden: p ? parseFloat(p.strokeDashoffset) > 1 : null,
-        shipAnim: s ? s.animationName : null,
-        shipDist: s ? s.offsetDistance : null,
       }
     })
     await page.close(); await c.close()
     const drawn = r.afHidden === false && r.profHidden === false
-    const parked = !suppressed || r.shipAnim === 'none'
-    drawn && parked
-      ? okMsg(`${label}: airframes and profile fully drawn${suppressed ? `, aircraft parked (${r.shipDist})` : ', aircraft still flying (nothing asked it to stop)'}`)
-      : bad(`${label}: ${JSON.stringify(r)}`)
+    drawn ? okMsg(`${label}: airframes and profile fully drawn`)
+          : bad(`${label}: ${JSON.stringify(r)}`)
   }
   const okMsg = ok
-  await drawnState('prefers-reduced-motion', () => browser.newContext({ reducedMotion: 'reduce' }), null, true)
+  await drawnState('prefers-reduced-motion', () => browser.newContext({ reducedMotion: 'reduce' }))
   await drawnState('stop-animation toggle', () => browser.newContext(),
-    p => p.addInitScript(() => { try { localStorage.setItem('axz-motion', 'off') } catch (e) {} }), true)
-  await drawnState('no JavaScript', () => browser.newContext({ javaScriptEnabled: false }), null, false)
+    p => p.addInitScript(() => { try { localStorage.setItem('axz-motion', 'off') } catch (e) {} }))
+  await drawnState('no JavaScript', () => browser.newContext({ javaScriptEnabled: false }))
+
+  // The route section is a document now, not an animation. Guard it, or the
+  // flying aircraft and the track draw quietly come back on a later change.
+  {
+    const page = await ctx.newPage()
+    await page.goto(BASE + '/axz/', { waitUntil: 'domcontentloaded' })
+    const leftovers = await page.evaluate(() => ({
+      ship: document.querySelectorAll('.plate-ship').length,
+      track: document.querySelectorAll('.track-path').length,
+      svg: document.querySelectorAll('.plate svg').length,
+      img: document.querySelectorAll('.plate__img').length,
+    }))
+    leftovers.ship === 0 && leftovers.track === 0 && leftovers.svg === 0
+      ? ok('route plates carry no motion and no traced SVG')
+      : bad(`route plates still animated: ${JSON.stringify(leftovers)}`)
+    leftovers.img === 2 ? ok("both plates show the owner's own chart render") : bad(`${leftovers.img} chart images, expected 2`)
+    await page.close()
+  }
 }
 
 await browser.close()

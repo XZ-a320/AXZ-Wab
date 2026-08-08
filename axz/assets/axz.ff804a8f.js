@@ -79,15 +79,6 @@
     for (var j = 0; j < items.length; j++) io.observe(items[j])
   }
 
-  /* --- Route track length -------------------------------------------------
-     Set the dash length from the real path so the draw is exact.            */
-  var tracks = document.querySelectorAll('.track-path')
-  for (var k = 0; k < tracks.length; k++) {
-    try {
-      var len = tracks[k].getTotalLength()
-      tracks[k].style.setProperty('--len', len)
-    } catch (e) {}
-  }
 })()
 
 /* --- April Fools gate -----------------------------------------------------
@@ -146,81 +137,38 @@
 })()
 
 /* --- Demo gate ------------------------------------------------------------
-   The original login is preserved for fidelity, but it authenticates nothing:
-   the real page fetched users/<name>.txt and string-compared it in the client,
+   The original login is preserved and made honest: it authenticates nothing.
+   The real page fetched users/<name>.txt and string-compared it in the client,
    which published the password to anyone who opened the URL. Here the fields
-   are never read, never stored and never sent — submitting only acknowledges.
-   The .axzlog reader above is deliberately NOT gated behind it.            */
+   are never read, never stored and never sent.
+
+   The gating happens HERE rather than in the markup, so with scripts off both
+   the login and the reader render and the reader still works. A mock login
+   that could not be passed without JS would lock people out of the page for
+   no gain.                                                                  */
 ;(function () {
   'use strict'
   var form = document.querySelector('[data-demo-gate]')
-  if (!form) return
-  var status = form.querySelector('[data-demo-status]')
+  var gate = document.querySelector('[data-gate]')
+  var viewer = document.querySelector('[data-viewer]')
+  if (!form || !gate || !viewer) return
+
+  viewer.hidden = true            // only now, once JS is known to run
+
   form.addEventListener('submit', function (ev) {
     ev.preventDefault()
-    var name = (form.querySelector('#pilot') || {}).value || ''
-    status.textContent = (form.getAttribute('data-welcome') || '欢迎') +
-      (name.trim() ? '，' + name.trim() : '') + '。' + (form.getAttribute('data-note') || '')
-    // Nothing is persisted and the password field is never read at all.
+    var name = ((form.querySelector('#pilot') || {}).value || '').trim()
     var pw = form.querySelector('#pilotpw')
-    if (pw) pw.value = ''
-  })
-})()
-
-/* --- Path-length measurement ----------------------------------------------
-   Every draw-in animation needs the REAL length of its path, or the dash
-   offset is wrong and the stroke either snaps or never finishes. Measure once
-   and write it back as a custom property. Skipped entirely when motion is off,
-   because the CSS then never reads it.                                      */
-;(function () {
-  'use strict'
-  var root = document.documentElement
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
-  if (root.getAttribute('data-motion') === 'off') return
-
-  /* getTotalLength() returns USER units (here, metres — the airframe viewBox is
-     in real dimensions). But `vector-effect: non-scaling-stroke` makes
-     stroke-dasharray operate in SCREEN pixels, so feeding it the user-unit
-     length produces a short repeating dash pattern instead of one long dash.
-     Convert through the element's actual on-screen scale. */
-  function measure(sel, prop, screenSpace) {
-    var els = document.querySelectorAll(sel)
-    for (var i = 0; i < els.length; i++) {
-      var el = els[i]
-      try {
-        var len = el.getTotalLength()
-        if (!len) continue
-        if (screenSpace) {
-          var svg = el.ownerSVGElement
-          var vb = svg && svg.viewBox && svg.viewBox.baseVal
-          var w = svg ? svg.getBoundingClientRect().width : 0
-          if (vb && vb.width && w) len = len * (w / vb.width)
-        }
-        el.style.setProperty(prop, Math.ceil(len))
-      } catch (e) {}
+    if (pw) pw.value = ''         // the password field is never even read
+    gate.hidden = true
+    viewer.hidden = false
+    var h = viewer.querySelector('#viewer-h')
+    if (h) {
+      h.textContent = (form.getAttribute('data-welcome') || '') +
+        (name ? '，' + name : '') + '。' + (form.getAttribute('data-note') || '')
+      h.focus()                   // move focus to what just appeared
     }
-  }
-  measure('.af-part, .af-fin', '--dlen', true)
-  measure('.prof-path', '--plen', false)
-
-  /* These figures are not .reveal, so give them the same one-shot observer
-     rather than a second mechanism.
-
-     data-anim is set HERE, not in the markup: the hidden start state is opt-in,
-     so if JS never runs, the observer is unavailable, or a measurement fails,
-     the drawing renders complete rather than invisible. A motion whose absence
-     leaves a blank box is exactly what this site's motion rule forbids. */
-  var figs = document.querySelectorAll('.fleet-scale, .profile')
-  if (!figs.length || !('IntersectionObserver' in window)) return
-  for (var a = 0; a < figs.length; a++) figs[a].setAttribute('data-anim', 'on')
-  var io = new IntersectionObserver(function (entries) {
-    entries.forEach(function (en) {
-      if (!en.isIntersecting) return
-      en.target.setAttribute('data-shown', 'true')
-      io.unobserve(en.target)
-    })
-  }, { rootMargin: '0px 0px -6% 0px', threshold: 0.12 })
-  for (var k = 0; k < figs.length; k++) io.observe(figs[k])
+  })
 })()
 
 })();

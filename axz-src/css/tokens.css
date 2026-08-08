@@ -127,22 +127,17 @@
 }
 
 /* --- PLATE ---------------------------------------------------------------
-   These are night charts. They do NOT remap on theme change: --plate is
-   16.64:1 against day paper and reads as an inset object in both modes.
+   The frame around the owner's own chart render. Night values that do NOT
+   remap on theme change: --plate is 16.64:1 against day paper, so the chart
+   reads as an inset object in both modes.
 
-   TIERING RULE: values sampled from the original charts are MARKS. A token
-   marked "mark only" appearing in a `color:` declaration fails the build.   */
+   The mark tokens that used to live here (track, fix, airway, terrain...)
+   described the traced SVG. That trace is gone, so they went with it rather
+   than sit here as values a gate pretends to verify.                        */
 
 .plate {
   --plate:       #0E1114;
   --plate-ink:   #E9E5DC;   /* 15.06 on plate - text */
   --plate-ink-2: #9AA3AC;   /*  7.40 on plate - text */
-  --plate-cyan:  #00A2E8;   /*  6.61 - text + mark (circled waypoints) */
-  --track:       #D8E04A;   /* 13.24 - mark: the flown route */
-  --fix:         #C8CDD4;   /* 11.85 - mark: triangle fixes */
-  --airway:      #E0A93B;   /*  8.93 - mark: dashed airways */
-  --dep:         #4CC97A;   /*  8.97 - mark: departure glyph */
-  --arr:         #F2554A;   /*  5.57 - MARK ONLY */
-  --arr-text:    #FF8A7E;   /*  8.29 - text tier of the same red */
-  --terrain:     #676F79;   /*  3.72 - MARK ONLY, terrain hatching */
 }
+
