@@ -18,7 +18,7 @@
 <link rel="preload" as="font" type="font/woff2" href="/axz/fonts/axz-sans-400-zh.966e9de8.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="/axz/fonts/axz-mono-400.6fc3e157.woff2" crossorigin>
 <style>@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-400-zh.966e9de8.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-700-zh.b140c00d.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Serif";src:url("/axz/fonts/axz-serif-400-zh.18350178.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-400.6fc3e157.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-600.4d4d2e8c.woff2") format("woff2");font-weight:600;font-style:normal;font-display:swap;}</style>
-<link rel="stylesheet" href="/axz/assets/axz.ce8dd19c.css">
+<link rel="stylesheet" href="/axz/assets/axz.c0d25e5a.css">
 </head>
 <body>
 <a class="skip" href="#main">跳到主要内容</a>
@@ -129,6 +129,13 @@
     <path class="plate-fix" d="M60 590 h120 M60 585 v10 M180 585 v10"/>
     <text class="plate-label" x="60" y="580">50 km</text>
   </g>
+
+  <!-- The aircraft flies the filed routing. offset-path uses the SAME geometry
+       as the track above, so it can never drift out of agreement with it.
+       Static state: parked at the destination end (see plate.css). -->
+  <g class="plate-ship" style="--track-d: path('M292 40 L332 166 L378 282 L425 404 L645 583')" aria-hidden="true">
+    <path class="plate-ship-glyph" transform="scale(2.1)" d="M 7 0 L -2 -3.4 L -0.6 0 L -2 3.4 Z M -0.2 0 L -5.6 -4.6 L -6.8 -4.6 L -4.2 0 L -6.8 4.6 L -5.6 4.6 Z"/>
+  </g>
 </svg>
 
       <figcaption class="plate__note">注：上方示意图为去程航路</figcaption>
@@ -211,6 +218,13 @@
     <path class="plate-fix" d="M60 596 h130 M60 591 v10 M190 591 v10"/>
     <text class="plate-label" x="60" y="586">100 km</text>
   </g>
+
+  <!-- The aircraft flies the filed routing. offset-path uses the SAME geometry
+       as the track above, so it can never drift out of agreement with it.
+       Static state: parked at the destination end (see plate.css). -->
+  <g class="plate-ship" style="--track-d: path('M845 428 L505 311 L365 302 L178 271')" aria-hidden="true">
+    <path class="plate-ship-glyph" transform="scale(2.1)" d="M 7 0 L -2 -3.4 L -0.6 0 L -2 3.4 Z M -0.2 0 L -5.6 -4.6 L -6.8 -4.6 L -4.2 0 L -6.8 4.6 L -5.6 4.6 Z"/>
+  </g>
 </svg>
 
       <figcaption class="plate__note">注：上方示意图为去程航路</figcaption>
@@ -233,11 +247,76 @@
     <p class="remark-cell">点击机场代码可查看航线示意图</p>
   </aside>
 </article></div>
+  <h3 class="record__label">高度剖面</h3>
+  <figure class="profile">
+  <svg viewBox="0 0 720 210" role="img" aria-label="两条航线的巡航高度按同一比例画在一起。上海到南京在 9,500 米，旧金山到萨利纳斯只有 1,676 米，差了将近六倍。" focusable="false">
+    <line class="prof-ground" x1="34" y1="176" x2="686" y2="176"/>
+    <text class="prof-ground-l" x="34" y="192">地面</text>
+    <g class="prof-leg">
+      <path class="prof-path" d="M 44 176 L 106.92 150.9 L 267.08000000000004 150.9 L 330 176"/>
+      <text class="prof-alt" x="187" y="142.9" text-anchor="middle">5,500英尺</text>
+      <text class="prof-pair" x="187" y="192" text-anchor="middle">KSFO&#8202;&#8596;&#8202;KSNS</text>
+    </g><g class="prof-leg">
+      <path class="prof-path" d="M 370 176 L 432.92 34.0 L 593.08 34.0 L 656 176"/>
+      <text class="prof-alt" x="513" y="26.0" text-anchor="middle">31100英尺</text>
+      <text class="prof-pair" x="513" y="192" text-anchor="middle">ZSPD&#8202;&#8596;&#8202;ZSNJ</text>
+    </g>
+  </svg>
+  <figcaption>两条航线的巡航高度按同一比例画在一起。上海到南京在 9,500 米，旧金山到萨利纳斯只有 1,676 米，差了将近六倍。</figcaption>
+</figure>
 </section>
 
 <section class="sector wrap" aria-labelledby="s-fleet">
   <div class="sector__head"><span class="sector__no">02</span><h2 id="s-fleet">执飞机队</h2></div>
   <p class="record__label">全部飞机 · 机队总览(按照服役时间排序)</p>
+  <figure class="fleet-scale">
+  <ul class="af-list"><li class="af-row">
+      <div class="af-meta">
+        <span class="reg">B-737X</span>
+        <span class="af-name">波音 737-800</span>
+        <span class="af-dims"><b class="code">39.47</b> m &middot; <b class="code">35.79</b> m</span>
+      </div>
+      <div class="af-draw" style="--af-w:88.7%">
+        <svg viewBox="-1.2 -19.09 41.87 38.19" role="img" aria-label="Boeing 737-800, 机身长度 39.47 m, 翼展 35.79 m" focusable="false">
+          <path class="af-part" d="M 0 0 C 0.79 -1.17 2.37 -1.88 4.54 -1.88 L 28.42 -1.88 C 33.94 -1.73 37.5 -0.79 39.47 -0.19 L 39.47 0.19 C 37.5 0.79 33.94 1.73 28.42 1.88 L 4.54 1.88 C 2.37 1.88 0.79 1.17 0 0 Z"/><path class="af-part" d="M 15.59 -1.62 L 23.68 -17.89 L 25.85 -17.89 L 23.09 -1.62 Z"/><path class="af-part" d="M 15.59 1.62 L 23.68 17.9 L 25.85 17.9 L 23.09 1.62 Z"/><path class="af-part" d="M 34.93 -0.85 L 37.3 -7.16 L 39.08 -7.16 L 38.48 -0.85 Z"/><path class="af-part" d="M 34.93 0.85 L 37.3 7.16 L 39.08 7.16 L 38.48 0.85 Z"/><path class="af-part" d="M 15.87 -7.1 L 19.72 -7.1 Q 20.07 -7.1 20.07 -6.75 L 20.07 -5.41 Q 20.07 -5.07 19.72 -5.07 L 15.87 -5.07 Q 15.53 -5.07 15.53 -5.41 L 15.53 -6.75 Q 15.53 -7.1 15.87 -7.1 Z"/><path class="af-part" d="M 15.87 5.07 L 19.72 5.07 Q 20.07 5.07 20.07 5.41 L 20.07 6.75 Q 20.07 7.1 19.72 7.1 L 15.87 7.1 Q 15.53 7.1 15.53 6.75 L 15.53 5.41 Q 15.53 5.07 15.87 5.07 Z"/><path class="af-fin" d="M 30.59 0 L 39.08 0"/>
+        </svg>
+      </div>
+    </li><li class="af-row">
+      <div class="af-meta">
+        <span class="reg">B-321X</span>
+        <span class="af-name">空客 A321</span>
+        <span class="af-dims"><b class="code">44.51</b> m &middot; <b class="code">35.8</b> m</span>
+      </div>
+      <div class="af-draw" style="--af-w:100.0%">
+        <svg viewBox="-1.2 -19.1 46.91 38.2" role="img" aria-label="Airbus A321, 机身长度 44.51 m, 翼展 35.8 m" focusable="false">
+          <path class="af-part" d="M 0 0 C 0.89 -1.22 2.67 -1.97 5.12 -1.97 L 32.05 -1.97 C 38.28 -1.82 42.28 -0.83 44.51 -0.2 L 44.51 0.2 C 42.28 0.83 38.28 1.82 32.05 1.98 L 5.12 1.98 C 2.67 1.98 0.89 1.22 0 0 Z"/><path class="af-part" d="M 17.58 -1.7 L 26.71 -17.9 L 29.15 -17.9 L 26.04 -1.7 Z"/><path class="af-part" d="M 17.58 1.7 L 26.71 17.9 L 29.15 17.9 L 26.04 1.7 Z"/><path class="af-part" d="M 39.39 -0.89 L 42.06 -7.16 L 44.06 -7.16 L 43.4 -0.89 Z"/><path class="af-part" d="M 39.39 0.89 L 42.06 7.16 L 44.06 7.16 L 43.4 0.89 Z"/><path class="af-part" d="M 17.87 -7.15 L 22.27 -7.15 Q 22.63 -7.15 22.63 -6.79 L 22.63 -5.38 Q 22.63 -5.02 22.27 -5.02 L 17.87 -5.02 Q 17.51 -5.02 17.51 -5.38 L 17.51 -6.79 Q 17.51 -7.15 17.87 -7.15 Z"/><path class="af-part" d="M 17.87 5.02 L 22.27 5.02 Q 22.63 5.02 22.63 5.38 L 22.63 6.79 Q 22.63 7.15 22.27 7.15 L 17.87 7.15 Q 17.51 7.15 17.51 6.79 L 17.51 5.38 Q 17.51 5.02 17.87 5.02 Z"/><path class="af-fin" d="M 34.5 0 L 44.06 0"/>
+        </svg>
+      </div>
+    </li><li class="af-row">
+      <div class="af-meta">
+        <span class="reg">B-1717</span>
+        <span class="af-name">波音 737-800 (MC联动)</span>
+        <span class="af-dims"><b class="code">39.47</b> m &middot; <b class="code">35.79</b> m</span>
+      </div>
+      <div class="af-draw" style="--af-w:88.7%">
+        <svg viewBox="-1.2 -19.09 41.87 38.19" role="img" aria-label="Boeing 737-800, 机身长度 39.47 m, 翼展 35.79 m" focusable="false">
+          <path class="af-part" d="M 0 0 C 0.79 -1.17 2.37 -1.88 4.54 -1.88 L 28.42 -1.88 C 33.94 -1.73 37.5 -0.79 39.47 -0.19 L 39.47 0.19 C 37.5 0.79 33.94 1.73 28.42 1.88 L 4.54 1.88 C 2.37 1.88 0.79 1.17 0 0 Z"/><path class="af-part" d="M 15.59 -1.62 L 23.68 -17.89 L 25.85 -17.89 L 23.09 -1.62 Z"/><path class="af-part" d="M 15.59 1.62 L 23.68 17.9 L 25.85 17.9 L 23.09 1.62 Z"/><path class="af-part" d="M 34.93 -0.85 L 37.3 -7.16 L 39.08 -7.16 L 38.48 -0.85 Z"/><path class="af-part" d="M 34.93 0.85 L 37.3 7.16 L 39.08 7.16 L 38.48 0.85 Z"/><path class="af-part" d="M 15.87 -7.1 L 19.72 -7.1 Q 20.07 -7.1 20.07 -6.75 L 20.07 -5.41 Q 20.07 -5.07 19.72 -5.07 L 15.87 -5.07 Q 15.53 -5.07 15.53 -5.41 L 15.53 -6.75 Q 15.53 -7.1 15.87 -7.1 Z"/><path class="af-part" d="M 15.87 5.07 L 19.72 5.07 Q 20.07 5.07 20.07 5.41 L 20.07 6.75 Q 20.07 7.1 19.72 7.1 L 15.87 7.1 Q 15.53 7.1 15.53 6.75 L 15.53 5.41 Q 15.53 5.07 15.87 5.07 Z"/><path class="af-fin" d="M 30.59 0 L 39.08 0"/>
+        </svg>
+      </div>
+    </li><li class="af-row">
+      <div class="af-meta">
+        <span class="reg">B-0001F</span>
+        <span class="af-name">波音 737-800BCF</span>
+        <span class="af-dims"><b class="code">39.47</b> m &middot; <b class="code">35.79</b> m</span>
+      </div>
+      <div class="af-draw" style="--af-w:88.7%">
+        <svg viewBox="-1.2 -19.09 41.87 38.19" role="img" aria-label="Boeing 737-800BCF, 机身长度 39.47 m, 翼展 35.79 m" focusable="false">
+          <path class="af-part" d="M 0 0 C 0.79 -1.17 2.37 -1.88 4.54 -1.88 L 28.42 -1.88 C 33.94 -1.73 37.5 -0.79 39.47 -0.19 L 39.47 0.19 C 37.5 0.79 33.94 1.73 28.42 1.88 L 4.54 1.88 C 2.37 1.88 0.79 1.17 0 0 Z"/><path class="af-part" d="M 15.59 -1.62 L 23.68 -17.89 L 25.85 -17.89 L 23.09 -1.62 Z"/><path class="af-part" d="M 15.59 1.62 L 23.68 17.9 L 25.85 17.9 L 23.09 1.62 Z"/><path class="af-part" d="M 34.93 -0.85 L 37.3 -7.16 L 39.08 -7.16 L 38.48 -0.85 Z"/><path class="af-part" d="M 34.93 0.85 L 37.3 7.16 L 39.08 7.16 L 38.48 0.85 Z"/><path class="af-part" d="M 15.87 -7.1 L 19.72 -7.1 Q 20.07 -7.1 20.07 -6.75 L 20.07 -5.41 Q 20.07 -5.07 19.72 -5.07 L 15.87 -5.07 Q 15.53 -5.07 15.53 -5.41 L 15.53 -6.75 Q 15.53 -7.1 15.87 -7.1 Z"/><path class="af-part" d="M 15.87 5.07 L 19.72 5.07 Q 20.07 5.07 20.07 5.41 L 20.07 6.75 Q 20.07 7.1 19.72 7.1 L 15.87 7.1 Q 15.53 7.1 15.53 6.75 L 15.53 5.41 Q 15.53 5.07 15.87 5.07 Z"/><path class="af-fin" d="M 30.59 0 L 39.08 0"/><path class="af-door" d="M 7.89 -1.88 L 7.89 -0.64 L 14.21 -0.64 L 14.21 -1.88"/>
+        </svg>
+      </div>
+    </li></ul>
+  <figcaption>四种机型按各自公布尺寸等比例绘制，可直接互相比较。以下为机型数据，非小泽航空的运营数据。</figcaption>
+</figure>
   <h3 class="record__label">客运飞机</h3>
   <div class="ledger"><article class="ledger__row reveal" id="b-737x">
   <p class="ledger__no">注册号 <span class="reg">B-737X</span></p>
@@ -340,6 +419,6 @@
     <p>虚拟航司 仅用于模拟飞行</p>
   </div>
 </footer>
-<script src="/axz/assets/axz.cf636e39.js" defer></script>
+<script src="/axz/assets/axz.1c58d59d.js" defer></script>
 </body>
 </html>

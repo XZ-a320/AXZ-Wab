@@ -62,4 +62,11 @@
     <path class="plate-fix" d="M60 590 h120 M60 585 v10 M180 585 v10"/>
     <text class="plate-label" x="60" y="580">50 km</text>
   </g>
+
+  <!-- The aircraft flies the filed routing. offset-path uses the SAME geometry
+       as the track above, so it can never drift out of agreement with it.
+       Static state: parked at the destination end (see plate.css). -->
+  <g class="plate-ship" style="--track-d: path('M292 40 L332 166 L378 282 L425 404 L645 583')" aria-hidden="true">
+    <path class="plate-ship-glyph" transform="scale(2.1)" d="M 7 0 L -2 -3.4 L -0.6 0 L -2 3.4 Z M -0.2 0 L -5.6 -4.6 L -6.8 -4.6 L -4.2 0 L -6.8 4.6 L -5.6 4.6 Z"/>
+  </g>
 </svg>

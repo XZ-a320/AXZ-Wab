@@ -252,3 +252,86 @@
   40% { transform: translate(-2px, 1px); }
   80% { transform: translate(1px, -2px); }
 }
+
+/* --- Airframe plan views ---------------------------------------------------
+   Width is set from the type's real length against the longest type in the
+   fleet, so the row is a true-scale comparison rather than four equal boxes. */
+.af-draw svg {
+  height: auto;
+  overflow: visible;
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+}
+/* Line weight must not scale with the drawing, or the A321 would render with a
+   heavier outline than the 737 purely because it is wider on the page. */
+.af-draw svg * { vector-effect: non-scaling-stroke; }
+.af-fin { fill: none; stroke-width: 1.1; }
+.af-door { fill: none; stroke-dasharray: 1.6 1.1; stroke: var(--ink-2); }
+.af-dims {
+  display: flex;
+  gap: var(--s-1);
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .1em;
+  color: var(--ink-3);
+  margin-block-start: var(--s-1);
+}
+.af-dims b { font-weight: 400; color: var(--ink-2); }
+
+/* The outline draws itself in. Static state is the finished drawing. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) [data-anim="on"] .af-part,
+  :root:not([data-motion="off"]) [data-anim="on"] .af-fin {
+    stroke-dasharray: var(--dlen);
+    stroke-dashoffset: var(--dlen);
+    fill-opacity: 0;
+  }
+  :root:not([data-motion="off"]) [data-anim="on"][data-shown="true"] .af-part,
+  :root:not([data-motion="off"]) [data-anim="on"][data-shown="true"] .af-fin {
+    animation: af-draw 1100ms var(--ease-page) forwards;
+  }
+}
+@keyframes af-draw {
+  0%   { stroke-dashoffset: var(--dlen, 400); fill-opacity: 0; }
+  70%  { fill-opacity: 0; }
+  100% { stroke-dashoffset: 0; fill-opacity: 1; }
+}
+
+.notice--quiet { border-inline-start-color: var(--rule-struct); color: var(--ink-3); }
+
+/* --- Fleet at one scale ---------------------------------------------------- */
+.fleet-scale { margin-block: var(--s-3) var(--s-6); }
+.af-list { display: flex; flex-direction: column; gap: var(--s-4); }
+.af-row {
+  display: grid;
+  grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: center;
+  padding-block-end: var(--s-3);
+  border-block-end: 1px solid var(--rule-hair);
+}
+.af-row:last-child { border-block-end: 0; }
+.af-meta { display: flex; flex-direction: column; gap: 2px; }
+.af-meta .reg {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .16em;
+  color: var(--remark);
+}
+.af-name { font-size: var(--fs-sm); }
+/* The drawing is sized as a share of the LONGEST type, inside a fixed track —
+   that is what makes the row a true comparison instead of four equal boxes. */
+.af-draw { max-width: 290px; }
+.af-draw svg { width: var(--af-w, 100%); height: auto; display: block; }
+.fleet-scale figcaption {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  max-inline-size: 64ch;
+  margin-block-start: var(--s-2);
+}
+@media (max-width: 720px) {
+  .af-row { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); }
+}

@@ -188,6 +188,53 @@ console.log('\nbilingual')
   await page.close()
 }
 
+
+/* 6. Motion: every animated graphic must leave a COMPLETE static state.
+      The site's own rule is that a motion which cannot be removed and leave a
+      legible, information-equivalent frame is not shipped. Three ways to remove
+      it — the OS preference, the in-page toggle, and no JS at all — must each
+      leave the graphics fully drawn rather than blank. */
+console.log('\nmotion')
+{
+  // suppressed=true means the visitor has ASKED for motion to stop, so the
+  // aircraft must be parked too. With JS merely absent, nobody asked for that —
+  // the CSS animation is welcome to keep running; what must not happen is a
+  // blank figure. So only the first two scenarios require shipAnim: none.
+  async function drawnState(label, makeCtx, prep, suppressed) {
+    const c = await makeCtx()
+    const page = await c.newPage()
+    if (prep) await prep(page)
+    await page.goto(BASE + '/axz/', { waitUntil: 'networkidle' })
+    await page.evaluate(() => document.querySelector('.fleet-scale')?.scrollIntoView({ block: 'center' }))
+    await page.waitForTimeout(400)
+    const r = await page.evaluate(() => {
+      const af = document.querySelector('.af-part')
+      const pf = document.querySelector('.prof-path')
+      const ship = document.querySelector('.plate-ship')
+      const cs = el => el ? getComputedStyle(el) : null
+      const a = cs(af), p = cs(pf), s = cs(ship)
+      return {
+        // "drawn" means: no dash offset hiding the stroke, and fill visible.
+        afHidden: a ? (parseFloat(a.strokeDashoffset) > 1 || parseFloat(a.fillOpacity) < 0.99) : null,
+        profHidden: p ? parseFloat(p.strokeDashoffset) > 1 : null,
+        shipAnim: s ? s.animationName : null,
+        shipDist: s ? s.offsetDistance : null,
+      }
+    })
+    await page.close(); await c.close()
+    const drawn = r.afHidden === false && r.profHidden === false
+    const parked = !suppressed || r.shipAnim === 'none'
+    drawn && parked
+      ? okMsg(`${label}: airframes and profile fully drawn${suppressed ? `, aircraft parked (${r.shipDist})` : ', aircraft still flying (nothing asked it to stop)'}`)
+      : bad(`${label}: ${JSON.stringify(r)}`)
+  }
+  const okMsg = ok
+  await drawnState('prefers-reduced-motion', () => browser.newContext({ reducedMotion: 'reduce' }), null, true)
+  await drawnState('stop-animation toggle', () => browser.newContext(),
+    p => p.addInitScript(() => { try { localStorage.setItem('axz-motion', 'off') } catch (e) {} }), true)
+  await drawnState('no JavaScript', () => browser.newContext({ javaScriptEnabled: false }), null, false)
+}
+
 await browser.close()
 console.log(fails.length ? `\n✗ ${fails.length} failure(s)` : '\n✓ all functional checks pass')
 process.exit(fails.length ? 1 : 0)

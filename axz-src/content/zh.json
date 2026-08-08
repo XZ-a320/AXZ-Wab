@@ -70,7 +70,10 @@
       "plan": "飞行航路",
       "landmarks": "主要地标",
       "outbound": "去程",
-      "inbound": "返程"
+      "inbound": "返程",
+      "profile": "高度剖面",
+      "ground": "地面",
+      "cruiseAt": "巡航"
     },
     "ksfo-ksns": {
       "from": "KSFO",
@@ -141,7 +144,11 @@
       "reg": "注册号",
       "history": "飞机历史",
       "events": "重大事件",
-      "funny": "搞笑史"
+      "funny": "搞笑史",
+      "length": "机身长度",
+      "span": "翼展",
+      "silhouette": "机型俯视图",
+      "silhouetteNote": "四种机型按各自公布尺寸等比例绘制，可直接互相比较。以下为机型数据，非小泽航空的运营数据。"
     },
     "b-737x": {
       "group": "pax",
@@ -449,6 +456,8 @@
     "chartCaption": "航线示意图",
     "viewOriginal": "查看原图",
     "notFound": "页面不存在",
-    "footerNav": "页脚导航"
+    "footerNav": "页脚导航",
+    "profileNote": "两条航线的巡航高度按同一比例画在一起。上海到南京在 9,500 米，旧金山到萨利纳斯只有 1,676 米，差了将近六倍。",
+    "aircraftMoving": "示意图上的飞机沿去程航路移动"
   }
 }

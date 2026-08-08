@@ -92,3 +92,74 @@
   letter-spacing: .1em;
   color: var(--plate-cyan);
 }
+
+/* --- The aircraft on the chart --------------------------------------------
+   Follows the same path data as the track, so the drawing and the motion can
+   never disagree. offset-rotate: auto keeps the heading correct through every
+   turn — the aircraft banks into the airway the way the routing actually does.
+
+   STATIC STATE: offset-distance 100% — parked at the destination. Removing the
+   animation leaves an aircraft sitting at the arrival airport, which is a
+   complete and truthful picture of the leg, not a broken frame.             */
+.plate-ship {
+  offset-path: var(--track-d);
+  offset-rotate: auto;
+  offset-distance: 100%;
+}
+.plate-ship-glyph {
+  fill: var(--plate-ink);
+  stroke: var(--plate);
+  stroke-width: 1.2;
+  paint-order: stroke fill;   /* a thin plate-coloured halo lifts it off the track */
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) .plate-ship {
+    animation: ship-fly 9s var(--ease-track) infinite;
+  }
+}
+@keyframes ship-fly {
+  0%        { offset-distance: 0%;   opacity: 0; }
+  4%        { opacity: 1; }
+  86%       { opacity: 1; }
+  92%, 100% { offset-distance: 100%; opacity: 0; }
+}
+
+/* --- Altitude profile ------------------------------------------------------
+   Both cruise levels on one scale. 31,100 ft over 5,500 ft is the site's most
+   striking number and a table row buries it.                                */
+.profile { margin-block: var(--s-4) var(--s-6); }
+.profile svg { width: 100%; height: auto; overflow: visible; }
+.profile figcaption {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  max-inline-size: 62ch;
+  margin-block-start: var(--s-2);
+}
+.prof-ground { stroke: var(--rule-struct); stroke-width: 1; }
+.prof-ground-l,
+.prof-pair,
+.prof-alt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  fill: var(--ink-3);
+}
+.prof-alt { fill: var(--remark); font-size: 13px; }
+.prof-pair { fill: var(--ink-2); }
+.prof-path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) .profile[data-anim="on"] .prof-path {
+    stroke-dasharray: var(--plen);
+    stroke-dashoffset: var(--plen);
+  }
+  :root:not([data-motion="off"]) .profile[data-anim="on"][data-shown="true"] .prof-path {
+    animation: prof-draw var(--t-4) var(--ease-page) forwards;
+  }
+}
+@keyframes prof-draw { to { stroke-dashoffset: 0; } }

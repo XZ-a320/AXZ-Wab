@@ -70,7 +70,10 @@
       "plan": "Routing",
       "landmarks": "Landmarks",
       "outbound": "Outbound",
-      "inbound": "Return"
+      "inbound": "Return",
+      "profile": "Altitude profile",
+      "ground": "Ground",
+      "cruiseAt": "Cruise"
     },
     "ksfo-ksns": {
       "from": "KSFO",
@@ -141,7 +144,11 @@
       "reg": "Registration",
       "history": "History",
       "events": "Notable Events",
-      "funny": "Incidents"
+      "funny": "Incidents",
+      "length": "Length",
+      "span": "Wingspan",
+      "silhouette": "Plan view",
+      "silhouetteNote": "The four types drawn to one scale from their published dimensions, so they can be compared directly. These are type figures, not Air Xiao Ze operating data."
     },
     "b-737x": {
       "group": "pax",
@@ -449,6 +456,8 @@
     "chartCaption": "Route map",
     "viewOriginal": "View original",
     "notFound": "Page not found",
-    "footerNav": "Footer navigation"
+    "footerNav": "Footer navigation",
+    "profileNote": "Both cruise altitudes drawn to one scale. Shanghai to Nanjing sits at 9,500 m; San Francisco to Salinas only reaches 1,676 m, nearly six times lower.",
+    "aircraftMoving": "On the route map, the aircraft tracks the outbound routing"
   }
 }

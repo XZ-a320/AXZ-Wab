@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync, rmSy
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
+import { airframe, TYPES, scaleBase } from './airframe.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -264,6 +265,86 @@ function routeRow(c, lang, id) {
 </article>`
 }
 
+/* --- Airframe plan view ---------------------------------------------------
+   All four types share one scale, so the A321 is drawn genuinely longer than
+   the 737-800 rather than merely labelled so. Width is set as a percentage of
+   the longest type in the fleet.
+
+   Motion: the outline draws itself in on first view. It has an exact static
+   state — stroke-dashoffset 0 is the finished drawing — so it satisfies the
+   site's motion rule and simply appears complete under reduced motion.      */
+const FLEET_BASE = scaleBase(Object.keys(TYPES))
+
+function fleetScale(c, lang) {
+  // One figure, all four types, one scale. A size comparison only works when
+  // the things being compared are adjacent — repeating a 300px drawing above
+  // each of four history paragraphs is bloat, not information.
+  const rows = c.fleet._order.map(id => {
+    const spec = TYPES[id]
+    if (!spec) return ''
+    const a = airframe(spec)
+    const P = a.paths
+    const pct = (spec.len / FLEET_BASE) * 100
+    const solid = [P.fuse, ...P.wings, ...P.stabs, ...P.nacelles]
+      .map(d => `<path class="af-part" d="${d}"/>`).join('')
+    const door = P.door ? `<path class="af-door" d="${P.door}"/>` : ''
+    const f = c.fleet[id]
+    return `<li class="af-row">
+      <div class="af-meta">
+        <span class="reg">${esc(f.reg)}</span>
+        <span class="af-name">${parts(f.name, lang)}</span>
+        <span class="af-dims"><b class="code">${spec.len}</b> m &middot; <b class="code">${spec.span}</b> m</span>
+      </div>
+      <div class="af-draw" style="--af-w:${pct.toFixed(1)}%">
+        <svg viewBox="${a.viewBox}" role="img" aria-label="${esc(spec.name)}, ${esc(c.fleet.labels.length)} ${spec.len} m, ${esc(c.fleet.labels.span)} ${spec.span} m" focusable="false">
+          ${solid}<path class="af-fin" d="${P.fin}"/>${door}
+        </svg>
+      </div>
+    </li>`
+  }).join('')
+
+  return `<figure class="fleet-scale">
+  <ul class="af-list">${rows}</ul>
+  <figcaption>${parts(c.fleet.labels.silhouetteNote, lang)}</figcaption>
+</figure>`
+}
+
+/* --- Altitude profile -----------------------------------------------------
+   Uses only figures already on the site: the two cruise altitudes and the two
+   distances. 31,100 ft against 5,500 ft is a 5.7x difference that a table row
+   hides completely; drawn to one scale it is the most striking fact here.   */
+function altitudeProfile(c, lang) {
+  const legs = [
+    { id: 'ksfo-ksns', ft: 5500, m: 1676 },
+    { id: 'zspd-zsnj', ft: 31100, m: 9500 },
+  ]
+  const W = 720, H = 210, PAD = 34
+  const maxFt = 31100
+  const y = ft => H - PAD - (ft / maxFt) * (H - PAD * 2)
+  const rows = legs.map((leg, i) => {
+    const r = c.routes[leg.id]
+    const x0 = PAD + i * ((W - PAD * 2) / 2) + 10
+    const w = (W - PAD * 2) / 2 - 40
+    const top = y(leg.ft)
+    const base = H - PAD
+    // climb - cruise - descent, as one profile line
+    const d = `M ${x0} ${base} L ${x0 + w * 0.22} ${top.toFixed(1)} L ${x0 + w * 0.78} ${top.toFixed(1)} L ${x0 + w} ${base}`
+    return `<g class="prof-leg">
+      <path class="prof-path" d="${d}"/>
+      <text class="prof-alt" x="${x0 + w / 2}" y="${(top - 8).toFixed(1)}" text-anchor="middle">${esc(r.altitude)}</text>
+      <text class="prof-pair" x="${x0 + w / 2}" y="${base + 16}" text-anchor="middle">${esc(r.from)}&#8202;&#8596;&#8202;${esc(r.to)}</text>
+    </g>`
+  }).join('')
+  return `<figure class="profile">
+  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(c.ui.profileNote)}" focusable="false">
+    <line class="prof-ground" x1="${PAD}" y1="${H - PAD}" x2="${W - PAD}" y2="${H - PAD}"/>
+    <text class="prof-ground-l" x="${PAD}" y="${H - PAD + 16}">${esc(c.routes.labels.ground)}</text>
+    ${rows}
+  </svg>
+  <figcaption>${parts(c.ui.profileNote, lang)}</figcaption>
+</figure>`
+}
+
 function fleetRow(c, lang, id) {
   const f = c.fleet[id], L = c.fleet.labels, P = s => parts(s, lang)
   return `<article class="ledger__row reveal" id="${id}">
@@ -300,11 +381,14 @@ function home(c, lang) {
 <section class="sector wrap" aria-labelledby="s-routes">
   <div class="sector__head"><span class="sector__no">${esc(S.routes.no)}</span><h2 id="s-routes">${P(S.routes.name)}</h2></div>
   <div class="ledger">${c.routes._order.map(id => routeRow(c, lang, id)).join('')}</div>
+  <h3 class="record__label">${esc(c.routes.labels.profile)}</h3>
+  ${altitudeProfile(c, lang)}
 </section>
 
 <section class="sector wrap" aria-labelledby="s-fleet">
   <div class="sector__head"><span class="sector__no">${esc(S.fleet.no)}</span><h2 id="s-fleet">${P(S.fleet.name)}</h2></div>
   <p class="record__label">${esc(c.fleet.listTitle)}</p>
+  ${fleetScale(c, lang)}
   <h3 class="record__label">${esc(c.fleet.groups.pax)}</h3>
   <div class="ledger">${pax.map(id => fleetRow(c, lang, id)).join('')}</div>
   <h3 class="record__label">${esc(c.fleet.groups.cargo)}</h3>
