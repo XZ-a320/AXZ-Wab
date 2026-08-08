@@ -171,6 +171,58 @@
   })
 })()
 
+/* --- Draw-in measurement + reveal -----------------------------------------
+   Every stroke-draw needs the REAL length of its path or the dash offset is
+   wrong and the line either snaps in or never completes.
+
+   getTotalLength() returns USER units (the airframe viewBox is in metres), but
+   `vector-effect: non-scaling-stroke` makes stroke-dasharray operate in SCREEN
+   pixels, so the raw value produces a short repeating dash instead of one long
+   one. Convert through the element's on-screen scale.
+
+   data-anim is set HERE, not in the markup: the hidden start state is opt-in,
+   so if JS never runs, the observer is unavailable, or a measurement fails,
+   the drawing renders complete rather than invisible.                       */
+;(function () {
+  'use strict'
+  var root = document.documentElement
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  if (root.getAttribute('data-motion') === 'off') return
+
+  function measure(sel, prop, screenSpace) {
+    var els = document.querySelectorAll(sel)
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i]
+      try {
+        var len = el.getTotalLength()
+        if (!len) continue
+        if (screenSpace) {
+          var svg = el.ownerSVGElement
+          var vb = svg && svg.viewBox && svg.viewBox.baseVal
+          var w = svg ? svg.getBoundingClientRect().width : 0
+          if (vb && vb.width && w) len = len * (w / vb.width)
+        }
+        el.style.setProperty(prop, Math.ceil(len))
+      } catch (e) {}
+    }
+  }
+  measure('.af-part, .af-fin', '--dlen', true)
+  measure('.prof-path', '--plen', false)
+
+  var figs = document.querySelectorAll('.fleet-scale, .profile')
+  if (!figs.length || !('IntersectionObserver' in window)) return
+  for (var a = 0; a < figs.length; a++) figs[a].setAttribute('data-anim', 'on')
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return
+      en.target.setAttribute('data-shown', 'true')
+      io.unobserve(en.target)
+    })
+  }, { rootMargin: '0px 0px -6% 0px', threshold: 0.12 })
+  for (var k = 0; k < figs.length; k++) io.observe(figs[k])
+})()
+
 })();
 ;(function(){
 /* ==========================================================================

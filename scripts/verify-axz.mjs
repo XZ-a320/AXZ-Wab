@@ -252,6 +252,35 @@ console.log('\nmotion')
     p => p.addInitScript(() => { try { localStorage.setItem('axz-motion', 'off') } catch (e) {} }))
   await drawnState('no JavaScript', () => browser.newContext({ javaScriptEnabled: false }))
 
+  /* The draw-in silently stopped working once before: a later edit deleted the
+     block that measures path lengths, so --dlen was never set, the dash rules
+     became invalid, and every drawing just appeared complete. Nothing failed —
+     it simply stopped animating. Assert the measurement actually happens. */
+  {
+    const c = await browser.newContext()
+    const page = await c.newPage()
+    await page.goto(BASE + '/axz/', { waitUntil: 'networkidle' })
+    await page.evaluate(() => document.querySelector('.fleet-scale')?.scrollIntoView({ block: 'start' }))
+    await page.waitForTimeout(150)
+    const m = await page.evaluate(() => {
+      const af = document.querySelector('.af-part')
+      const pf = document.querySelector('.prof-path')
+      const fig = document.querySelector('.fleet-scale')
+      return {
+        dlen: af && af.style.getPropertyValue('--dlen'),
+        plen: pf && pf.style.getPropertyValue('--plen'),
+        anim: fig && fig.getAttribute('data-anim'),
+        drawing: af ? parseFloat(getComputedStyle(af).strokeDashoffset) > 1 : null,
+      }
+    })
+    m.dlen && m.plen && m.anim === 'on'
+      ? ok(`draw-in is wired: --dlen=${m.dlen}, --plen=${m.plen}, data-anim=on`)
+      : bad(`draw-in not wired: ${JSON.stringify(m)}`)
+    m.drawing === true ? ok('airframe strokes are mid-draw shortly after reveal')
+                       : bad('airframe appeared complete instantly — the draw-in is not running')
+    await page.close(); await c.close()
+  }
+
   // The route section is a document now, not an animation. Guard it, or the
   // flying aircraft and the track draw quietly come back on a later change.
   {

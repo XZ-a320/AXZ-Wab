@@ -236,7 +236,7 @@ function fleetScale(c, lang) {
     const P = a.paths
     const pct = (spec.len / FLEET_BASE) * 100
     const solid = [P.fuse, ...P.wings, ...P.stabs, ...P.nacelles]
-      .map(d => `<path class="af-part" d="${d}"/>`).join('')
+      .map((d, i) => `<path class="af-part" style="--i:${i}" d="${d}"/>`).join('')
     const door = P.door ? `<path class="af-door" d="${P.door}"/>` : ''
 
     // Side elevation, same metres-per-unit scale, so the two views of one type
@@ -244,7 +244,7 @@ function fleetScale(c, lang) {
     const sv = sideview(spec)
     const S = sv.paths
     const svSolid = [S.fuse, S.wing, S.stab, S.fin, S.nacelle]
-      .map(d => `<path class="af-part" d="${d}"/>`).join('')
+      .map((d, i) => `<path class="af-part" style="--i:${i}" d="${d}"/>`).join('')
     const svThin = [S.win, ...S.legs].map(d => `<path class="af-line" d="${d}"/>`).join('')
       + (S.door ? `<path class="af-door" d="${S.door}"/>` : '')
     const svg2 = `<svg viewBox="${sv.viewBox}" aria-hidden="true" focusable="false">
@@ -259,7 +259,7 @@ function fleetScale(c, lang) {
       </div>
       <div class="af-draw" style="--af-w:${pct.toFixed(1)}%">
         <svg viewBox="${a.viewBox}" role="img" aria-label="${esc(spec.name)}, ${esc(c.fleet.labels.length)} ${spec.len} m, ${esc(c.fleet.labels.span)} ${spec.span} m" focusable="false">
-          ${solid}<path class="af-fin" d="${P.fin}"/>${door}
+          ${solid}<path class="af-fin" style="--i:7" d="${P.fin}"/>${door}
         </svg>
         ${svg2}
       </div>

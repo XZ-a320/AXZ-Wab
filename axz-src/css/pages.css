@@ -291,12 +291,15 @@
   }
   :root:not([data-motion="off"]) [data-anim="on"][data-shown="true"] .af-part,
   :root:not([data-motion="off"]) [data-anim="on"][data-shown="true"] .af-fin {
-    animation: af-draw 1100ms var(--ease-page) forwards;
+    /* Staggered by path index: fuselage first, then wings, tail, nacelles —
+       roughly the order you would draw them, rather than all at once. */
+    animation: af-draw 900ms var(--ease-page) forwards;
+    animation-delay: calc(var(--i, 0) * 110ms);
   }
 }
 @keyframes af-draw {
-  0%   { stroke-dashoffset: var(--dlen, 400); fill-opacity: 0; }
-  70%  { fill-opacity: 0; }
+  0%   { stroke-dashoffset: var(--dlen); fill-opacity: 0; }
+  75%  { fill-opacity: 0; }
   100% { stroke-dashoffset: 0; fill-opacity: 1; }
 }
 
@@ -390,18 +393,15 @@
    Julien.scavini's 737-800 top view, shipped as an alpha matte and painted
    through mask-image so the ink colour is the real --ink token in both themes.
 
-   Sized by HEIGHT, not width: with the width driving it the drawing grew past
-   the masthead's bottom rule on wide screens. Height-bounded plus
-   inset-inline-end: 0 keeps it inside its frame on both axes, and the masthead
-   clips anything left over.
+   Sized by HEIGHT, not width: with width driving it the drawing grew past the
+   masthead's bottom rule on wide screens. Height-bounded plus
+   inset-inline-end: 0 keeps it inside its frame on both axes, and .masthead
+   clips whatever is left over.
 
    Opacity is per-theme and measured, not eyeballed. At 0.13 the night
    watermark computed 1.34:1 against #0B0D10 — effectively invisible, which is
-   what it looked like. Night is 0.30 (2.34:1); day stays lighter at 0.15
-   because dark ink on light paper already reads at low alpha.
-
-   @supports guard: without mask support the element would paint as a solid
-   rectangle, which is far worse than simply not showing it.                  */
+   exactly what it looked like. Night is 0.30 (2.34:1); day stays lighter at
+   0.15 because dark ink on light paper already reads at low alpha.          */
 .masthead { overflow: hidden; }
 .masthead__in { position: relative; }
 .masthead__ship { display: none; }
@@ -410,9 +410,9 @@
   .masthead__ship {
     display: block;
     position: absolute;
-    inset-block-start: 6%;
+    inset-block-start: 1%;
     inset-inline-end: 0;
-    height: min(74%, 520px);
+    height: min(97%, 620px);
     aspect-ratio: 1205 / 1041;
     pointer-events: none;
     z-index: -1;
@@ -434,13 +434,21 @@
   :root[data-theme="night"] .masthead__ship { opacity: .30; }
   :root[data-theme="day"] .masthead__ship { opacity: .15; }
 
-  /* Below the tagline's column it would sit on top of the type, and at full
-     width it ate an entire phone screen. Static, smaller, out of the way. */
+  /* Drawn in, nose to tail. This one is a RASTER, so it cannot stroke-draw the
+     way the vector fleet does — a clip wipe is the honest equivalent for a
+     bitmap, and reads as the drawing being laid down. The base state is the
+     finished drawing; the wipe is added only when motion is welcome. */
+  @media (prefers-reduced-motion: no-preference) {
+    :root:not([data-motion="off"]) .masthead__ship {
+      animation: ship-draw 1800ms var(--ease-page) both;
+    }
+  }
+
   @media (max-width: 900px) {
     .masthead__ship {
       position: static;
       height: auto;
-      width: min(78%, 340px);
+      width: min(86%, 380px);
       margin-block-start: var(--s-3);
       -webkit-mask-image: url("/axz/img/b738-top-800.webp");
       mask-image: url("/axz/img/b738-top-800.webp");
@@ -448,6 +456,11 @@
       mask-position: center;
     }
   }
+}
+
+@keyframes ship-draw {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
 }
 
 .foot__credit { font-size: var(--fs-xs); margin-block-start: var(--s-2); max-inline-size: 74ch; }
