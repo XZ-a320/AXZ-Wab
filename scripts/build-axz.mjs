@@ -203,7 +203,7 @@ ${sprite}
     <div class="controls">
       <div class="lang">
         <a lang="zh-Hans" hreflang="zh-Hans" href="${urlFor(key, 'zh-Hans')}"${lang === 'zh-Hans' ? ' aria-current="page"' : ''}>${icon('i-flag-cn', 'icon--flag')}<span>中文</span></a>
-        <span aria-hidden="true">/</span>
+        <span class="lang__sep" aria-hidden="true">/</span>
         <a lang="en" hreflang="en" href="${urlFor(key, 'en')}"${lang === 'en' ? ' aria-current="page"' : ''}>${icon('i-flag-us', 'icon--flag')}<span>English</span></a>
       </div>
       <button class="ctrl-btn ctrl-btn--icon" type="button" data-theme-toggle aria-pressed="false"
@@ -364,7 +364,7 @@ function altitudeProfile(c, lang) {
     const d = `M ${x0} ${base} L ${x0 + w * 0.22} ${top.toFixed(1)} L ${x0 + w * 0.78} ${top.toFixed(1)} L ${x0 + w} ${base}`
     return `<g class="prof-leg">
       <path class="prof-path" d="${d}"/>
-      <text class="prof-alt" x="${x0 + w / 2}" y="${(top - 8).toFixed(1)}" text-anchor="middle">${esc(r.altitude)}</text>
+      <text class="prof-alt" x="${x0 + w / 2}" y="${(top - 8).toFixed(1)}" text-anchor="middle">${esc(r.altitudeShort || r.altitude)}</text>
       <text class="prof-pair" x="${x0 + w / 2}" y="${base + 16}" text-anchor="middle">${esc(r.from)}&#8202;&#8596;&#8202;${esc(r.to)}</text>
     </g>`
   }).join('')

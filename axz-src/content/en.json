@@ -83,7 +83,7 @@
       "pair": "San Francisco International ↔ Salinas Municipal",
       "fromName": "San Francisco International Airport",
       "toName": "Salinas Municipal Airport",
-      "distance": "About 59 nm",
+      "distance": "About 68 mi",
       "duration": "About 30 min",
       "altitude": "5,500 ft",
       "landmarks": "Santa Cruz Mountains (mid-route), Monterey Bay coast",
@@ -101,7 +101,8 @@
           "plan": "KSNS SID SNS V111 BSR STAR KSFO"
         }
       ],
-      "chartAlt": "Route map from KSFO to KSNS, with the outbound routing via OSI, SAPID and SANTY."
+      "chartAlt": "Route map from KSFO to KSNS, with the outbound routing via OSI, SAPID and SANTY.",
+      "altitudeShort": "5,500 ft"
     },
     "zspd-zsnj": {
       "from": "ZSPD",
@@ -109,7 +110,7 @@
       "pair": "Shanghai Pudong International ↔ Nanjing Lukou International",
       "fromName": "Shanghai Pudong International Airport",
       "toName": "Nanjing Lukou International Airport",
-      "distance": "About 151 nm",
+      "distance": "About 174 mi",
       "duration": "About 50 min",
       "altitude": "31,100 ft (9,500 m)",
       "landmarks": "Yangtze River Delta, Lake Tai, Zhenjiang",
@@ -127,7 +128,8 @@
           "plan": "ZSNJ SID ESBAG R343 SASAN STAR ZSPD"
         }
       ],
-      "chartAlt": "Route map from ZSPD to ZSNJ, with the outbound routing via SASAN and ESBAG."
+      "chartAlt": "Route map from ZSPD to ZSNJ, with the outbound routing via SASAN and ESBAG.",
+      "altitudeShort": "31,100 ft"
     }
   },
   "fleet": {

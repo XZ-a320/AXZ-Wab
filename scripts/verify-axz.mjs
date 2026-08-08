@@ -151,23 +151,52 @@ console.log('\nicons')
   await page.close()
 }
 
-/* 2d. Units: Chinese metric, English imperial — but never at the cost of the
-      owner's own figures. */
+/* 2d. Units: Chinese metric (km and metres, including altitude), English
+      imperial (statute miles and feet). The owner's own altitude figures are
+      kept in parentheses on the Chinese side rather than deleted — and for
+      ZSPD-ZSNJ the metric value is the point: 9,500 m is the Chinese metric
+      flight level and 31100 ft is its official table equivalent, so the pair
+      has to survive together or the number stops making sense. */
 {
   const page = await ctx.newPage()
   await page.goto(BASE + '/axz/', { waitUntil: 'domcontentloaded' })
   const zhTxt = await page.innerText('main')
   zhTxt.includes('约110公里') && zhTxt.includes('约280公里')
-    ? ok('Chinese distances stay metric, in the owner\'s own words') : bad('Chinese distances altered')
+    ? ok('Chinese distances metric, in the owner\'s own words') : bad('Chinese distances altered')
+  zhTxt.includes('1,676米') && zhTxt.includes('9,500米')
+    ? ok('Chinese altitudes lead with metres') : bad('Chinese altitudes are not metric-first')
   zhTxt.includes('5,500英尺') && zhTxt.includes('31100英尺')
-    ? ok('Chinese altitudes untouched (31100英尺 is a real metric flight level)') : bad('Chinese altitudes altered');
-  /\b39\.47 m\b/.test(zhTxt) ? ok('Chinese fleet dimensions in metres') : bad('Chinese fleet dimensions not metric')
+    ? ok('the owner\'s original altitude figures are still shown') : bad('an original altitude figure was deleted')
+  zhTxt.includes('9,500米（31100英尺）')
+    ? ok('9,500 m and 31100 ft stay paired (the metric level and its table equivalent)')
+    : bad('the metric level and its foot equivalent were separated')
+  ;/\b39\.47 m\b/.test(zhTxt) ? ok('Chinese fleet dimensions in metres') : bad('Chinese fleet dimensions not metric')
+
   await page.goto(BASE + '/axz/en/', { waitUntil: 'domcontentloaded' })
   const enTxt = await page.innerText('main')
-  enTxt.includes('59 nm') && enTxt.includes('151 nm')
-    ? ok('English distances in nautical miles') : bad('English distances not converted');
-  /129\.5 ft/.test(enTxt) ? ok('English fleet dimensions in feet') : bad('English fleet dimensions not in feet')
+  enTxt.includes('68 mi') && enTxt.includes('174 mi')
+    ? ok('English distances in statute miles') : bad('English distances not in miles')
+  !/\d+\s?nm\b/.test(enTxt) ? ok('no nautical miles left in English') : bad('nautical miles still present in English')
+  ;/129\.5 ft/.test(enTxt) ? ok('English fleet dimensions in feet') : bad('English fleet dimensions not in feet')
   enTxt.includes('31,100 ft') ? ok('English altitude keeps 31,100 ft') : bad('English altitude altered')
+  await page.close()
+}
+
+/* 2e. The language separator must sit on the same centre line as the two
+      links; it hung high because .lang was a flex row defaulting to stretch. */
+{
+  const page = await ctx.newPage()
+  await page.goto(BASE + '/axz/', { waitUntil: 'networkidle' })
+  const geo = await page.evaluate(() => {
+    const sep = document.querySelector('.lang__sep')
+    const links = [...document.querySelectorAll('.lang a')]
+    const mid = el => { const r = el.getBoundingClientRect(); return r.top + r.height / 2 }
+    return { sepMid: mid(sep), linkMids: links.map(mid) }
+  })
+  const drift = Math.max(...geo.linkMids.map(m => Math.abs(m - geo.sepMid)))
+  drift < 2
+    ? ok(`language separator is centred with the links (${drift.toFixed(1)}px drift)`)
+    : bad(`language separator is ${drift.toFixed(1)}px off the links' centre line`)
   await page.close()
 }
 

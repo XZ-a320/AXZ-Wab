@@ -85,7 +85,7 @@
       "toName": "萨利纳斯机场",
       "distance": "约110公里",
       "duration": "约30分钟",
-      "altitude": "5,500英尺",
+      "altitude": "1,676米（5,500英尺）",
       "landmarks": "圣克鲁斯山脉(中段)、蒙特雷湾沿岸",
       "legs": [
         {
@@ -101,7 +101,8 @@
           "plan": "KSNS SID SNS V111 BSR STAR KSFO"
         }
       ],
-      "chartAlt": "KSFO 至 KSNS 航线示意图，去程航路经 OSI、SAPID、SANTY 三个航路点"
+      "chartAlt": "KSFO 至 KSNS 航线示意图，去程航路经 OSI、SAPID、SANTY 三个航路点",
+      "altitudeShort": "1,676米"
     },
     "zspd-zsnj": {
       "from": "ZSPD",
@@ -111,7 +112,7 @@
       "toName": "南京禄口国际机场",
       "distance": "约280公里",
       "duration": "约50分钟",
-      "altitude": "31100英尺",
+      "altitude": "9,500米（31100英尺）",
       "landmarks": "长江三角洲、太湖、镇江",
       "legs": [
         {
@@ -127,7 +128,8 @@
           "plan": "ZSNJ SID ESBAG R343 SASAN STAR ZSPD"
         }
       ],
-      "chartAlt": "ZSPD 至 ZSNJ 航线示意图，去程航路经 SASAN、ESBAG 两个航路点"
+      "chartAlt": "ZSPD 至 ZSNJ 航线示意图，去程航路经 SASAN、ESBAG 两个航路点",
+      "altitudeShort": "9,500米"
     }
   },
   "fleet": {

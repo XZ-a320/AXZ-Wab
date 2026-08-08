@@ -45,8 +45,17 @@
 .nav a[aria-current="page"] { color: var(--ink); border-block-end-color: var(--remark); }
 
 .controls { display: flex; gap: var(--s-2); align-items: center; }
-.controls .lang { display: flex; gap: var(--s-1); font-size: var(--fs-sm); }
+.controls .lang { display: flex; align-items: center; gap: var(--s-1); font-size: var(--fs-sm); }
 .controls .lang a { min-height: var(--tap); display: inline-flex; align-items: center; }
+/* Separator: centred, quiet, and slightly angled so it reads as a divider
+   rather than a character someone typed. */
+.lang__sep {
+  color: var(--rule-struct);
+  font-size: var(--fs-sm);
+  line-height: 1;
+  transform: rotate(12deg);
+  user-select: none;
+}
 .ctrl-btn {
   min-height: var(--tap);
   min-width: var(--tap);
