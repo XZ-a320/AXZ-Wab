@@ -11,12 +11,12 @@
    the site already names all four types.
    ========================================================================== */
 
-// length / wingspan / fuselage diameter, metres.
+// length / wingspan / fuselage diameter / overall height, metres.
 export const TYPES = {
-  'b-737x':  { name: 'Boeing 737-800',     len: 39.47, span: 35.79, dia: 3.76, engines: 2, cargo: false },
-  'b-321x':  { name: 'Airbus A321',        len: 44.51, span: 35.80, dia: 3.95, engines: 2, cargo: false },
-  'b-1717':  { name: 'Boeing 737-800',     len: 39.47, span: 35.79, dia: 3.76, engines: 2, cargo: false },
-  'b-0001f': { name: 'Boeing 737-800BCF',  len: 39.47, span: 35.79, dia: 3.76, engines: 2, cargo: true },
+  'b-737x':  { name: 'Boeing 737-800',     len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2, cargo: false },
+  'b-321x':  { name: 'Airbus A321',        len: 44.51, span: 35.80, dia: 3.95, h: 11.76, engines: 2, cargo: false },
+  'b-1717':  { name: 'Boeing 737-800',     len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2, cargo: false },
+  'b-0001f': { name: 'Boeing 737-800BCF',  len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2, cargo: true },
 }
 
 const n = v => Math.round(v * 100) / 100
@@ -128,4 +128,90 @@ export function airframe(spec) {
 /** Longest type in the set — everything is scaled against it. */
 export function scaleBase(keys) {
   return Math.max(...keys.map(k => TYPES[k].len))
+}
+
+/**
+ * Side elevation, nose at x=0, fuselage centreline at y=0, up is negative.
+ * Same metre-per-unit scale as airframe(), so a plan view and a side view of
+ * the same type line up exactly when placed one above the other.
+ */
+export function sideview(spec) {
+  const { len: L, dia: D } = spec
+  const r = D / 2
+  const H = spec.h || D * 3.3          // overall height, ground to fin tip
+  const gear = r + (H - r) * 0.16      // approximate belly-to-ground clearance
+
+  // Fuselage: nose, constant section, upswept tail cone.
+  const noseEnd = L * 0.115
+  const tailStart = L * 0.70
+  const fuse = [
+    `M 0 ${n(-r * 0.10)}`,
+    `C ${n(L * 0.02)} ${n(-r * 0.72)} ${n(L * 0.06)} ${n(-r)} ${n(noseEnd)} ${n(-r)}`,
+    `L ${n(tailStart)} ${n(-r)}`,
+    `C ${n(L * 0.86)} ${n(-r * 1.02)} ${n(L * 0.95)} ${n(-r * 1.10)} ${n(L)} ${n(-r * 1.15)}`,
+    `L ${n(L)} ${n(-r * 0.55)}`,
+    `C ${n(L * 0.92)} ${n(r * 0.30)} ${n(L * 0.82)} ${n(r * 0.86)} ${n(L * 0.62)} ${n(r)}`,
+    `L ${n(noseEnd)} ${n(r)}`,
+    `C ${n(L * 0.06)} ${n(r)} ${n(L * 0.02)} ${n(r * 0.72)} 0 ${n(-r * 0.10)}`,
+    'Z',
+  ].join(' ')
+
+  // Fin: swept leading edge, the tallest thing on the aircraft.
+  const finTop = -(H - gear)
+  const fin = [
+    `M ${n(L * 0.70)} ${n(-r * 0.95)}`,
+    `L ${n(L * 0.925)} ${n(finTop)}`,
+    `L ${n(L * 1.0)} ${n(finTop)}`,
+    `L ${n(L * 0.995)} ${n(-r * 1.12)}`,
+    'Z',
+  ].join(' ')
+
+  // Tailplane, seen edge-on as a shallow wedge off the tail cone.
+  const stab = [
+    `M ${n(L * 0.90)} ${n(-r * 0.72)}`,
+    `L ${n(L * 1.03)} ${n(-r * 1.30)}`,
+    `L ${n(L * 1.05)} ${n(-r * 1.16)}`,
+    `L ${n(L * 0.94)} ${n(-r * 0.55)}`,
+    'Z',
+  ].join(' ')
+
+  // Wing edge-on, and the nacelle slung under it.
+  const wing = [
+    `M ${n(L * 0.40)} ${n(r * 0.42)}`,
+    `L ${n(L * 0.66)} ${n(r * 0.10)}`,
+    `L ${n(L * 0.62)} ${n(r * 0.02)}`,
+    `L ${n(L * 0.395)} ${n(r * 0.30)}`,
+    'Z',
+  ].join(' ')
+  const eR = D * 0.27
+  const ex = L * 0.365
+  const ey = r + eR * 0.42   // keeps real clearance under the nacelle
+  const nacelle = [
+    `M ${n(ex)} ${n(ey - eR)}`,
+    `L ${n(ex + L * 0.115)} ${n(ey - eR * 0.86)}`,
+    `L ${n(ex + L * 0.115)} ${n(ey + eR * 0.86)}`,
+    `L ${n(ex)} ${n(ey + eR)}`,
+    'Z',
+  ].join(' ')
+
+  // Window line and door, the details that make it read as an airliner.
+  const win = `M ${n(L * 0.16)} ${n(-r * 0.34)} L ${n(L * 0.80)} ${n(-r * 0.34)}`
+  const door = spec.cargo
+    ? `M ${n(L * 0.20)} ${n(-r * 0.92)} L ${n(L * 0.20)} ${n(-r * 0.10)} L ${n(L * 0.36)} ${n(-r * 0.10)} L ${n(L * 0.36)} ${n(-r * 0.92)}`
+    : null
+
+  // Gear: a plain stance line rather than drawn bogies at this size.
+  const ground = `M 0 ${n(gear)} L ${n(L)} ${n(gear)}`
+  const legs = [
+    `M ${n(L * 0.165)} ${n(r * 0.98)} L ${n(L * 0.165)} ${n(gear)}`,
+    `M ${n(L * 0.47)} ${n(r * 0.92)} L ${n(L * 0.47)} ${n(gear)}`,
+  ]
+
+  const pad = 1.2
+  const top = finTop - pad
+  return {
+    ...spec,
+    viewBox: `${-pad} ${n(top)} ${n(L + pad * 2)} ${n(gear - top + pad)}`,
+    paths: { fuse, fin, stab, wing, nacelle, win, door, ground, legs },
+  }
 }

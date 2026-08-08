@@ -335,3 +335,82 @@
 @media (max-width: 720px) {
   .af-row { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); }
 }
+
+/* --- Flight progress strips ------------------------------------------------
+   Modelled on a real ATC strip: fixed blocks, hard rules between them, mono
+   throughout, no rounding. The form is the point — a simmer reads it instantly. */
+.strips { margin-block: var(--s-2) var(--s-6); }
+.strip-list { display: grid; gap: var(--s-2); }
+.strip {
+  display: grid;
+  grid-template-columns: minmax(0, 8.5rem) minmax(0, 8rem) minmax(0, 1fr);
+  border: 1px solid var(--rule-struct);
+  border-inline-start: 3px solid var(--remark);
+  background: var(--paper-2);
+}
+.strip > * {
+  padding: var(--s-15) var(--s-2);
+  border-inline-end: 1px solid var(--rule-struct);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  min-width: 0;
+}
+.strip > *:last-child { border-inline-end: 0; }
+.strip__no { font-size: var(--fs-md); font-weight: 600; letter-spacing: .06em; }
+.strip__dir,
+.strip__t {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .12em;
+  color: var(--ink-3);
+}
+.strip__lvl .code { font-size: var(--fs-sm); color: var(--remark); }
+.strip__pair { font-family: var(--font-mono); font-size: var(--fs-sm); letter-spacing: .08em; }
+.strip .route-string { color: var(--ink-2); }
+.strips figcaption {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  margin-block-start: var(--s-2);
+}
+@media (max-width: 720px) {
+  .strip { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .strip__rte { grid-column: 1 / -1; border-block-start: 1px solid var(--rule-struct); }
+  .strip > * { border-inline-end: 0; }
+  .strip__call { border-inline-end: 1px solid var(--rule-struct); }
+}
+
+/* Side elevation sits under the plan view in the same drawing track. */
+.af-draw svg + svg { margin-block-start: var(--s-1); }
+.af-line { fill: none; stroke: var(--ink-2); stroke-width: .9; }
+.af-ground { fill: none; stroke: var(--rule-struct); stroke-width: .9; }
+
+/* --- Masthead aircraft -----------------------------------------------------
+   Sits behind and to the side of the tagline. Hairline weight so it reads as a
+   drawing on the page rather than an illustration pasted onto it.           */
+.masthead__in { position: relative; }
+.masthead__ship {
+  position: absolute;
+  inset-block-start: 4%;
+  inset-inline-end: clamp(-40px, -2vw, 0px);
+  width: clamp(320px, 46vw, 760px);
+  pointer-events: none;
+  z-index: -1;
+}
+.masthead__ship svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  opacity: .16;
+}
+.masthead__ship svg * { vector-effect: non-scaling-stroke; }
+/* Below the tagline's own column it would sit on top of the type. */
+@media (max-width: 900px) {
+  .masthead__ship { position: static; width: 100%; margin-block-start: var(--s-4); }
+  .masthead__ship svg { opacity: .28; }
+}

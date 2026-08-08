@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync, rmSy
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
-import { airframe, TYPES, scaleBase } from './airframe.mjs'
+import { airframe, sideview, TYPES, scaleBase } from './airframe.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -288,6 +288,18 @@ function fleetScale(c, lang) {
     const solid = [P.fuse, ...P.wings, ...P.stabs, ...P.nacelles]
       .map(d => `<path class="af-part" d="${d}"/>`).join('')
     const door = P.door ? `<path class="af-door" d="${P.door}"/>` : ''
+
+    // Side elevation, same metres-per-unit scale, so the two views of one type
+    // line up and all four types stay comparable across both.
+    const sv = sideview(spec)
+    const S = sv.paths
+    const svSolid = [S.fuse, S.wing, S.stab, S.fin, S.nacelle]
+      .map(d => `<path class="af-part" d="${d}"/>`).join('')
+    const svThin = [S.win, ...S.legs].map(d => `<path class="af-line" d="${d}"/>`).join('')
+      + (S.door ? `<path class="af-door" d="${S.door}"/>` : '')
+    const svg2 = `<svg viewBox="${sv.viewBox}" aria-hidden="true" focusable="false">
+        ${svSolid}${svThin}<path class="af-ground" d="${S.ground}"/>
+      </svg>`
     const f = c.fleet[id]
     return `<li class="af-row">
       <div class="af-meta">
@@ -299,6 +311,7 @@ function fleetScale(c, lang) {
         <svg viewBox="${a.viewBox}" role="img" aria-label="${esc(spec.name)}, ${esc(c.fleet.labels.length)} ${spec.len} m, ${esc(c.fleet.labels.span)} ${spec.span} m" focusable="false">
           ${solid}<path class="af-fin" d="${P.fin}"/>${door}
         </svg>
+        ${svg2}
       </div>
     </li>`
   }).join('')
@@ -307,6 +320,53 @@ function fleetScale(c, lang) {
   <ul class="af-list">${rows}</ul>
   <figcaption>${parts(c.fleet.labels.silhouetteNote, lang)}</figcaption>
 </figure>`
+}
+
+/* --- Masthead aircraft ----------------------------------------------------
+   B-737X, the airline's first aircraft, drawn large beside the tagline. Purely
+   decorative here — the same geometry appears labelled and dimensioned in
+   sector 02 — so it is aria-hidden and adds nothing for a screen reader to
+   wade through before reaching the content.                                 */
+function mastheadShip() {
+  const a = airframe(TYPES['b-737x'])
+  const P = a.paths
+  const solid = [P.fuse, ...P.wings, ...P.stabs, ...P.nacelles]
+    .map(d => `<path class="af-part" d="${d}"/>`).join('')
+  return `<div class="masthead__ship" aria-hidden="true">
+    <svg viewBox="${a.viewBox}" focusable="false">${solid}<path class="af-fin" d="${P.fin}"/></svg>
+  </div>`
+}
+
+/* --- Flight progress strips -----------------------------------------------
+   The four flight numbers in the form every simmer knows: an ATC progress
+   strip. Callsign block, level block, route block. Every value is already on
+   the site — no aircraft is assigned to a leg, because the content says both
+   B-737X and B-321X fly AXZ001/002 and picking one would be inventing.     */
+function flightStrips(c, lang) {
+  const rows = c.routes._order.flatMap(id => {
+    const r = c.routes[id]
+    return r.legs.map(leg => ({ leg, r }))
+  })
+  const strips = rows.map(({ leg, r }) => `<li class="strip">
+    <div class="strip__call">
+      <span class="strip__no code">${esc(leg.flight)}</span>
+      <span class="strip__dir">${esc(leg.dir)}</span>
+    </div>
+    <div class="strip__lvl">
+      <span class="code">${esc(r.altitude)}</span>
+      <span class="strip__t">${esc(r.duration)}</span>
+    </div>
+    <div class="strip__rte">
+      <span class="strip__pair"><span class="code">${esc(leg.dir === r.legs[0].dir ? r.from : r.to)}</span>
+        <span aria-hidden="true">&#8594;</span>
+        <span class="code">${esc(leg.dir === r.legs[0].dir ? r.to : r.from)}</span></span>
+      <span class="route-string">${esc(leg.plan).split(' ').map(t => `<span class="tok">${t}</span>`).join(' ')}</span>
+    </div>
+  </li>`).join('')
+  return `<figure class="strips">
+    <ul class="strip-list">${strips}</ul>
+    <figcaption>${parts(c.ui.stripNote, lang)}</figcaption>
+  </figure>`
 }
 
 /* --- Altitude profile -----------------------------------------------------
@@ -370,17 +430,20 @@ function home(c, lang) {
 
   const body = `
 <section class="masthead">
-  <div class="wrap">
+  <div class="wrap masthead__in">
     <h1 class="sr-only">${P(nameLine(c, ' '))} (${esc(c.meta.code)})</h1>
     <p class="masthead__tagline" lang="en" aria-hidden="true">FLY<br>ON<br>TIME</p>
     <p class="masthead__remark">${P(c.meta.disclaimer)}</p>
     <p class="masthead__sub">${P(nameLine(c, ' · '))} · ${esc(c.meta.code)}</p>
+    ${mastheadShip()}
   </div>
 </section>
 
 <section class="sector wrap" aria-labelledby="s-routes">
   <div class="sector__head"><span class="sector__no">${esc(S.routes.no)}</span><h2 id="s-routes">${P(S.routes.name)}</h2></div>
   <div class="ledger">${c.routes._order.map(id => routeRow(c, lang, id)).join('')}</div>
+  <h3 class="record__label">${esc(c.routes.labels.flights)}</h3>
+  ${flightStrips(c, lang)}
   <h3 class="record__label">${esc(c.routes.labels.profile)}</h3>
   ${altitudeProfile(c, lang)}
 </section>

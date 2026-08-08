@@ -3,22 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>飞行日志 · 判读台 — 小泽航空</title>
-<meta name="description" content="把 .axzlog 文件拖到下面的方框里，本页会直接把它读出来。文件不会上传到任何地方，全部在你自己的浏览器里完成。">
+<title>飞行日志查看器 — 小泽航空</title>
+<meta name="description" content="把 .axzlog 文件拖进下面的区域，页面会当场把里面的内容读出来。文件不会上传到任何服务器，整个过程都在你自己的浏览器里完成。">
 
 <link rel="canonical" href="https://xiaobrook.com/axz/logbook/">
 <link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/logbook/">
 <link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/logbook/">
 <link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/logbook/">
-<meta property="og:title" content="飞行日志 · 判读台 — 小泽航空">
-<meta property="og:description" content="把 .axzlog 文件拖到下面的方框里，本页会直接把它读出来。文件不会上传到任何地方，全部在你自己的浏览器里完成。">
+<meta property="og:title" content="飞行日志查看器 — 小泽航空">
+<meta property="og:description" content="把 .axzlog 文件拖进下面的区域，页面会当场把里面的内容读出来。文件不会上传到任何服务器，整个过程都在你自己的浏览器里完成。">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="zh_CN">
 <link rel="icon" href="/axz/favicon.svg" type="image/svg+xml">
 <link rel="preload" as="font" type="font/woff2" href="/axz/fonts/axz-sans-400-zh.966e9de8.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="/axz/fonts/axz-mono-400.6fc3e157.woff2" crossorigin>
 <style>@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-400-zh.966e9de8.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-700-zh.b140c00d.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Serif";src:url("/axz/fonts/axz-serif-400-zh.18350178.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-400.6fc3e157.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-600.4d4d2e8c.woff2") format("woff2");font-weight:600;font-style:normal;font-display:swap;}</style>
-<link rel="stylesheet" href="/axz/assets/axz.c0d25e5a.css">
+<link rel="stylesheet" href="/axz/assets/axz.52c4a194.css">
 </head>
 <body>
 <a class="skip" href="#main">跳到主要内容</a>
@@ -31,7 +31,7 @@
       <img class="mark mark--light" src="/axz/img/wordmark-light.webp" alt="" aria-hidden="true" width="114" height="74">
       <img class="mark mark--dark" src="/axz/img/wordmark-dark.webp" alt="" aria-hidden="true" width="114" height="74">
     </a>
-    <nav class="nav" aria-label="主导航"><a href="/axz/">航行日志</a><a href="/axz/guestbook/">留言区</a><a href="/axz/logbook/" aria-current="page">飞行日志</a><a href="/axz/accessibility/">无障碍声明</a></nav>
+    <nav class="nav" aria-label="主导航"><a href="/axz/">首页</a><a href="/axz/guestbook/">留言区</a><a href="/axz/logbook/" aria-current="page">飞行日志</a><a href="/axz/accessibility/">无障碍声明</a></nav>
     <div class="controls">
       <div class="lang">
         <a lang="zh-Hans" hreflang="zh-Hans" href="/axz/logbook/" aria-current="page">中文</a>
@@ -47,13 +47,13 @@
 </header>
 <main id="main">
 
-<section class="sector wrap" data-axzlog data-strings="{&quot;bands&quot;:{&quot;pre&quot;:&quot;飞行前&quot;,&quot;takeoff&quot;:&quot;起飞&quot;,&quot;cruise&quot;:&quot;巡航&quot;,&quot;landing&quot;:&quot;降落&quot;,&quot;post&quot;:&quot;飞行后&quot;},&quot;fields&quot;:{&quot;FlightNumber&quot;:&quot;航班号&quot;,&quot;AircraftType&quot;:&quot;机型&quot;,&quot;Registration&quot;:&quot;注册号&quot;,&quot;Date&quot;:&quot;日期&quot;,&quot;DepartureAirport&quot;:&quot;起飞机场&quot;,&quot;DepartureGate&quot;:&quot;停机位&quot;,&quot;DepartureTime&quot;:&quot;时间&quot;,&quot;DepartureWeather&quot;:&quot;机场天气&quot;,&quot;FlightPlan&quot;:&quot;飞行计划&quot;,&quot;V1&quot;:&quot;V1&quot;,&quot;VR&quot;:&quot;VR&quot;,&quot;V2&quot;:&quot;V2&quot;,&quot;TakeoffConfig&quot;:&quot;构型&quot;,&quot;TakeoffRunway&quot;:&quot;跑道&quot;,&quot;CruiseRemark&quot;:&quot;备注&quot;,&quot;ArrivalAirport&quot;:&quot;降落机场&quot;,&quot;LandingRunway&quot;:&quot;跑道&quot;,&quot;LandingMethod&quot;:&quot;降落方式&quot;,&quot;LandingConfig&quot;:&quot;构型&quot;,&quot;LandingWeather&quot;:&quot;天气&quot;,&quot;LandingTime&quot;:&quot;时间&quot;,&quot;ArrivalGate&quot;:&quot;停机位&quot;,&quot;PostFlightRemark&quot;:&quot;备注&quot;},&quot;noRemark&quot;:&quot;无&quot;,&quot;errorFormat&quot;:&quot;无效的日志文件格式。&quot;,&quot;errorEmpty&quot;:&quot;数据为空&quot;,&quot;errorRead&quot;:&quot;读取失败，请确认文件是由 AXZ 飞行日志记录器保存的。&quot;,&quot;unsupported&quot;:&quot;你的浏览器不支持在本地解压 .axzlog 文件。请更新浏览器，或使用 AXZ 飞行日志记录器打开。&quot;,&quot;sampleNotice&quot;:&quot;示例文件 · 由本站生成，非真实飞行记录&quot;}">
-  <h1>飞行日志 · 判读台</h1>
-  <p class="prose">把 .axzlog 文件拖到下面的方框里，本页会直接把它读出来。文件不会上传到任何地方，全部在你自己的浏览器里完成。</p>
+<section class="sector wrap" data-axzlog data-strings="{&quot;bands&quot;:{&quot;pre&quot;:&quot;飞行前&quot;,&quot;takeoff&quot;:&quot;起飞&quot;,&quot;cruise&quot;:&quot;巡航&quot;,&quot;landing&quot;:&quot;降落&quot;,&quot;post&quot;:&quot;飞行后&quot;},&quot;fields&quot;:{&quot;FlightNumber&quot;:&quot;航班号&quot;,&quot;AircraftType&quot;:&quot;机型&quot;,&quot;Registration&quot;:&quot;注册号&quot;,&quot;Date&quot;:&quot;日期&quot;,&quot;DepartureAirport&quot;:&quot;起飞机场&quot;,&quot;DepartureGate&quot;:&quot;停机位&quot;,&quot;DepartureTime&quot;:&quot;时间&quot;,&quot;DepartureWeather&quot;:&quot;机场天气&quot;,&quot;FlightPlan&quot;:&quot;飞行计划&quot;,&quot;V1&quot;:&quot;V1&quot;,&quot;VR&quot;:&quot;VR&quot;,&quot;V2&quot;:&quot;V2&quot;,&quot;TakeoffConfig&quot;:&quot;构型&quot;,&quot;TakeoffRunway&quot;:&quot;跑道&quot;,&quot;CruiseRemark&quot;:&quot;备注&quot;,&quot;ArrivalAirport&quot;:&quot;降落机场&quot;,&quot;LandingRunway&quot;:&quot;跑道&quot;,&quot;LandingMethod&quot;:&quot;降落方式&quot;,&quot;LandingConfig&quot;:&quot;构型&quot;,&quot;LandingWeather&quot;:&quot;天气&quot;,&quot;LandingTime&quot;:&quot;时间&quot;,&quot;ArrivalGate&quot;:&quot;停机位&quot;,&quot;PostFlightRemark&quot;:&quot;备注&quot;},&quot;noRemark&quot;:&quot;无&quot;,&quot;errorFormat&quot;:&quot;无效的日志文件格式。&quot;,&quot;errorEmpty&quot;:&quot;数据为空&quot;,&quot;errorRead&quot;:&quot;读取失败。请确认这个文件是 AXZ 飞行日志记录器保存出来的。&quot;,&quot;unsupported&quot;:&quot;你的浏览器不支持在本地解压 .axzlog 文件。请更新浏览器，或使用 AXZ 飞行日志记录器打开。&quot;,&quot;sampleNotice&quot;:&quot;示例文件 · 由本站生成，非真实飞行记录&quot;}">
+  <h1>飞行日志查看器</h1>
+  <p class="prose">把 .axzlog 文件拖进下面的区域，页面会当场把里面的内容读出来。文件不会上传到任何服务器，整个过程都在你自己的浏览器里完成。</p>
 
   <div class="dropzone" data-axzlog-zone>
   <div class="dropzone" data-axzlog-zone>
-    <p class="dropzone__hint" id="dz-hint">把 .axzlog 文件拖到这里，或点击选择文件</p>
+    <p class="dropzone__hint" id="dz-hint">把 .axzlog 文件拖到这里，也可以点下面的按钮选文件</p>
     <label class="btn" for="axzfile">选择日志文件</label>
     <input id="axzfile" type="file" accept=".axzlog" class="sr-only" data-axzlog-input>
     <button class="btn" type="button" data-axzlog-sample="/axz/fixtures/sample.axzlog">载入示例文件</button>
@@ -63,12 +63,12 @@
   <div class="ledger" data-axzlog-out hidden></div>
 
   <h2>.axzlog 是什么</h2>
-  <p class="prose">文件开头是 6 个字节的 ASCII 字符 AXZLOG，后面接一段 gzip 压缩的 UTF-8 JSON。浏览器可以直接解压，所以这台判读台不需要服务器。</p>
+  <p class="prose">文件开头是 6 个字节的 ASCII 字符 AXZLOG，后面接一段 gzip 压缩过的 UTF-8 JSON。浏览器自己就能解压，所以这个页面不需要服务器。</p>
 
   <h2>飞行员登录</h2>
-  <div class="notice">这是一道装饰性的门。本站是静态站点，没有服务器，也没有账号数据库：这里输入的任何内容都不会被发送、保存或校验。请不要输入你真正在用的密码。任意填写即可进入。</div>
+  <div class="notice">这个登录框只是把原来页面的样子留了下来，它不会真的核对任何东西。本站是静态网站，没有服务器，也没有账号；你在这里输入的内容不会被发送、保存或校验。别用你真在用的密码，随便填就能进。</div>
   <form class="demo-gate" data-demo-gate autocomplete="off" novalidate
-        data-welcome="欢迎" data-note="这道门只是复刻原页面的样子。判读台在上方，任何人都能直接使用，不需要登录。">
+        data-welcome="欢迎" data-note="这个登录框只是还原原页面的样子。上面的查看器谁都能直接用，不用登录。">
     <div class="field">
       <label for="pilot">用户名</label>
       <input id="pilot" name="pilot" type="text" autocomplete="off" placeholder="输入飞行员用户名">
@@ -86,14 +86,14 @@
     <p class="record__meta">此处不提供注册服务</p>
   </form>
 
-  <h2>原日志系统</h2>
-  <p class="notice">原飞行日志页由服务器程序驱动，飞行员上传的 .axzlog 文件保存在服务器上供所有人下载。本站是静态站点，没有这台服务器，因此改为在你自己的浏览器里直接读取文件。以下是原页面的界面文字，保留于此作为记录。</p>
+  <h2>原来的日志系统</h2>
+  <p class="notice">原来的飞行日志页要有服务器才能用：飞行员上传的 .axzlog 存在服务器上，大家一起下载。本站是静态网站，没有这台服务器，所以改成在你自己的浏览器里直接读文件。下面是原页面上的文字，留在这里作个记录。</p>
   <ul class="record__events"><li>飞行日志管理</li><li>提交飞行日志</li><li>下载飞行日志</li><li>仅支持上传 .axzlog 格式，所有飞行员共享日志</li><li>可用日志列表</li><li>下载</li></ul>
 </section>
 </main>
 <footer class="foot">
   <div class="wrap">
-    <nav class="foot__nav" aria-label="页脚导航"><a href="/axz/">航行日志</a><a href="/axz/guestbook/">留言区</a><a href="/axz/logbook/" aria-current="page">飞行日志</a><a href="/axz/accessibility/">无障碍声明</a></nav>
+    <nav class="foot__nav" aria-label="页脚导航"><a href="/axz/">首页</a><a href="/axz/guestbook/">留言区</a><a href="/axz/logbook/" aria-current="page">飞行日志</a><a href="/axz/accessibility/">无障碍声明</a></nav>
     <p>小泽航空 <span lang="en">Air Xiao Ze</span> (AXZ) © 2026</p>
     <p>虚拟航司 仅用于模拟飞行</p>
   </div>
