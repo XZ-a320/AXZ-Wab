@@ -112,6 +112,65 @@ console.log('\nlogbook: mock gate then reader')
   await page.close(); await c2.close()
 }
 
+/* 2c. Icons must never become the accessible name. A flag is a country, not a
+      language; a sun is not the word "day". Every icon is aria-hidden and the
+      real name is text beside it, and the toggles' icon/label/state must all
+      describe the same next action or they contradict each other. */
+console.log('\nicons')
+{
+  const page = await ctx.newPage()
+  await page.goto(BASE + '/axz/', { waitUntil: 'networkidle' })
+
+  const hidden = await page.$$eval('.icon', els => els.filter(e => e.getAttribute('aria-hidden') !== 'true').length)
+  hidden === 0 ? ok('every icon is aria-hidden') : bad(`${hidden} icons are exposed to assistive tech`)
+
+  const langs = await page.$$eval('.lang a', as => as.map(a => ({ name: a.textContent.trim(), lang: a.getAttribute('lang') })))
+  langs.length === 2 && langs[0].name === '中文' && langs[1].name === 'English'
+    ? ok('language links are named by language, not by flag')
+    : bad(`language link names: ${JSON.stringify(langs)}`)
+
+  const read = () => page.evaluate(() => {
+    const t = document.querySelector('[data-theme-toggle]'), m = document.querySelector('[data-motion-toggle]')
+    return {
+      ti: t.querySelector('use').getAttribute('href'), tn: t.textContent.trim(), tp: t.getAttribute('aria-pressed'),
+      mi: m.querySelector('use').getAttribute('href'), mn: m.textContent.trim(), mp: m.getAttribute('aria-pressed'),
+    }
+  })
+  const a = await read()
+  await page.click('[data-theme-toggle]'); await page.waitForTimeout(120)
+  const b2 = await read()
+  a.ti !== b2.ti && a.tn !== b2.tn && a.tp !== b2.tp
+    ? ok(`theme toggle: icon, name and pressed-state all change (${a.ti}/${a.tn} -> ${b2.ti}/${b2.tn})`)
+    : bad(`theme toggle did not update together: ${JSON.stringify([a, b2])}`)
+
+  await page.click('[data-motion-toggle]'); await page.waitForTimeout(120)
+  const c3 = await read()
+  b2.mi !== c3.mi && b2.mn !== c3.mn && b2.mp !== c3.mp
+    ? ok(`motion toggle: icon, name and pressed-state all change (${b2.mi}/${b2.mn} -> ${c3.mi}/${c3.mn})`)
+    : bad(`motion toggle did not update together: ${JSON.stringify([b2, c3])}`)
+  await page.close()
+}
+
+/* 2d. Units: Chinese metric, English imperial — but never at the cost of the
+      owner's own figures. */
+{
+  const page = await ctx.newPage()
+  await page.goto(BASE + '/axz/', { waitUntil: 'domcontentloaded' })
+  const zhTxt = await page.innerText('main')
+  zhTxt.includes('约110公里') && zhTxt.includes('约280公里')
+    ? ok('Chinese distances stay metric, in the owner\'s own words') : bad('Chinese distances altered')
+  zhTxt.includes('5,500英尺') && zhTxt.includes('31100英尺')
+    ? ok('Chinese altitudes untouched (31100英尺 is a real metric flight level)') : bad('Chinese altitudes altered');
+  /\b39\.47 m\b/.test(zhTxt) ? ok('Chinese fleet dimensions in metres') : bad('Chinese fleet dimensions not metric')
+  await page.goto(BASE + '/axz/en/', { waitUntil: 'domcontentloaded' })
+  const enTxt = await page.innerText('main')
+  enTxt.includes('59 nm') && enTxt.includes('151 nm')
+    ? ok('English distances in nautical miles') : bad('English distances not converted');
+  /129\.5 ft/.test(enTxt) ? ok('English fleet dimensions in feet') : bad('English fleet dimensions not in feet')
+  enTxt.includes('31,100 ft') ? ok('English altitude keeps 31,100 ft') : bad('English altitude altered')
+  await page.close()
+}
+
 /* 3. April Fools: sanitized, gated, exit works, noindex. */
 console.log('\napril fools')
 {

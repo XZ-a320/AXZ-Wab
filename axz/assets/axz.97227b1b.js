@@ -18,11 +18,18 @@
 
   var themeBtn = document.querySelector('[data-theme-toggle]')
   if (themeBtn) {
+    /* The icon shows what a press will DO, and the accessible name says the
+       same thing, so the two can never drift apart: a moon when a press would
+       switch to night, a sun when it would switch back to day. */
+    var themeIcon = themeBtn.querySelector('[data-theme-icon] use')
+    var themeLabel = themeBtn.querySelector('[data-theme-label]')
     var sync = function () {
       var isNight = root.getAttribute('data-theme') === 'night' ||
         (!root.hasAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches)
       themeBtn.setAttribute('aria-pressed', String(isNight))
-      themeBtn.textContent = themeBtn.getAttribute(isNight ? 'data-label-day' : 'data-label-night')
+      var label = themeBtn.getAttribute(isNight ? 'data-label-day' : 'data-label-night')
+      if (themeLabel) themeLabel.textContent = label
+      if (themeIcon) themeIcon.setAttribute('href', isNight ? '#i-sun' : '#i-moon')
     }
     sync()
     themeBtn.addEventListener('click', function () {
@@ -47,10 +54,16 @@
 
   var motionBtn = document.querySelector('[data-motion-toggle]')
   if (motionBtn) {
+    /* Pause while motion runs, play once it is stopped — again matching the
+       label to the icon so both describe the same next action. */
+    var motionIcon = motionBtn.querySelector('[data-motion-icon] use')
+    var motionLabel = motionBtn.querySelector('[data-motion-label]')
     var syncM = function () {
       var off = root.getAttribute('data-motion') === 'off'
       motionBtn.setAttribute('aria-pressed', String(off))
-      motionBtn.textContent = motionBtn.getAttribute(off ? 'data-label-resume' : 'data-label-stop')
+      var label = motionBtn.getAttribute(off ? 'data-label-resume' : 'data-label-stop')
+      if (motionLabel) motionLabel.textContent = label
+      if (motionIcon) motionIcon.setAttribute('href', off ? '#i-play' : '#i-pause')
     }
     syncM()
     motionBtn.addEventListener('click', function () {

@@ -57,6 +57,11 @@ mkdirSync(join(OUT, 'assets'), { recursive: true })
 mkdirSync(join(OUT, 'fonts'), { recursive: true })
 mkdirSync(join(OUT, 'img', 'original'), { recursive: true })
 
+// Icon sprite, inlined once per document so <use href="#i-..."> resolves
+// without a network round trip and the symbols inherit currentColor.
+const sprite = readFileSync(join(SRC, 'icons', 'sprite.svg'), 'utf8')
+const icon = (id, cls = '') => `<svg class="icon ${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`
+
 const cssBundle = ['tokens', 'base', 'ledger', 'plate', 'pages']
   .map(f => readFileSync(join(SRC, 'css', `${f}.css`), 'utf8')).join('\n')
 // Each file is wrapped in its own block and terminated, so one file can never
@@ -156,8 +161,9 @@ function shell({ c, lang, key, title, desc, body, noindex = false }) {
   const otherCat = lang === 'zh-Hans' ? en : zh
   const P = s => parts(s, lang)
 
+  const NAV_ICON = { home: 'i-home', guestbook: 'i-guestbook', logbook: 'i-logbook', accessibility: 'i-a11y' }
   const nav = ['home', 'guestbook', 'logbook', 'accessibility'].map(k =>
-    `<a href="${urlFor(k, lang)}"${k === key ? ' aria-current="page"' : ''}>${P(c.nav[k])}</a>`
+    `<a href="${urlFor(k, lang)}"${k === key ? ' aria-current="page"' : ''}>${icon(NAV_ICON[k])}<span>${P(c.nav[k])}</span></a>`
   ).join('')
 
   return `<!DOCTYPE html>
@@ -182,6 +188,7 @@ ${preloads(lang)}
 <link rel="stylesheet" href="${BASE}/assets/${cssName}">
 </head>
 <body>
+${sprite}
 <a class="skip" href="#main">${P(c.nav.skip)}</a>
 <header class="topbar">
   <div class="wrap topbar__in">
@@ -195,14 +202,20 @@ ${preloads(lang)}
     <nav class="nav" aria-label="${esc(c.nav.label)}">${nav}</nav>
     <div class="controls">
       <div class="lang">
-        <a lang="zh-Hans" hreflang="zh-Hans" href="${urlFor(key, 'zh-Hans')}"${lang === 'zh-Hans' ? ' aria-current="page"' : ''}>中文</a>
+        <a lang="zh-Hans" hreflang="zh-Hans" href="${urlFor(key, 'zh-Hans')}"${lang === 'zh-Hans' ? ' aria-current="page"' : ''}>${icon('i-flag-cn', 'icon--flag')}<span>中文</span></a>
         <span aria-hidden="true">/</span>
-        <a lang="en" hreflang="en" href="${urlFor(key, 'en')}"${lang === 'en' ? ' aria-current="page"' : ''}>English</a>
+        <a lang="en" hreflang="en" href="${urlFor(key, 'en')}"${lang === 'en' ? ' aria-current="page"' : ''}>${icon('i-flag-us', 'icon--flag')}<span>English</span></a>
       </div>
-      <button class="ctrl-btn" type="button" data-theme-toggle aria-pressed="false"
-        data-label-day="${esc(c.nav.themeDay)}" data-label-night="${esc(c.nav.themeNight)}">${esc(c.nav.themeNight)}</button>
-      <button class="ctrl-btn" type="button" data-motion-toggle aria-pressed="false"
-        data-label-stop="${esc(c.nav.motionStop)}" data-label-resume="${esc(c.nav.motionResume)}">${esc(c.nav.motionStop)}</button>
+      <button class="ctrl-btn ctrl-btn--icon" type="button" data-theme-toggle aria-pressed="false"
+        data-label-day="${esc(c.nav.themeDay)}" data-label-night="${esc(c.nav.themeNight)}">
+        <svg class="icon" aria-hidden="true" focusable="false" data-theme-icon><use href="#i-moon"/></svg>
+        <span class="sr-only" data-theme-label>${esc(c.nav.themeNight)}</span>
+      </button>
+      <button class="ctrl-btn ctrl-btn--icon" type="button" data-motion-toggle aria-pressed="false"
+        data-label-stop="${esc(c.nav.motionStop)}" data-label-resume="${esc(c.nav.motionResume)}">
+        <svg class="icon" aria-hidden="true" focusable="false" data-motion-icon><use href="#i-pause"/></svg>
+        <span class="sr-only" data-motion-label>${esc(c.nav.motionStop)}</span>
+      </button>
     </div>
   </div>
 </header>
@@ -224,6 +237,23 @@ ${body}
 
 /* --- Home ----------------------------------------------------------------- */
 const FLEET_BASE = scaleBase(Object.keys(TYPES))
+
+/* --- Units ----------------------------------------------------------------
+   Chinese reads metric, English reads imperial. Two things are deliberately
+   NOT converted:
+
+   - The altitudes. 5,500英尺 and 31100英尺 are the owner's own words, and
+     31,100 ft is a real Chinese metric flight level (9,500 m) — rewriting it
+     as metres would both edit his text and destroy the fact.
+   - The route distances in Chinese, which he already wrote in 公里.
+
+   Aviation measures distance in NAUTICAL miles, so the English uses nm rather
+   than statute miles; "68 mi" between two airports would read as amateur to
+   the audience this site is for.                                            */
+const M_TO_FT = 3.280839895
+const dim = (metres, lang) => lang === 'zh-Hans'
+  ? `${metres} m`
+  : `${(metres * M_TO_FT).toFixed(1)} ft`
 
 function fleetScale(c, lang) {
   // One figure, all four types, one scale. A size comparison only works when
@@ -255,10 +285,10 @@ function fleetScale(c, lang) {
       <div class="af-meta">
         <span class="reg">${esc(f.reg)}</span>
         <span class="af-name">${parts(f.name, lang)}</span>
-        <span class="af-dims"><b class="code">${spec.len}</b> m &middot; <b class="code">${spec.span}</b> m</span>
+        <span class="af-dims"><b class="code">${dim(spec.len, lang)}</b> &middot; <b class="code">${dim(spec.span, lang)}</b></span>
       </div>
       <div class="af-draw" style="--af-w:${pct.toFixed(1)}%">
-        <svg viewBox="${a.viewBox}" role="img" aria-label="${esc(spec.name)}, ${esc(c.fleet.labels.length)} ${spec.len} m, ${esc(c.fleet.labels.span)} ${spec.span} m" focusable="false">
+        <svg viewBox="${a.viewBox}" role="img" aria-label="${esc(spec.name)}, ${esc(c.fleet.labels.length)} ${dim(spec.len, lang)}, ${esc(c.fleet.labels.span)} ${dim(spec.span, lang)}" focusable="false">
           ${solid}<path class="af-fin" style="--i:7" d="${P.fin}"/>${door}
         </svg>
         ${svg2}
@@ -423,7 +453,7 @@ function home(c, lang) {
 </section>
 
 <section class="sector wrap" aria-labelledby="s-routes">
-  <div class="sector__head"><span class="sector__no">${esc(S.routes.no)}</span><h2 id="s-routes">${P(S.routes.name)}</h2></div>
+  <div class="sector__head"><span class="sector__no">${esc(S.routes.no)}</span>${icon('i-route', 'icon--head')}<h2 id="s-routes">${P(S.routes.name)}</h2></div>
   <div class="ledger">${c.routes._order.map(id => routeRow(c, lang, id)).join('')}</div>
   <h3 class="record__label">${esc(c.routes.labels.flights)}</h3>
   ${flightStrips(c, lang)}
@@ -432,7 +462,7 @@ function home(c, lang) {
 </section>
 
 <section class="sector wrap" aria-labelledby="s-fleet">
-  <div class="sector__head"><span class="sector__no">${esc(S.fleet.no)}</span><h2 id="s-fleet">${P(S.fleet.name)}</h2></div>
+  <div class="sector__head"><span class="sector__no">${esc(S.fleet.no)}</span>${icon('i-fleet', 'icon--head')}<h2 id="s-fleet">${P(S.fleet.name)}</h2></div>
   <p class="record__label">${esc(c.fleet.listTitle)}</p>
   ${fleetScale(c, lang)}
   <h3 class="record__label">${esc(c.fleet.groups.pax)}</h3>
@@ -472,12 +502,12 @@ function home(c, lang) {
 </section>
 
 <section class="sector wrap" aria-labelledby="s-guest">
-  <div class="sector__head"><span class="sector__no">${esc(S.guestbook.no)}</span><h2 id="s-guest">${P(S.guestbook.name)}</h2></div>
+  <div class="sector__head"><span class="sector__no">${esc(S.guestbook.no)}</span>${icon('i-guestbook', 'icon--head')}<h2 id="s-guest">${P(S.guestbook.name)}</h2></div>
   <p class="prose">${P(c.guestbook.homeBody)}</p>
   <p><a class="btn" href="${urlFor('guestbook', lang)}">${esc(c.guestbook.cta)}</a></p>
   <h3 class="record__label">${esc(c.tools.title)}</h3>
   <p>
-    <a class="btn" href="${esc(c.tools.routeQueryUrl)}" target="_blank" rel="noopener noreferrer" hreflang="zh">${esc(c.tools.routeQuery)}<span class="sr-only"> (${esc(c.tools.externalNote)})</span></a>
+    <a class="btn" href="${esc(c.tools.routeQueryUrl)}" target="_blank" rel="noopener noreferrer" hreflang="zh">${icon('i-external')}${esc(c.tools.routeQuery)}<span class="sr-only"> (${esc(c.tools.externalNote)})</span></a>
     <a class="btn" href="${urlFor('logbook', lang)}">${esc(c.logbook.title)}</a>
   </p>
 </section>`
@@ -559,6 +589,7 @@ function logbook(c, lang) {
          the moment it is chosen. No separate "load" step. -->
     <label class="dropzone" data-axzlog-zone>
       <input id="axzfile" type="file" accept=".axzlog" class="sr-only" data-axzlog-input>
+      ${icon('i-drop', 'icon--drop')}
       <span class="dropzone__hint">${esc(c.logbook.dropzone)}</span>
     </label>
     <p class="dropzone__alt">

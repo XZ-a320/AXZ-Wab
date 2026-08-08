@@ -83,7 +83,7 @@
       "pair": "San Francisco International ↔ Salinas Municipal",
       "fromName": "San Francisco International Airport",
       "toName": "Salinas Municipal Airport",
-      "distance": "About 110 km",
+      "distance": "About 59 nm",
       "duration": "About 30 min",
       "altitude": "5,500 ft",
       "landmarks": "Santa Cruz Mountains (mid-route), Monterey Bay coast",
@@ -109,7 +109,7 @@
       "pair": "Shanghai Pudong International ↔ Nanjing Lukou International",
       "fromName": "Shanghai Pudong International Airport",
       "toName": "Nanjing Lukou International Airport",
-      "distance": "About 280 km",
+      "distance": "About 151 nm",
       "duration": "About 50 min",
       "altitude": "31,100 ft (9,500 m)",
       "landmarks": "Yangtze River Delta, Lake Tai, Zhenjiang",
@@ -459,7 +459,7 @@
     "viewOriginal": "View original",
     "notFound": "Page not found",
     "footerNav": "Footer navigation",
-    "profileNote": "Both cruise altitudes drawn to one scale. Shanghai to Nanjing sits at 9,500 m; San Francisco to Salinas only reaches 1,676 m, nearly six times lower.",
+    "profileNote": "Both cruise altitudes drawn to one scale. Shanghai to Nanjing sits at 31,100 ft; San Francisco to Salinas only reaches 5,500 ft, nearly six times lower.",
     "aircraftMoving": "On the route map, the aircraft flies the outbound routing",
     "stripNote": "The four flight numbers laid out the way a real ATC flight progress strip is."
   }

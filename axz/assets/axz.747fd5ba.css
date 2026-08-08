@@ -1137,3 +1137,33 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .dropzone__hint { display: block; color: var(--ink-2); }
 .dropzone__alt { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-block: var(--s-2); }
+
+/* --- Icons -----------------------------------------------------------------
+   One inline sprite per document. Line icons use stroke: currentColor so they
+   follow the surrounding text colour and need no per-theme variant; the two
+   flags carry their own official colours and are decorative only. */
+.icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  display: inline-block;
+  vertical-align: -0.18em;
+}
+.icon--flag {
+  width: 1.35em;
+  height: .9em;
+  vertical-align: -0.08em;
+  /* A flag is a country, not a language, so it never carries the accessible
+     name — the language's own name sits beside it and does that job. */
+  outline: 1px solid var(--rule-hair);
+  outline-offset: 0;
+}
+.icon--head { width: 1.1em; height: 1.1em; color: var(--ink-3); }
+.icon--drop { width: 2.2em; height: 2.2em; margin-inline: auto; color: var(--ink-3); }
+
+.nav a { gap: var(--s-1); }
+.controls .lang a { gap: 6px; }
+.ctrl-btn--icon { padding-inline: var(--s-15); }
+.ctrl-btn--icon .icon { width: 1.25em; height: 1.25em; vertical-align: middle; }
+.btn .icon { margin-inline-end: 2px; }
+.sector__head .icon--head { align-self: center; }
