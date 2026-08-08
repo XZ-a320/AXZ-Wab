@@ -1,0 +1,148 @@
+/* ==========================================================================
+   AXZ design tokens
+   Every ratio in a comment below is computed by scripts/check-axz-contrast.mjs
+   and enforced there. Do not hand-edit a ratio; run the checker.
+
+   Shape system: two line weights and nothing else. No radii, no shadows.
+   The one "elevation" is a hard 6px print offset, used in exactly one place.
+   ========================================================================== */
+
+:root {
+  color-scheme: light dark;
+
+  /* --- DAY (default) ---------------------------------------------------- */
+  --paper:        #F3F0E9;   /* page ground, warm bone */
+  --paper-2:      #FBF9F4;   /* inset ledger cells */
+  --paper-shade:  #E2DCCF;   /* DECORATIVE ONLY - the print offset. Never text. */
+
+  --ink:          #15171B;   /* 15.77 on paper - body, headings */
+  --ink-2:        #43484F;   /*  8.10 on paper - secondary prose */
+  --ink-3:        #5E646C;   /*  5.25 on paper - lightest text token in the system */
+
+  --cyan-ink:     #00688F;   /*  5.46 on paper - links, brand text */
+  --cyan:         #00A2E8;   /* brand cyan, sampled from the wordmark.
+                                2.86 on paper => FILL ONLY in day, never text. */
+  --remark:       #A8261D;   /*  6.23 on paper - the 备注 column */
+
+  --rule-hair:    #C7C1B3;   /* 1.58 - ruled-paper rhythm, decorative */
+  --rule-struct:  #7A7365;   /* 4.13 - structural rules, row separation (1.4.11) */
+
+  --focus-outer:  #0B5FA5;   /* 5.78 on paper */
+  --focus-inner:  #F3F0E9;
+
+  /* --- Type ------------------------------------------------------------- */
+  /* Latin FIRST so per-glyph fallback gives Latin to Archivo, not to a CJK
+     face's bundled Latin. ~37% of the rendered width here is Latin. */
+  --font-sans: Archivo, "AXZ Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-kai:  "AXZ Serif", "Noto Serif SC", "Songti SC", STSong, serif;
+  --font-mono: "AXZ Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  /* ratio 1.25, anchored 17px ZH / 18px EN */
+  --fs-mono-xs: 12px;
+  --fs-xs:      13px;
+  --fs-sm:      15px;
+  --fs-base:    17px;
+  --fs-md:      21px;
+  --fs-lg:      27px;
+  --fs-xl:      34px;
+  --fs-2xl:     clamp(38px, 5.2vw, 62px);
+  --fs-display: clamp(52px, 11vw, 148px);   /* masthead only */
+
+  /* --- Space: 8px base, no exceptions ----------------------------------- */
+  --s-h:   4px;
+  --s-1:   8px;
+  --s-15: 12px;
+  --s-2:  16px;
+  --s-3:  24px;
+  --s-4:  32px;
+  --s-6:  48px;
+  --s-8:  64px;
+  --s-12: 96px;
+  --s-16: 128px;
+  --s-24: 192px;
+
+  --measure: 1160px;
+  --gutter: 24px;
+  --row-rhythm: 32px;
+  --tap: 44px;              /* design floor, well above the 24px WCAG minimum */
+
+  /* --- Shape ------------------------------------------------------------ */
+  --print-offset: 6px 6px 0 var(--paper-shade);   /* hard, zero blur, one use */
+
+  /* --- Motion ----------------------------------------------------------- */
+  --ease-ink:   cubic-bezier(.22, .61, .36, 1);   /* default - a pen settling */
+  --ease-page:  cubic-bezier(.65, 0, .35, 1);     /* reveals */
+  --ease-track: linear;                            /* route draws only */
+  --t-1: 120ms;
+  --t-2: 220ms;
+  --t-3: 420ms;
+  --t-4: 900ms;
+}
+
+/* --- NIGHT ---------------------------------------------------------------
+   --night-2 sits 1.07:1 from --night. Separation is carried by RULES, never
+   by contrast, so every component boundary on a nested surface must use
+   --rule-struct (not --rule-hair). Enforced in check-axz-contrast.mjs.        */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="day"]) {
+    --paper:       #0B0D10;
+    --paper-2:     #12161A;
+    --paper-shade: #1B2026;
+
+    --ink:         #E9E5DC;   /* 15.48 on night */
+    --ink-2:       #A8B0B9;   /*  8.87 */
+    --ink-3:       #8A929B;   /*  6.18 */
+
+    --cyan-ink:    #38BDF6;   /*  9.06 - links in night */
+    --cyan:        #00A2E8;   /*  6.79 - text-safe on night */
+    --remark:      #FF6B5E;   /*  6.96 */
+
+    --rule-hair:   #242A31;
+    --rule-struct: #5F6771;   /*  3.40 - non-text contrast, passes 1.4.11 */
+
+    --focus-outer: #7ED0F5;   /* 11.33 */
+    --focus-inner: #0B0D10;
+  }
+}
+
+:root[data-theme="night"] {
+  --paper:       #0B0D10;
+  --paper-2:     #12161A;
+  --paper-shade: #1B2026;
+
+  --ink:         #E9E5DC;
+  --ink-2:       #A8B0B9;
+  --ink-3:       #8A929B;
+
+  --cyan-ink:    #38BDF6;
+  --cyan:        #00A2E8;
+  --remark:      #FF6B5E;
+
+  --rule-hair:   #242A31;
+  --rule-struct: #5F6771;
+
+  --focus-outer: #7ED0F5;
+  --focus-inner: #0B0D10;
+}
+
+/* --- PLATE ---------------------------------------------------------------
+   These are night charts. They do NOT remap on theme change: --plate is
+   16.64:1 against day paper and reads as an inset object in both modes.
+
+   TIERING RULE: values sampled from the original charts are MARKS. A token
+   marked "mark only" appearing in a `color:` declaration fails the build.   */
+
+.plate {
+  --plate:       #0E1114;
+  --plate-ink:   #E9E5DC;   /* 15.06 on plate - text */
+  --plate-ink-2: #9AA3AC;   /*  7.40 on plate - text */
+  --plate-cyan:  #00A2E8;   /*  6.61 - text + mark (circled waypoints) */
+  --track:       #D8E04A;   /* 13.24 - mark: the flown route */
+  --fix:         #C8CDD4;   /* 11.85 - mark: triangle fixes */
+  --airway:      #E0A93B;   /*  8.93 - mark: dashed airways */
+  --dep:         #4CC97A;   /*  8.97 - mark: departure glyph */
+  --arr:         #F2554A;   /*  5.57 - MARK ONLY */
+  --arr-text:    #FF8A7E;   /*  8.29 - text tier of the same red */
+  --terrain:     #676F79;   /*  3.72 - MARK ONLY, terrain hatching */
+}

@@ -1,0 +1,467 @@
+{
+  "_note": "源语言目录。中文为唯一真源，英文由此生成。带 locked 的键有固定译法，见 en.json 与构建校验。",
+  "lang": "zh-Hans",
+  "langName": "中文",
+  "dir": "ltr",
+  "meta": {
+    "siteName": "小泽航空",
+    "siteNameEn": "Air Xiao Ze",
+    "code": "AXZ",
+    "tagline": "FLY ON TIME",
+    "disclaimer": "虚拟航司 仅用于模拟飞行",
+    "copyright": "小泽航空 Air Xiao Ze (AXZ) © 2026",
+    "description": "小泽航空（AXZ）是一家虚拟航空公司，成立于2026年，主运营基地为旧金山国际机场。两条航线，四架飞机，以及一份完整的飞行记录。",
+    "artCredit": "机型俯视图：Julien.scavini，取自维基共享资源，CC BY-SA 3.0，本站做了裁切与重新上色。",
+    "artCreditLink": "https://commons.wikimedia.org/wiki/File:Boeing_737-800_v1.0.png"
+  },
+  "nav": {
+    "label": "主导航",
+    "home": "首页",
+    "guestbook": "留言区",
+    "logbook": "飞行日志",
+    "accessibility": "无障碍声明",
+    "skip": "跳到主要内容",
+    "themeDay": "昼",
+    "themeNight": "夜",
+    "themeLabel": "切换昼夜模式",
+    "motionStop": "停止动画",
+    "motionResume": "恢复动画",
+    "langSwitch": "English"
+  },
+  "home": {
+    "title": "小泽航空 - Air Xiao Ze (AXZ)",
+    "sectors": {
+      "routes": {
+        "no": "01",
+        "name": "核心航线"
+      },
+      "fleet": {
+        "no": "02",
+        "name": "执飞机队"
+      },
+      "record": {
+        "no": "03",
+        "name": "小泽航空 · 全纪录"
+      },
+      "hotspot": {
+        "no": "04",
+        "name": "重要热点"
+      },
+      "guestbook": {
+        "no": "05",
+        "name": "留言与飞行员工具"
+      }
+    },
+    "routesMore": "查看更多航线",
+    "fleetMore": "查看更多飞机",
+    "routeListTitle": "全部航线",
+    "routeHint": "👆 点击机场代码可查看航线示意图",
+    "routeNote": "注：上方示意图为去程航路",
+    "originalImage": "原图",
+    "originalImageClose": "关闭"
+  },
+  "routes": {
+    "_order": [
+      "ksfo-ksns",
+      "zspd-zsnj"
+    ],
+    "labels": {
+      "distance": "航线距离",
+      "duration": "飞行时间",
+      "altitude": "巡航高度",
+      "plan": "飞行航路",
+      "landmarks": "主要地标",
+      "outbound": "去程",
+      "inbound": "返程",
+      "profile": "高度剖面",
+      "ground": "地面",
+      "cruiseAt": "巡航",
+      "flights": "航班"
+    },
+    "ksfo-ksns": {
+      "from": "KSFO",
+      "to": "KSNS",
+      "pair": "旧金山国际机场 ↔ 萨利纳斯机场",
+      "fromName": "旧金山国际机场",
+      "toName": "萨利纳斯机场",
+      "distance": "约110公里",
+      "duration": "约30分钟",
+      "altitude": "5,500英尺",
+      "landmarks": "圣克鲁斯山脉(中段)、蒙特雷湾沿岸",
+      "legs": [
+        {
+          "id": "axz001",
+          "dir": "去程",
+          "flight": "AXZ001",
+          "plan": "KSFO SID OSI V25 SAPID T259 SANTY STAR KSNS"
+        },
+        {
+          "id": "axz002",
+          "dir": "返程",
+          "flight": "AXZ002",
+          "plan": "KSNS SID SNS V111 BSR STAR KSFO"
+        }
+      ],
+      "chartAlt": "KSFO 至 KSNS 航线示意图，去程航路经 OSI、SAPID、SANTY 三个航路点"
+    },
+    "zspd-zsnj": {
+      "from": "ZSPD",
+      "to": "ZSNJ",
+      "pair": "上海浦东国际机场 ↔ 南京禄口国际机场",
+      "fromName": "上海浦东国际机场",
+      "toName": "南京禄口国际机场",
+      "distance": "约280公里",
+      "duration": "约50分钟",
+      "altitude": "31100英尺",
+      "landmarks": "长江三角洲、太湖、镇江",
+      "legs": [
+        {
+          "id": "axz003",
+          "dir": "去程",
+          "flight": "AXZ003",
+          "plan": "ZSPD SID SASAN R343 ESBAG STAR ZSNJ"
+        },
+        {
+          "id": "axz004",
+          "dir": "返程",
+          "flight": "AXZ004",
+          "plan": "ZSNJ SID ESBAG R343 SASAN STAR ZSPD"
+        }
+      ],
+      "chartAlt": "ZSPD 至 ZSNJ 航线示意图，去程航路经 SASAN、ESBAG 两个航路点"
+    }
+  },
+  "fleet": {
+    "_order": [
+      "b-737x",
+      "b-321x",
+      "b-1717",
+      "b-0001f"
+    ],
+    "groups": {
+      "pax": "客运飞机",
+      "cargo": "货运飞机"
+    },
+    "listTitle": "全部飞机 · 机队总览(按照服役时间排序)",
+    "labels": {
+      "reg": "注册号",
+      "history": "飞机历史",
+      "events": "重大事件",
+      "funny": "搞笑史",
+      "length": "机身长度",
+      "span": "翼展",
+      "silhouette": "俯视图",
+      "silhouetteNote": "四种机型按官方公布的尺寸、用同一个比例画在一起，可以直接互相比。这里是机型本身的数据，不是小泽航空的运营数据。"
+    },
+    "b-737x": {
+      "group": "pax",
+      "name": "波音 737-800",
+      "nameFull": "波音 737-800 ✈️ 小泽首架飞机",
+      "reg": "B-737X",
+      "dossierTitle": "波音 737-800 B-737X · 小泽首架飞机档案",
+      "history": "B-737X 是小泽航空成立后的 第一架飞机 ，也是公司开航首飞机型。2026年航司创立之初，该机独自承担 KSFO↔KSNS 所有 AXZ001/AXZ002 航班，是小泽航空从无到有的见证者，也是机队元老级主力。",
+      "events": [
+        "执行小泽航空历史首班 AXZ001 航班",
+        "开航初期独苗运营，单日执飞多班往返",
+        "完成侧风、单发、中断起飞等多项特情训练"
+      ],
+      "funny": [
+        "落地风格稳健偏\"重\"，被地勤戏称跑道震动器",
+        "曾飞错航线小绕圈，副驾驶默默截图做成表情包",
+        "机队内地位最高，谁都要喊一声元老机"
+      ]
+    },
+    "b-321x": {
+      "group": "pax",
+      "name": "空客 A321",
+      "nameFull": "空中客车 A321",
+      "reg": "B-321X",
+      "dossierTitle": "空客 A321 B-321X · 主力客运机档案",
+      "history": "B-321X 是小泽航空引入的第二架客运主力机型，为空客 A321。主要用于分担 B-737X 的运营压力，加密航班频次，执飞 AXZ001/AXZ002 核心班次，是机队重要客运力量。",
+      "events": [
+        "正式入列后大幅提升航线班次密度",
+        "多次承担高峰时段加班飞行任务",
+        "陪机组去完成模拟发动机失效等特情处置演练"
+      ],
+      "funny": [
+        "刚到公司就上演重着陆，被调侃来抢饭碗",
+        "机组在一次训练忘放襟翼进近，全机舱尴尬沉默一分钟",
+        "自称\"优雅载客机\"，实际落地偶尔很粗暴"
+      ]
+    },
+    "b-1717": {
+      "group": "pax",
+      "name": "波音 737-800 (MC联动)",
+      "nameFull": "波音 737-800 B-1717 MC联动机档案",
+      "reg": "B-1717",
+      "dossierTitle": "波音 737-800 B-1717 MC联动机档案",
+      "history": "B-1717是小泽航空与Minecraft的联动飞机，发誓永不退涂！",
+      "events": [
+        "小泽航空首架联动飞机正式入列",
+        "于2026年3月20日完成首次 KSFO↔KSNS 载客飞行",
+        "这架也是小泽航空机队中保养最好的一架"
+      ],
+      "funny": [
+        "在喷涂涂装期间，应为防水问题导致飞机掉色",
+        "首飞第一天就发生了重着落",
+        "2026年6月11日机长硬抗乱流，客舱乘客表示：仿佛被\"涂抹\"在舱壁上"
+      ]
+    },
+    "b-0001f": {
+      "group": "cargo",
+      "name": "波音 737-800BCF",
+      "nameFull": "波音 737-800BCF",
+      "reg": "B-0001F",
+      "dossierTitle": "波音 737-800BCF B-0001F · 货机档案",
+      "history": "B-0001F 是小泽航空首架专用货运飞机，为 737-800BCF 货机。主要执飞虚拟货运航班，负责模拟物资、小件快运，标志小泽航空正式进入客货协同运营阶段。",
+      "events": [
+        "完成小泽航空首班商业货运飞行",
+        "通过重载起降、偏载模拟等严苛测试",
+        "长期稳定执行夜间货运任务"
+      ],
+      "funny": [
+        "配重失误导致抬头过猛，被笑\"快递要逃逸\"",
+        "滑行速度过慢被塔台频繁催促",
+        "机队沉默搬砖人，只运货不说话"
+      ]
+    }
+  },
+  "record": {
+    "labels": {
+      "history": "航司历史",
+      "events": "重大事件",
+      "blackHistory": "搞笑黑历史"
+    },
+    "history": "小泽航空（AXZ）成立于2026年，主运营基地为旧金山国际机场（KSFO）。公司初期仅运营一条精品往返航线：KSFO ↔ KSNS，最初以 B-737-800 为唯一运营机型，后续逐步引入 A321 客运机型与 737-800BCF 货机，形成精简高效的客货并举机队，是专注于飞行的特色航司。后期将部分主力转战中国市场，并开通了ZSPD ↔ ZSNJ的往返航线。",
+    "events": [
+      "2026年正式成立，B-737X 执行首班 AXZ001 首航任务",
+      "引进 A321 B-321X 扩充客运运力，加密班次运营",
+      "随后将新引进的B-1717与Minecraft形成长期联动提高知名度",
+      "B-0001F 货机投入使用，开启小泽航空货运业务",
+      "全年模拟飞行安全运行，无重大事故"
+    ],
+    "blackHistory": [
+      "首航当天机长滑行超速，被虚拟ATC连续警告成名场面",
+      "B-737X 多次温柔重着陆，荣获\"跑道按摩师\"称号",
+      "A321 刚入列就上演忘放襟翼名场面，机组集体沉默",
+      "货机 B-0001F 因配重不当抬头过猛，被调侃\"快递想私奔\""
+    ]
+  },
+  "hotspot": {
+    "body": "2026年4月18日下午，上海虹桥机场(ZSSS)惊现国航747(B-2472),这震撼的一幕正好被相机镜头记录下！",
+    "status": "最新动态：持续更新中",
+    "imageAlt": "上海虹桥机场停机坪上的国航波音747-400，注册号B-2472"
+  },
+  "guestbook": {
+    "title": "小泽航空 留言区",
+    "docTitle": "小泽航空留言区",
+    "back": "返回首页",
+    "warning": "⚠️ 无用的留言将被删除！⚠️",
+    "homeTitle": "欢迎留言互相交流",
+    "homeBody": "欢迎留下你对小泽航空和其他成员的祝福～",
+    "cta": "前往留言区",
+    "archiveNotice": "这里是留言的存档。原来的留言板要有服务器才能收留言，本站是静态网站，所以留言原样保留在这里，暂时不能发新的。",
+    "empty": "还没有留言，来做第一个吧",
+    "ceremonyTitle": "原来发留言的步骤",
+    "ceremonyNote": "下面是原留言板上的文字，留在这里作个记录。",
+    "ceremony": [
+      "发布留言",
+      "⚠️ 发布无用的留言将被删除！确定要继续吗？",
+      "写下你的留言",
+      "请输入留言内容（最多100字）...",
+      "发布后无法修改！请确认以下内容：",
+      "确认发布",
+      "修改",
+      "确定发布",
+      "取消",
+      "留言内容不能为空",
+      "留言不能超过100字",
+      "留言发布成功！"
+    ],
+    "entries": [
+      {
+        "time": "2026-07-28 12:48:27",
+        "content": "做的网站真好"
+      },
+      {
+        "time": "2026-07-10 03:33:48",
+        "content": "⭐⭐⭐ ⭐ ⭐小泽棒棒哒！继续加油"
+      },
+      {
+        "time": "2026-07-09 07:15:26",
+        "content": "⭐️⭐️⭐️⭐️⭐️五星好评，737宽敞舒适，令人愉悦，登机流畅，航班没有延误"
+      }
+    ]
+  },
+  "tools": {
+    "title": "飞行员工具",
+    "routeQuery": "航路查询",
+    "routeQueryUrl": "https://route.hkrscoc.com",
+    "logUpload": "日志上传",
+    "externalNote": "站外链接"
+  },
+  "logbook": {
+    "title": "飞行日志查看器",
+    "headerSub": "Air Xiao Ze (AXZ) · 飞行日志",
+    "intro": "把 .axzlog 文件拖进下面的区域，页面会当场把里面的内容读出来。文件不会上传到任何服务器，整个过程都在你自己的浏览器里完成。",
+    "dropzone": "把 .axzlog 文件拖到这里，也可以点下面的按钮选文件",
+    "dropzoneButton": "选择日志文件",
+    "sampleButton": "载入示例文件",
+    "sampleNotice": "示例文件 · 由本站生成，非真实飞行记录",
+    "clearButton": "清除",
+    "errorFormat": "无效的日志文件格式。",
+    "errorEmpty": "数据为空",
+    "errorRead": "读取失败。请确认这个文件是 AXZ 飞行日志记录器保存出来的。",
+    "unsupported": "你的浏览器不支持在本地解压 .axzlog 文件。请更新浏览器，或使用 AXZ 飞行日志记录器打开。",
+    "noRemark": "无",
+    "legacyTitle": "原来的日志系统",
+    "legacyNote": "原来的飞行日志页要有服务器才能用：飞行员上传的 .axzlog 存在服务器上，大家一起下载。本站是静态网站，没有这台服务器，所以改成在你自己的浏览器里直接读文件。下面是原页面上的文字，留在这里作个记录。",
+    "legacy": [
+      "飞行日志管理",
+      "提交飞行日志",
+      "下载飞行日志",
+      "仅支持上传 .axzlog 格式，所有飞行员共享日志",
+      "可用日志列表",
+      "下载"
+    ],
+    "formatTitle": ".axzlog 是什么",
+    "formatBody": "文件开头是 6 个字节的 ASCII 字符 AXZLOG，后面接一段 gzip 压缩过的 UTF-8 JSON。浏览器自己就能解压，所以这个页面不需要服务器。",
+    "loginTitle": "飞行员登录",
+    "loginUser": "用户名",
+    "loginPass": "密码",
+    "loginUserPlaceholder": "输入飞行员用户名",
+    "loginPassPlaceholder": "输入密码",
+    "loginButton": "登录",
+    "loginBack": "返回主页",
+    "loginNoRegister": "此处不提供注册服务",
+    "loginDemoNotice": "这个登录框只是把原来页面的样子留了下来，它不会真的核对任何东西。本站是静态网站，没有服务器，也没有账号；你在这里输入的内容不会被发送、保存或校验。别用你真在用的密码，随便填就能进。",
+    "loginEmpty": "请输入用户名和密码",
+    "welcome": "欢迎",
+    "logout": "退出登录",
+    "manageTitle": "飞行日志管理",
+    "bands": {
+      "pre": "飞行前",
+      "takeoff": "起飞",
+      "cruise": "巡航",
+      "landing": "降落",
+      "post": "飞行后"
+    },
+    "fields": {
+      "FlightNumber": "航班号",
+      "AircraftType": "机型",
+      "Registration": "注册号",
+      "Date": "日期",
+      "DepartureAirport": "起飞机场",
+      "DepartureGate": "停机位",
+      "DepartureTime": "时间",
+      "DepartureWeather": "机场天气",
+      "FlightPlan": "飞行计划",
+      "V1": "V1",
+      "VR": "VR",
+      "V2": "V2",
+      "TakeoffConfig": "构型",
+      "TakeoffRunway": "跑道",
+      "CruiseRemark": "备注",
+      "ArrivalAirport": "降落机场",
+      "LandingRunway": "跑道",
+      "LandingMethod": "降落方式",
+      "LandingConfig": "构型",
+      "LandingWeather": "天气",
+      "LandingTime": "时间",
+      "ArrivalGate": "停机位",
+      "PostFlightRemark": "备注"
+    },
+    "welcomeNote": "这个登录框只是还原原页面的样子。上面的查看器谁都能直接用，不用登录。"
+  },
+  "aprilfools": {
+    "date": "2026年4月1日",
+    "title": "愚人节彩蛋",
+    "docTitle": "愚人节彩蛋（模拟入侵页面）- 小泽航空",
+    "gateHeading": "这是一个愚人节玩笑页面",
+    "gateBody": "下面是小泽航空在 2026 年 4 月 1 日贴出的恶搞页面，它假装网站被黑客攻陷。页面上的一切都是假的：没有病毒，没有勒索，没有任何数据被加密。原页面上的比特币地址、暗网地址和联系邮箱已在此处移除。",
+    "gateButton": "我知道了，进去看看",
+    "exitButton": "恢复原网站",
+    "removedBtc": "[比特币地址已移除]",
+    "removedEmail": "hack@[已移除]",
+    "removedOnion": "[已移除]",
+    "docTitleOriginal": "⚠️ 系统警告 - 小泽航空已被入侵 ⚠️",
+    "heading": "⚠️ [!!!] 系统已被攻陷 [!!!] ⚠️",
+    "org": "< 暗夜黑客组织 - 代号: 红瞳 >",
+    "asciiAlt": "ASCII 字符画，拼出 EASY IE 2 字样",
+    "terminal": [
+      {
+        "task": "[>] 入侵防火墙............",
+        "state": "[ 完成 ]"
+      },
+      {
+        "task": "[>] 绕过IDS/IPS............",
+        "state": "[ 成功 ]"
+      },
+      {
+        "task": "[>] 提权至ROOT............",
+        "state": "[ 已获得最高权限 ]"
+      },
+      {
+        "task": "[>] 数据库脱敏.............",
+        "state": "[ 解密中 ]"
+      },
+      {
+        "task": "[>] 篡改主页.............",
+        "state": "[ 执行中 ]"
+      },
+      {
+        "task": "[>] 植入永久后门.........",
+        "state": "████████████ 完成 ████████████"
+      }
+    ],
+    "ransom": [
+      "⚠️ 警告 ⚠️ 小泽航空 (Air Xiao Ze) 所有数据已被加密！",
+      "你的飞行计划、机队信息、航线图已被上传至暗网节点：",
+      "如需解锁，请支付 0.5 比特币至地址：",
+      "支付后联系邮箱：",
+      "并提供截图，24小时内恢复。",
+      "► 剩余时间：23:59:47 ◄"
+    ],
+    "prompt": "root@AXZ-Server:~#",
+    "commands": [
+      "./入侵证据清除.sh --force",
+      "rm -rf /var/log/hack*",
+      "echo 'I was here' > /home/axz/readme.txt",
+      "lastlog -u root",
+      "service apache2 stop",
+      "chattr +i /var/www/html/index.html"
+    ],
+    "decryptButton": "尝试解密",
+    "decryptAlert": "无法解密！请支付赎金。（这是模拟页面，请点击“恢复原网站”按钮）",
+    "decryptFail": "▮▮▮▮▮▮▮▮▮▮ 100% [解密失败，密钥无效]",
+    "footerNote": "* 这是模拟入侵的恶搞页面，没有任何实际病毒或勒索行为。",
+    "footerSign": "小泽航空 友情整蛊 | 仅供娱乐"
+  },
+  "accessibility": {
+    "title": "无障碍声明",
+    "target": "本站以 WCAG 2.2 AA 级为标准。",
+    "sections": {
+      "status": "当前状况",
+      "tested": "测试方式",
+      "known": "已知问题",
+      "contact": "反馈"
+    },
+    "statusBody": "本站是静态网站，内容在页面打开时就全部呈现，不开脚本也能读。所有能点的东西都是真的按钮或链接，可以用键盘操作。中英文两个版本分别标了语言。",
+    "testedBody": "键盘操作逐页走查；用 VoiceOver 朗读校对；axe-core 自动检测；对比度按 WCAG 的公式逐条算过，没有靠估的；在 375 像素宽的屏幕上实机看过。",
+    "knownBody": "航线示意图是图形，图上的信息在紧挨着的文字表格里都有一份。愚人节彩蛋页保留了原来那种粗糙的样子，那本身就是内容的一部分；那一页的动画默认是关的，可以自己打开。",
+    "contactBody": "如果你在这个网站上遇到什么用不了的地方，欢迎在留言区告诉我。",
+    "motionNote": "本站会跟随系统的“减少动态效果”设置。你也可以随时点页面顶部的“停止动画”把动画关掉。"
+  },
+  "ui": {
+    "sector": "章节",
+    "backToTop": "回到顶部",
+    "externalLink": "在新窗口打开",
+    "chartCaption": "航线示意图",
+    "viewOriginal": "查看原图",
+    "notFound": "页面不存在",
+    "footerNav": "页脚导航",
+    "profileNote": "两条航线的巡航高度按同一个比例画在一起。上海到南京在 9,500 米，旧金山到萨利纳斯只有 1,676 米，差了将近六倍。",
+    "aircraftMoving": "示意图上的飞机沿去程航路飞",
+    "stripNote": "四个航班号的进程条，格式仿照真实管制用的飞行进程单。"
+  }
+}

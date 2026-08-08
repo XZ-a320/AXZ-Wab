@@ -1,0 +1,10 @@
+# Local preview server, not part of the site
+.axz-serve.mjs
+.claude/
+
+# Unsubset font originals: ~49 MB of upstream TTFs, redistributable but
+# pointless to version. Re-download with the URLs in axz-src/fonts-src/README.
+axz-src/fonts-src/*.ttf
+
+# Intermediate subsetting artifacts
+axz-src/.font-tmp/
