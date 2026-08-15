@@ -101,6 +101,11 @@ const ICONS = [
   line('i-drop', `<path d="M12 3.5v10.5"/><path d="m7.8 10 4.2 4 4.2-4"/><path d="M4.5 16.5v4h15v-4"/>`),
   line('i-route', `<circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="5.5" r="2"/><path d="M7.2 17.1 16.9 7.2" stroke-dasharray="2.4 2"/>`),
   line('i-fleet', `<path d="M12 3.2c.7 0 1.2 1.5 1.3 3.6v2.4l7.2 4.3v1.9l-7.2-2.1v3.6l2.4 1.7v1.4L12 19l-3.7 1v-1.4l2.4-1.7v-3.6L3.5 15.4v-1.9l7.2-4.3V6.8C10.8 4.7 11.3 3.2 12 3.2Z"/>`),
+  // A departure board: the frame, the header rule, and three rows of flights.
+  line('i-board', `<path d="M3.5 4.5h17v15h-17Z"/><path d="M3.5 8.5h17"/><path d="M7 12h10"/><path d="M7 15.5h10"/>`),
+  // Dispatch: a release on a clipboard. The clip is what separates it from
+  // i-logbook, which is a bound book with a spine.
+  line('i-dispatch', `<path d="M9 5H5.5v15h13V5H15"/><path d="M9 3.4h6V6.6H9Z"/><path d="M8.8 11h6.4"/><path d="M8.8 14.6h4"/>`),
 ]
 
 mkdirSync(OUT, { recursive: true })

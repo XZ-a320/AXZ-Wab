@@ -44,10 +44,16 @@ const remarksOf = c => [
   ...(c.fleet?._order || []).map(k => c.fleet?.[k]?.funny),
   c.fleet?.labels?.funny, c.record?.labels?.blackHistory,
   c.logbook?.noRemark, c.logbook?.fields?.CruiseRemark,
+  // The landing verdict is set as a remarks cell, in the same red serif, so
+  // its bands belong to this face and not to the body face.
+  ...(c.landing?.bands || []).map(b => b?.remark),
 ]
 const displayOf = c => [
   c.meta, c.nav, c.home, c.record?.labels, c.fleet?.labels, c.fleet?.groups,
   c.routes?.labels, c.guestbook, c.logbook?.bands, c.accessibility?.sections, c.ui,
+  // Panels added after the first build. Each of these renders at least one
+  // heading or a bold label, so the 700 weight has to carry their glyphs.
+  c.netmap, c.board, c.resources, c.dispatch, c.landing,
 ]
 // The English guestbook still shows the three real entries in Chinese.
 const enWithEntries = [en, zh.guestbook?.entries]

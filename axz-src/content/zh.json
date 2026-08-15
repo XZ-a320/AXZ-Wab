@@ -20,6 +20,7 @@
     "guestbook": "留言区",
     "logbook": "飞行日志",
     "accessibility": "无障碍声明",
+    "dispatch": "签派台",
     "skip": "跳到主要内容",
     "themeDay": "昼",
     "themeNight": "夜",
@@ -39,16 +40,24 @@
         "no": "02",
         "name": "执飞机队"
       },
-      "record": {
+      "board": {
         "no": "03",
+        "name": "航班时刻表"
+      },
+      "record": {
+        "no": "04",
         "name": "小泽航空 · 全纪录"
       },
       "hotspot": {
-        "no": "04",
+        "no": "05",
         "name": "重要热点"
       },
+      "resources": {
+        "no": "06",
+        "name": "资源与联动"
+      },
       "guestbook": {
-        "no": "05",
+        "no": "07",
         "name": "留言与飞行员工具"
       }
     },
@@ -226,6 +235,43 @@
       ]
     }
   },
+  "netmap": {
+    "title": "航线网络图",
+    "note": "两条航线画在同一个比例尺上。旧金山那条110公里，上海那条280公里，图上的长度就是这个比例。图上只画了两头的机场，中间的航路点在上面的航路里写着。",
+    "scaleLabel": "比例尺",
+    "scaleValue": "100公里",
+    "northLabel": "北",
+    "selectTitle": "点一条航段，图上和进程单上会一起标出来",
+    "showAll": "全部显示",
+    "selectedNote": "已选航段",
+    "legAria": "航段"
+  },
+  "board": {
+    "note": "四个航班号，两个基地。下面的钟走的是各自基地的当地时间。",
+    "cols": {
+      "flight": "航班",
+      "sector": "航段",
+      "level": "巡航",
+      "block": "飞行时间",
+      "status": "状态"
+    },
+    "status": "准点",
+    "statusNote": "这块牌子只有一种状态。虚拟航司不存在延误。",
+    "clocksTitle": "基地当地时间",
+    "clockNote": "时钟按你设备的时区换算，页面打开之后才开始走。没有脚本的时候这里显示时区名。",
+    "bases": [
+      {
+        "icao": "KSFO",
+        "name": "旧金山",
+        "zone": "America/Los_Angeles"
+      },
+      {
+        "icao": "ZSPD",
+        "name": "上海浦东",
+        "zone": "Asia/Shanghai"
+      }
+    ]
+  },
   "record": {
     "labels": {
       "history": "航司历史",
@@ -251,6 +297,66 @@
     "body": "2026年4月18日下午，上海虹桥机场(ZSSS)惊现国航747(B-2472),这震撼的一幕正好被相机镜头记录下！",
     "status": "最新动态：持续更新中",
     "imageAlt": "上海虹桥机场停机坪上的国航波音747-400，注册号B-2472"
+  },
+  "resources": {
+    "linksTitle": "常用链接",
+    "linksNote": "下面都是别人家的网站，跟小泽航空没有关系，放在这里是因为飞的时候确实要用。",
+    "links": [
+      {
+        "name": "航路查询",
+        "desc": "查航路和航路点，本站的航路就是在这里查的。",
+        "url": "https://route.hkrscoc.com"
+      },
+      {
+        "name": "VATSIM",
+        "desc": "连线飞行网络，有真人管制。",
+        "url": "https://www.vatsim.net"
+      },
+      {
+        "name": "IVAO",
+        "desc": "另一个连线飞行网络。",
+        "url": "https://www.ivao.aero"
+      },
+      {
+        "name": "SimBrief",
+        "desc": "放行单和油量计划，比这里的签派台正经得多。",
+        "url": "https://www.simbrief.com"
+      },
+      {
+        "name": "Aviation Weather Center",
+        "desc": "查 METAR 和 TAF，美国国家气象局的。",
+        "url": "https://aviationweather.gov"
+      }
+    ],
+    "livery": {
+      "title": "B-1717 涂装档案",
+      "note": "机队里唯一一架联动涂装机。这一栏按记录程序的规矩填，有就写，没有就写无。",
+      "rows": [
+        {
+          "k": "注册号",
+          "v": "B-1717"
+        },
+        {
+          "k": "机型",
+          "v": "波音 737-800"
+        },
+        {
+          "k": "联动对象",
+          "v": "Minecraft"
+        },
+        {
+          "k": "首次载客",
+          "v": "2026年3月20日 KSFO↔KSNS"
+        },
+        {
+          "k": "涂装承诺",
+          "v": "发誓永不退涂"
+        }
+      ],
+      "photoLabel": "涂装照片",
+      "photoNone": "无",
+      "photoNote": "档案里没有这架飞机的照片，所以这一栏空着。"
+    }
   },
   "guestbook": {
     "title": "小泽航空 留言区",
@@ -376,8 +482,88 @@
     "toolTitle": "飞行日志生成工具",
     "toolDownload": "下载飞行日志记录程序",
     "toolNote": "用来生成 .axzlog 文件的 Windows 程序。用它记录完一次飞行，再把生成的文件拖回上面的查看器就能看。",
-    "toolMeta": "Windows 64 位 · 约 108 MB · 程序未签名，Windows 可能弹 SmartScreen 提示",
-    "toolHost": "文件放在 GitHub 的发布页上，不在本站"
+    "toolMeta": "Windows 64 位 · 压缩包 {SIZE} MB · 解压后是一个约 108 MB 的 exe",
+    "toolHost": "文件就放在本站，点了直接下载",
+    "toolWarn": "程序没有签名。解压出来第一次运行时 Windows 会弹 SmartScreen 提示，要点「更多信息」再点「仍要运行」。",
+    "toolShaLabel": "压缩包 SHA-256",
+    "toolShaNote": "没有签名的程序只能靠这个校验。下载完可以在 PowerShell 里跑 Get-FileHash 对一下，对不上就别运行。"
+  },
+  "dispatch": {
+    "title": "签派台",
+    "docTitle": "签派台 - 小泽航空",
+    "headerSub": "Air Xiao Ze (AXZ) · 签派",
+    "intro": "选一条航段、挑一架飞机，这里会出一份放行单。上面的数字没有一个是编的：航路、巡航高度、航线距离、飞行时间都是本站已经写在航线那一节里的，平均地速是距离除以时间反推出来的，算式在下面写着。",
+    "legLabel": "航段",
+    "acLabel": "执飞飞机",
+    "issueButton": "出放行单",
+    "releaseTitle": "飞行放行单",
+    "releaseHint": "下面这份放行单会随着上面的选择一起变。",
+    "downloadButton": "下载放行单",
+    "downloadNote": "存成一个纯文本文件，不上传到任何地方。",
+    "fields": {
+      "flight": "航班号",
+      "aircraft": "机型",
+      "reg": "注册号",
+      "sector": "航段",
+      "route": "飞行航路",
+      "level": "巡航高度",
+      "distance": "航线距离",
+      "block": "预计飞行时间",
+      "speed": "平均地速",
+      "issued": "签派时间"
+    },
+    "issuedPending": "出单时填写",
+    "speedUnit": "公里/小时",
+    "mathTitle": "这些数字是怎么来的",
+    "mathNote": "平均地速 = 航线距离 ÷ 飞行时间。两条航段各算一次：",
+    "mathRows": [
+      "KSFO ↔ KSNS：110 公里 ÷ 0.5 小时 = 220 公里/小时",
+      "ZSPD ↔ ZSNJ：280 公里 ÷ 0.833 小时 = 336 公里/小时"
+    ],
+    "mathTail": "本站不给油量。算油要知道全重、风和备降场，这三样这里一个都没有，编一个数字出来不如不写。要正经的放行单请用 SimBrief。",
+    "noscript": "没有脚本的时候，四个航班的放行单内容在上面的航线那一节里都能查到。",
+    "backHome": "返回首页"
+  },
+  "landing": {
+    "title": "落地评分",
+    "intro": "一架 737 在最后进近上。到了该拉平的高度按一下，看看接地的时候垂直速度是多少。评语按机队档案里现成的说法给。",
+    "startButton": "开始进近",
+    "flareButton": "拉平",
+    "againButton": "再来一次",
+    "hint": "按空格键，或者点上面的按钮。",
+    "radioLabel": "无线电高度",
+    "vsLabel": "接地垂直速度",
+    "vsUnit": "英尺/分钟",
+    "remarkLabel": "备注",
+    "tableTitle": "评分标准",
+    "tableNote": "不玩这个小游戏也能看：下面就是全部的评分档位。",
+    "colVs": "接地垂直速度",
+    "colRemark": "备注",
+    "bands": [
+      {
+        "max": 60,
+        "range": "60 以内",
+        "remark": "跑道按摩师"
+      },
+      {
+        "max": 200,
+        "range": "61 到 200",
+        "remark": "落地风格稳健"
+      },
+      {
+        "max": 400,
+        "range": "201 到 400",
+        "remark": "跑道震动器"
+      },
+      {
+        "max": 0,
+        "range": "400 以上",
+        "remark": "重着陆"
+      }
+    ],
+    "tooHigh": "拉早了，飘了一段才接地。",
+    "tooLate": "拉晚了。",
+    "noFlare": "一直没拉平。"
   },
   "aprilfools": {
     "date": "2026年4月1日",

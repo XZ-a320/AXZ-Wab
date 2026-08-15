@@ -112,6 +112,15 @@ zh.guestbook.entries.forEach((e, i) => {
   if (t.time !== e.time) fails.push(`guestbook.entries[${i}].time was altered`)
 })
 if (en.tools.routeQueryUrl !== zh.tools.routeQueryUrl) fails.push('tools.routeQueryUrl was altered')
+// A URL is not prose. Translating one silently sends readers somewhere else,
+// and the two catalogues must point at the same place.
+zh.resources.links.forEach((l, i) => {
+  const e = en.resources.links[i]
+  if (e.url !== l.url) fails.push(`resources.links[${i}].url was altered: "${e.url}"`)
+  if (!/^https:\/\//.test(e.url)) fails.push(`resources.links[${i}].url is not https: "${e.url}"`)
+})
+// The livery file's empty state is the point of that panel; it must stay empty.
+if (zh.resources.livery.photoNone !== '无') fails.push('the livery photograph field lost its 无 empty state')
 
 /* 6. No CJK punctuation leaking into English prose.
       Guestbook entries are deliberately Chinese and are excluded. */

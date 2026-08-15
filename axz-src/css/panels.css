@@ -1,0 +1,335 @@
+/* ==========================================================================
+   AXZ panels — network map, departure board, resources, dispatch, landing.
+
+   Everything here obeys the system already set in tokens.css: two line
+   weights, no radii, no shadows, mono for anything an aeroplane would print,
+   and only tokens that check-axz-contrast has computed a ratio for.
+   ========================================================================== */
+
+/* --- Route network --------------------------------------------------------
+   The SVG is a picture; the buttons underneath are the interaction. Nothing
+   inside the drawing is focusable, so there is no invisible tab stop and no
+   control that only a mouse can reach.                                      */
+.netmap { margin-block: var(--s-3) var(--s-6); }
+.netmap svg { width: 100%; height: auto; overflow: visible; }
+
+.net-track {
+  stroke: var(--ink);
+  stroke-width: 1.4;
+  fill: none;
+}
+.net-dot { fill: var(--paper); stroke: var(--ink); stroke-width: 1.4; }
+.net-icao {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: .1em;
+  fill: var(--ink);
+}
+.net-km {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  fill: var(--ink-3);
+}
+.net-north, .net-bar { stroke: var(--rule-struct); stroke-width: 1; fill: none; }
+
+/* Selection is carried by weight and colour together, never by colour alone. */
+.netmap[data-selected] .net-leg { opacity: .32; }
+.netmap[data-selected] .net-leg[data-active] { opacity: 1; }
+.net-leg[data-active] .net-track { stroke: var(--remark); stroke-width: 2.4; }
+.net-leg[data-active] .net-dot { stroke: var(--remark); }
+.net-leg[data-active] .net-icao { fill: var(--remark); }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) .net-leg,
+  :root:not([data-motion="off"]) .net-track { transition: opacity var(--t-2) var(--ease-ink), stroke-width var(--t-2) var(--ease-ink); }
+}
+
+.net-select__title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-block: var(--s-3) var(--s-2);
+}
+.net-select { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.net-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: var(--tap);
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--rule-struct);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+/* Selected. Declared BEFORE the hover rule on purpose: both selectors weigh
+   the same, so whichever comes last wins, and a selected button under the
+   cursor was painting --ink text onto an --ink fill. Hover is the later rule
+   and therefore owns the whole colour pair whenever it applies. */
+.net-btn[aria-pressed="true"] {
+  border-color: var(--remark);
+  border-inline-start-width: 3px;
+  color: var(--ink);
+  background: var(--paper-2);
+}
+.net-btn:hover { background: var(--ink); color: var(--paper); }
+.net-btn__dir { font-size: var(--fs-xs); color: var(--ink-3); }
+.net-btn:hover .net-btn__dir { color: var(--paper); }
+.netmap figcaption {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  max-inline-size: 68ch;
+  margin-block-start: var(--s-3);
+}
+
+/* --- Departure board ------------------------------------------------------
+   A table, because it is one. The split-flap is on the clocks, which are the
+   only thing on this site that actually changes.                            */
+.board { margin-block: var(--s-2) var(--s-4); }
+
+.bd {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block: var(--s-3);
+  border-block: 2px solid var(--ink);
+}
+.bd th, .bd td {
+  text-align: start;
+  padding: var(--s-15) var(--s-2);
+  border-block-end: 1px solid var(--rule-struct);
+  vertical-align: baseline;
+}
+.bd tbody tr:last-child td { border-block-end: 0; }
+.bd th {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.bd-flight .code { font-size: var(--fs-md); font-weight: 600; letter-spacing: .06em; }
+.bd-sector, .bd-level { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.bd-level .code { color: var(--remark); }
+.bd-block { font-size: var(--fs-sm); color: var(--ink-2); }
+.bd-status .bd-flap {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--ink);
+  padding: var(--s-h) var(--s-1);
+}
+.bd-note {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  max-inline-size: 64ch;
+  margin-block-start: var(--s-2);
+}
+
+.clocks { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-block: var(--s-2); }
+.clock {
+  display: grid;
+  gap: 2px;
+  min-width: 12rem;
+  padding: var(--s-2);
+  border: 1px solid var(--rule-struct);
+  border-inline-start: 3px solid var(--remark);
+  background: var(--paper-2);
+}
+.clock__icao {
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  color: var(--remark);
+}
+.clock__name { font-size: var(--fs-sm); color: var(--ink-2); }
+/* The zone name is what renders with no script, so this cell has to survive a
+   long string as gracefully as it does "14:32:07". */
+.clock__time {
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums slashed-zero;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+/* The flap. Half a beat, on the digits only, and it never hides the value:
+   the element is legible at every frame of the animation. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) .clock__time[data-flip] {
+    animation: bd-flap var(--t-2) var(--ease-ink);
+    transform-origin: 50% 0;
+  }
+}
+@keyframes bd-flap {
+  0%   { transform: perspective(200px) rotateX(0deg); }
+  45%  { transform: perspective(200px) rotateX(-38deg); }
+  100% { transform: perspective(200px) rotateX(0deg); }
+}
+
+/* --- Resources ------------------------------------------------------------ */
+.res-list { margin-block: var(--s-2) var(--s-6); border-block-start: 1px solid var(--rule-struct); }
+.res-row {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  gap: var(--s-1) var(--s-3);
+  align-items: baseline;
+  padding-block: var(--s-2);
+  border-block-end: 1px solid var(--rule-struct);
+}
+.res-link { display: inline-flex; align-items: center; gap: var(--s-1); min-height: var(--tap); }
+.res-desc { color: var(--ink-2); font-size: var(--fs-sm); }
+@media (max-width: 720px) {
+  .res-row { grid-template-columns: minmax(0, 1fr); }
+}
+
+.spec.livery { margin-block-start: var(--s-2); }
+.livery__note {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  margin-block-start: var(--s-2);
+}
+
+/* --- Dispatch desk --------------------------------------------------------
+   The release is a document, so it is set like one: a ruled head, a two-column
+   body, mono for everything an aeroplane would print.                        */
+.disp { margin-block: var(--s-4); }
+.disp-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--s-3);
+  margin-block-end: var(--s-3);
+}
+.disp select {
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s-1) var(--s-15);
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  background: var(--paper-2);
+  border: 1px solid var(--rule-struct);
+}
+
+.release {
+  border: 1px solid var(--rule-struct);
+  border-inline-start: 3px solid var(--remark);
+  background: var(--paper-2);
+  padding: var(--s-3);
+  margin-block: var(--s-3);
+}
+.release__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-block-end: var(--s-1);
+  margin-block-end: var(--s-2);
+  border-block-end: 1px solid var(--rule-struct);
+}
+.release__code { font-size: var(--fs-sm); color: var(--remark); letter-spacing: .12em; }
+.release__body {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
+  gap: var(--s-1) var(--s-3);
+}
+.release__body dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-block-start: 3px;
+}
+.release__body dd { margin: 0; font-size: var(--fs-sm); min-width: 0; }
+@media (max-width: 560px) {
+  .release__body { grid-template-columns: minmax(0, 1fr); gap: 0 0; }
+  .release__body dt { margin-block-start: var(--s-2); }
+}
+
+/* --- Landing score --------------------------------------------------------
+   The game is hidden until script confirms it can run, because a Begin button
+   that does nothing is worse than no button. The scoring TABLE is always
+   rendered, so the information exists whether or not the game does.          */
+.lg { margin-block: var(--s-3) var(--s-4); }
+/* Capped rather than full-bleed: stretched across the whole measure the frame
+   is 360px tall and the aeroplane inside it reads as a speck. */
+.lg-view {
+  width: 100%;
+  max-width: 660px;
+  height: auto;
+  border: 1px solid var(--rule-struct);
+  background: var(--paper-2);
+}
+.lg-ground { stroke: var(--rule-struct); stroke-width: 1; }
+.lg-rwy { fill: var(--ink-3); }
+.lg-ship { fill: var(--ink); stroke: none; }
+
+.lg-readout {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-block: var(--s-2);
+}
+.lg-readout__k {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.lg-readout__v { font-size: var(--fs-lg); font-variant-numeric: tabular-nums slashed-zero; }
+
+/* The verdict is a remarks cell, because on this site that is what a verdict
+   is: red, serif, opened by the same proof-reader's caret as every other
+   remark in the ledger. */
+.lg-result:empty { display: none; }
+.lg-result {
+  margin-block-start: var(--s-3);
+  padding-inline-start: var(--s-2);
+  border-inline-start: 2px solid var(--remark);
+}
+.lg-result .lg-vs {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xl);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+.lg-result .lg-vs-unit {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-inline-start: var(--s-1);
+}
+.lg-result .lg-remark {
+  display: block;
+  color: var(--remark);
+  font-family: var(--font-kai);
+  font-size: var(--fs-md);
+  margin-block-start: var(--s-1);
+}
+.lg-result .lg-note { color: var(--ink-2); font-size: var(--fs-sm); margin-block-start: var(--s-1); }
+.lg-table .lg-remark { color: var(--remark); font-family: var(--font-kai); }
+.lg-table td { font-size: var(--fs-sm); }
+
+/* --- Recorder checksum -----------------------------------------------------
+   64 hex characters have no spaces to break at, so on a narrow screen the run
+   would either overflow the page or force a horizontal scrollbar on the body.
+   It wraps anywhere instead, and stays selectable as one string. */
+.sha { margin-block: var(--s-2); }
+.sha__value {
+  font-size: var(--fs-mono-xs);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  line-height: 1.6;
+}

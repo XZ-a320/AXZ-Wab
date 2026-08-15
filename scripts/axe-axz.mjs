@@ -7,8 +7,8 @@ const AXE = readFileSync('/Users/brookxiao/New/Xiao/Website/node_modules/axe-cor
 const BASE = 'http://localhost:4788'
 
 const PAGES = [
-  '/axz/', '/axz/guestbook/', '/axz/logbook/', '/axz/accessibility/', '/axz/aprilfools/',
-  '/axz/en/', '/axz/en/guestbook/', '/axz/en/logbook/', '/axz/en/accessibility/', '/axz/en/aprilfools/',
+  '/axz/', '/axz/guestbook/', '/axz/logbook/', '/axz/dispatch/', '/axz/accessibility/', '/axz/aprilfools/',
+  '/axz/en/', '/axz/en/guestbook/', '/axz/en/logbook/', '/axz/en/dispatch/', '/axz/en/accessibility/', '/axz/en/aprilfools/',
 ]
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']
@@ -55,4 +55,4 @@ if (all.length) {
   }
   process.exit(1)
 }
-console.log('\n✓ zero axe violations across 10 documents x 2 themes')
+console.log(`\n✓ zero axe violations across ${PAGES.length} documents x 2 themes`)

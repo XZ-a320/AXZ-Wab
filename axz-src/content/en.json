@@ -20,6 +20,7 @@
     "guestbook": "Guestbook",
     "logbook": "Flight Log",
     "accessibility": "Accessibility",
+    "dispatch": "Dispatch",
     "skip": "Skip to main content",
     "themeDay": "Day",
     "themeNight": "Night",
@@ -39,16 +40,24 @@
         "no": "02",
         "name": "Fleet in Service"
       },
-      "record": {
+      "board": {
         "no": "03",
+        "name": "Departure Board"
+      },
+      "record": {
+        "no": "04",
         "name": "Air Xiao Ze · The Full Record"
       },
       "hotspot": {
-        "no": "04",
+        "no": "05",
         "name": "Top Story"
       },
+      "resources": {
+        "no": "06",
+        "name": "Resources and Collaborations"
+      },
       "guestbook": {
-        "no": "05",
+        "no": "07",
         "name": "Guestbook and Pilot Tools"
       }
     },
@@ -226,6 +235,43 @@
       ]
     }
   },
+  "netmap": {
+    "title": "Route Network",
+    "note": "Both routes are drawn to one scale. The San Francisco pair is 68 mi apart, the Shanghai pair 174 mi, and the lengths on the map are in that proportion. Only the two end airports are plotted; the waypoints between them are written out in the routings above.",
+    "scaleLabel": "Scale",
+    "scaleValue": "62 mi",
+    "northLabel": "N",
+    "selectTitle": "Pick a sector and it is marked on both the map and its progress strip",
+    "showAll": "Show all",
+    "selectedNote": "Selected sector",
+    "legAria": "Sector"
+  },
+  "board": {
+    "note": "Four flight numbers, two bases. The clocks below run on local time at each base.",
+    "cols": {
+      "flight": "Flight",
+      "sector": "Sector",
+      "level": "Level",
+      "block": "Block time",
+      "status": "Status"
+    },
+    "status": "ON TIME",
+    "statusNote": "This board has exactly one status. A virtual airline does not run late.",
+    "clocksTitle": "Local time at each base",
+    "clockNote": "The clocks are converted using your device time zone and only start once the page is open. With scripts off this shows the time zone name instead.",
+    "bases": [
+      {
+        "icao": "KSFO",
+        "name": "San Francisco",
+        "zone": "America/Los_Angeles"
+      },
+      {
+        "icao": "ZSPD",
+        "name": "Shanghai Pudong",
+        "zone": "Asia/Shanghai"
+      }
+    ]
+  },
   "record": {
     "labels": {
       "history": "Airline History",
@@ -251,6 +297,66 @@
     "body": "On the afternoon of April 18, 2026, an Air China 747 (B-2472) appeared out of nowhere at Shanghai Hongqiao Airport (ZSSS), and the camera happened to catch the whole thing!",
     "status": "Latest: still developing",
     "imageAlt": "An Air China Boeing 747-400, registration B-2472, on the apron at Shanghai Hongqiao Airport."
+  },
+  "resources": {
+    "linksTitle": "Useful Links",
+    "linksNote": "Everything below is somebody else's website and has nothing to do with Air Xiao Ze. They are here because you actually need them when you fly.",
+    "links": [
+      {
+        "name": "Route Lookup",
+        "desc": "Look up airways and waypoints. This is where the routings on this site came from.",
+        "url": "https://route.hkrscoc.com"
+      },
+      {
+        "name": "VATSIM",
+        "desc": "Online flying network, staffed by human controllers.",
+        "url": "https://www.vatsim.net"
+      },
+      {
+        "name": "IVAO",
+        "desc": "The other online flying network.",
+        "url": "https://www.ivao.aero"
+      },
+      {
+        "name": "SimBrief",
+        "desc": "Releases and fuel planning, and a great deal more serious than the dispatch desk here.",
+        "url": "https://www.simbrief.com"
+      },
+      {
+        "name": "Aviation Weather Center",
+        "desc": "METARs and TAFs, from the US National Weather Service.",
+        "url": "https://aviationweather.gov"
+      }
+    ],
+    "livery": {
+      "title": "B-1717 Livery File",
+      "note": "The only collaboration livery in the fleet. This file follows the recorder's own rule: fill a field in if there is something to put there, and write None if there is not.",
+      "rows": [
+        {
+          "k": "Registration",
+          "v": "B-1717"
+        },
+        {
+          "k": "Type",
+          "v": "Boeing 737-800"
+        },
+        {
+          "k": "Collaboration with",
+          "v": "Minecraft"
+        },
+        {
+          "k": "First passenger flight",
+          "v": "March 20, 2026, KSFO↔KSNS"
+        },
+        {
+          "k": "Paint promise",
+          "v": "swore it would never lose its paint"
+        }
+      ],
+      "photoLabel": "Livery photograph",
+      "photoNone": "None",
+      "photoNote": "There is no photograph of this aircraft in the file, so the field is left empty."
+    }
   },
   "guestbook": {
     "title": "Air Xiao Ze Guestbook",
@@ -376,8 +482,88 @@
     "toolTitle": "Flight log recorder",
     "toolDownload": "Download the flight log recorder",
     "toolNote": "A Windows program for producing .axzlog files. Record a flight with it, then drop the file back into the viewer above.",
-    "toolMeta": "Windows 64-bit · about 108 MB · unsigned, so Windows may show a SmartScreen prompt",
-    "toolHost": "Hosted on GitHub Releases, not on this site"
+    "toolMeta": "Windows 64-bit · {SIZE} MB zipped · about 108 MB once unzipped",
+    "toolHost": "The file is on this site. The button downloads it directly.",
+    "toolWarn": "The program is unsigned. The first time you run it after unzipping, Windows will show a SmartScreen prompt: choose More info, then Run anyway.",
+    "toolShaLabel": "Zip SHA-256",
+    "toolShaNote": "A checksum is the only integrity check an unsigned program has. After downloading you can run Get-FileHash in PowerShell and compare. If it does not match, do not run it."
+  },
+  "dispatch": {
+    "title": "Dispatch Desk",
+    "docTitle": "Dispatch Desk - Air Xiao Ze",
+    "headerSub": "Air Xiao Ze (AXZ) · Dispatch",
+    "intro": "Pick a sector, pick an aircraft, and this desk issues a release. None of the numbers on it are invented: the routing, cruise level, distance and block time are all already written in the routes section of this site, and the average groundspeed is the distance divided by the time. The arithmetic is written out below.",
+    "legLabel": "Sector",
+    "acLabel": "Aircraft",
+    "issueButton": "Issue release",
+    "releaseTitle": "Flight Release",
+    "releaseHint": "The release below changes with the choices above.",
+    "downloadButton": "Download release",
+    "downloadNote": "Saved as a plain text file. It is not uploaded anywhere.",
+    "fields": {
+      "flight": "Flight",
+      "aircraft": "Type",
+      "reg": "Registration",
+      "sector": "Sector",
+      "route": "Routing",
+      "level": "Cruise level",
+      "distance": "Distance",
+      "block": "Block time",
+      "speed": "Average groundspeed",
+      "issued": "Issued"
+    },
+    "issuedPending": "filled in on issue",
+    "speedUnit": "mph",
+    "mathTitle": "Where these numbers come from",
+    "mathNote": "Average groundspeed = distance divided by block time, worked once for each sector:",
+    "mathRows": [
+      "KSFO ↔ KSNS: 68 mi divided by 0.5 h = 136 mph",
+      "ZSPD ↔ ZSNJ: 174 mi divided by 0.833 h = 209 mph"
+    ],
+    "mathTail": "This desk does not give you a fuel figure. Fuel needs all-up weight, wind and an alternate, and this site has none of the three. A made-up number would be worse than no number. For a release you can actually file, use SimBrief.",
+    "noscript": "With scripts off, everything the four releases would contain can be read in the routes section of the home page.",
+    "backHome": "Back to home"
+  },
+  "landing": {
+    "title": "Landing Score",
+    "intro": "A 737 is on final. Press once when it is time to flare, and see what the vertical speed is at touchdown. The remark you get is one the fleet files already use.",
+    "startButton": "Begin approach",
+    "flareButton": "Flare",
+    "againButton": "Go again",
+    "hint": "Press the space bar, or use the button above.",
+    "radioLabel": "Radio altitude",
+    "vsLabel": "Touchdown vertical speed",
+    "vsUnit": "ft/min",
+    "remarkLabel": "Remarks",
+    "tableTitle": "How it is scored",
+    "tableNote": "You do not have to play to read this: the bands below are the whole scoring table.",
+    "colVs": "Touchdown vertical speed",
+    "colRemark": "Remarks",
+    "bands": [
+      {
+        "max": 60,
+        "range": "under 60",
+        "remark": "the Runway Masseur"
+      },
+      {
+        "max": 200,
+        "range": "61 to 200",
+        "remark": "a steady touchdown"
+      },
+      {
+        "max": 400,
+        "range": "201 to 400",
+        "remark": "the Runway Shaker"
+      },
+      {
+        "max": 0,
+        "range": "over 400",
+        "remark": "hard landing"
+      }
+    ],
+    "tooHigh": "Flared early, and floated a while before touching down.",
+    "tooLate": "Flared late.",
+    "noFlare": "Never flared at all."
   },
   "aprilfools": {
     "date": "April 1, 2026",

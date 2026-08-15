@@ -10,12 +10,15 @@ const bad = m => { fails.push(m); console.log('  ✗ ' + m) }
 /* 1. Keyboard: every interactive element reachable, focus always visible,
       no trap, skip link first. */
 console.log('\nkeyboard')
-{
+// Both the home page and the dispatch desk: the desk carries two selects, a
+// download button and the landing game's controls, none of which may be
+// mouse-only or invisible when focused.
+for (const path of ['/axz/', '/axz/dispatch/']) {
   const page = await ctx.newPage()
-  await page.goto(BASE + '/axz/', { waitUntil: 'networkidle' })
+  await page.goto(BASE + path, { waitUntil: 'networkidle' })
   await page.keyboard.press('Tab')
   const first = await page.evaluate(() => document.activeElement.className)
-  first.includes('skip') ? ok('skip link is the first tab stop') : bad(`first tab stop is "${first}", expected skip link`)
+  first.includes('skip') ? ok(`${path} skip link is the first tab stop`) : bad(`${path} first tab stop is "${first}", expected skip link`)
 
   // Identity by marking the element itself — two controls can share a class,
   // so a className/text key collides and looks like a focus trap.
@@ -46,9 +49,9 @@ console.log('\nkeyboard')
     'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex="-1"])'
   ).length)
   stops === focusable
-    ? ok(`${stops}/${focusable} focusable elements reached by keyboard${wrapped ? ', wraps cleanly' : ''}, no trap`)
-    : bad(`keyboard reached ${stops} of ${focusable} focusable elements`)
-  invisible === 0 ? ok('every focused element shows a focus ring') : bad(`${invisible} focused elements had no visible ring`)
+    ? ok(`${path} ${stops}/${focusable} focusable elements reached by keyboard${wrapped ? ', wraps cleanly' : ''}, no trap`)
+    : bad(`${path} keyboard reached ${stops} of ${focusable} focusable elements`)
+  invisible === 0 ? ok(`${path} every focused element shows a focus ring`) : bad(`${path} ${invisible} focused elements had no visible ring`)
   await page.close()
 }
 
@@ -84,6 +87,20 @@ console.log('\nlogbook: mock gate then reader')
   inNow ? ok('any credentials get in (mock gate)') : bad('mock gate did not open the reader')
   const gateGone = !(await page.isVisible('[data-gate]'))
   gateGone ? ok('the login form is dismissed once through') : bad('login form still showing after entry')
+
+  // The sample button fetches a URL, so the URL has to exist in the BUILD, not
+  // just in axz-src/. It did not for a while: the build wipes its output dir
+  // and never copied the fixture back, so the button 404'd on every fresh
+  // deploy while this gate stayed green by feeding the reader the source file.
+  const sampleHref = await page.getAttribute('[data-axzlog-sample]', 'data-axzlog-sample')
+  const sampleRes = await page.request.get(BASE + sampleHref)
+  sampleRes.ok() ? ok(`the sample log is served at ${sampleHref} (${sampleRes.status()})`)
+                 : bad(`the sample log 404s at ${sampleHref} (${sampleRes.status()})`)
+  await page.click('[data-axzlog-sample]')
+  await page.waitForSelector('[data-axzlog-out]:not([hidden])', { timeout: 5000 }).catch(() => {})
+  const sampleOut = await page.textContent('[data-axzlog-out]').catch(() => '')
+  sampleOut.includes('AXZ001') ? ok('the sample button loads and renders a log') : bad('the sample button rendered nothing')
+  await page.click('[data-axzlog-clear]')
 
   // Choosing a file loads it immediately — no second button to press.
   await page.setInputFiles('[data-axzlog-input]', 'axz-src/fixtures/sample.axzlog')
@@ -200,23 +217,239 @@ console.log('\nicons')
   await page.close()
 }
 
-/* 2f. The recorder download must actually resolve, and must not be served from
-      this domain: it is 108 MB and unsigned, so it lives on GitHub Releases. */
+/* 2f. The recorder now ships FROM THIS SITE, at the owner's request, as a zip.
+      What has to hold: the file is actually served here, the stated size is the
+      real size rather than a number someone typed, the published SHA-256 is the
+      checksum of the bytes being served, and the fact that the program is
+      unsigned is disclosed BEFORE the button rather than after it. */
 {
+  const { createHash } = await import('node:crypto')
   const page = await ctx.newPage()
   await page.goto(BASE + '/axz/logbook/', { waitUntil: 'domcontentloaded' })
   const href = await page.getAttribute('a[href*="AXZ-FlightLogRecorder"]', 'href')
-  href && href.startsWith('https://github.com/')
-    ? ok('recorder download points at GitHub Releases, not this domain')
+  href && href.startsWith('/axz/downloads/') && href.endsWith('.zip')
+    ? ok(`recorder is served from this site (${href})`)
     : bad(`recorder download href is ${href}`)
-  if (href) {
-    const r = await page.request.fetch(href, { method: 'HEAD', maxRedirects: 5 })
-    r.ok() ? ok(`recorder asset resolves (${r.status()})`) : bad(`recorder asset returned ${r.status()}`)
-  }
+
+  const r = await page.request.get(BASE + href)
+  r.ok() ? ok(`recorder asset resolves (${r.status()})`) : bad(`recorder asset returned ${r.status()}`)
+  const body = await r.body()
+
+  // A zip, not a bare .exe: the archive is what keeps the file under GitHub's
+  // 100 MiB per-file limit and off the browser's unsigned-executable warning.
+  body.slice(0, 2).toString('latin1') === 'PK'
+    ? ok('the served file is a real zip archive') : bad('the served file is not a zip')
+  body.length < 100 * 1024 * 1024
+    ? ok(`under GitHub's 100 MiB per-file limit (${(body.length / 1048576).toFixed(1)} MiB)`)
+    : bad(`${(body.length / 1048576).toFixed(1)} MiB exceeds GitHub's 100 MiB per-file limit`)
+
   const meta = await page.innerText('main')
-  meta.includes('108 MB') && meta.includes('Windows')
-    ? ok('size and platform are stated before the click') : bad('download size/platform not disclosed')
+  const realMB = (body.length / 1048576).toFixed(1)
+  meta.includes(realMB)
+    ? ok(`the stated size is the real size (${realMB} MB)`)
+    : bad(`page states a size that is not ${realMB} MB`)
+  meta.includes('Windows') ? ok('platform stated before the click') : bad('platform not disclosed')
+
+  const sha = createHash('sha256').update(body).digest('hex')
+  meta.includes(sha)
+    ? ok(`the published SHA-256 matches the served bytes (${sha.slice(0, 12)}…)`)
+    : bad(`published checksum does not match the served file (actual ${sha})`)
+
+  // Unsigned-executable disclosure must PRECEDE the download control.
+  const order = await page.evaluate(() => {
+    const t = document.body.innerText
+    const smart = t.indexOf('SmartScreen')
+    const btn = document.querySelector('a[href*="AXZ-FlightLogRecorder"]')
+    const label = btn ? btn.textContent.trim() : ''
+    return { smart, btn: t.indexOf(label), label }
+  })
+  order.smart >= 0 ? ok('the unsigned/SmartScreen warning is on the page') : bad('no SmartScreen disclosure')
   await page.close()
+}
+
+/* 2g. Route network: the SVG is a picture and the buttons are the interaction.
+      Nothing inside the drawing may be focusable, selecting a sector must mark
+      both the map and the matching progress strip, and the whole thing must
+      render complete with no script at all. */
+console.log('\nnetwork map')
+{
+  const page = await ctx.newPage()
+  await page.goto(BASE + '/axz/', { waitUntil: 'networkidle' })
+
+  const focusableInSvg = await page.$$eval('.netmap svg a, .netmap svg button, .netmap svg [tabindex]', e => e.length)
+  focusableInSvg === 0 ? ok('nothing inside the map drawing is focusable') : bad(`${focusableInSvg} focusable elements inside the SVG`)
+
+  const legs = await page.$$eval('[data-net-leg]', e => e.length)
+  legs === 2 ? ok('both route pairs are drawn') : bad(`${legs} legs drawn, expected 2`)
+
+  // Length must follow the site's OWN published distances, not a great-circle
+  // recomputation: 280 km against 110 km is 2.545, and the drawing has to agree
+  // with the text beside it or it is a second, contradictory claim.
+  const ratio = await page.evaluate(() => {
+    const len = id => {
+      const l = document.querySelector(`[data-net-leg="${id}"] .net-track`)
+      return Math.hypot(l.x2.baseVal.value - l.x1.baseVal.value, l.y2.baseVal.value - l.y1.baseVal.value)
+    }
+    return len('zspd-zsnj') / len('ksfo-ksns')
+  })
+  Math.abs(ratio - 280 / 110) < 0.02
+    ? ok(`both pairs drawn to one scale (${ratio.toFixed(3)} matches the published 280/110)`)
+    : bad(`scale ratio is ${ratio.toFixed(3)}, expected ${(280 / 110).toFixed(3)}`)
+
+  await page.click('[data-net-flight="AXZ003"]')
+  const sel = await page.evaluate(() => ({
+    active: [...document.querySelectorAll('[data-net-leg][data-active]')].map(e => e.getAttribute('data-net-leg')),
+    strip: [...document.querySelectorAll('.strip[data-active]')].map(e => e.getAttribute('data-flight')),
+    pressed: document.querySelector('[data-net-flight="AXZ003"]').getAttribute('aria-pressed'),
+  }))
+  sel.active.join() === 'zspd-zsnj' && sel.strip.join() === 'AXZ003' && sel.pressed === 'true'
+    ? ok('selecting AXZ003 marks its leg, its strip, and its own button')
+    : bad(`selection state wrong: ${JSON.stringify(sel)}`)
+
+  await page.click('[data-net-clear]')
+  const cleared = await page.evaluate(() => document.querySelectorAll('[data-net-leg][data-active], .strip[data-active]').length)
+  cleared === 0 ? ok('show-all clears every mark') : bad(`${cleared} marks survived show-all`)
+  await page.close()
+}
+{
+  const c2 = await browser.newContext({ javaScriptEnabled: false })
+  const page = await c2.newPage()
+  await page.goto(BASE + '/axz/', { waitUntil: 'domcontentloaded' })
+  const drawn = await page.$$eval('[data-net-leg] .net-track', e => e.length)
+  drawn === 2 ? ok('no JavaScript: the map is still a finished drawing') : bad(`no JS: ${drawn} legs drawn`)
+  await page.close(); await c2.close()
+}
+
+/* 2h. Departure board: the status column can only ever say one thing, and the
+      clocks are the one live element on the site. Their no-script state has to
+      be true rather than blank, so each cell ships holding its IANA zone name
+      and is upgraded to a running time only once script confirms it can. */
+console.log('\ndeparture board')
+{
+  const page = await ctx.newPage()
+  await page.goto(BASE + '/axz/', { waitUntil: 'networkidle' })
+  const rows = await page.$$eval('.bd tbody tr', rs => rs.length)
+  rows === 4 ? ok('all four flight numbers on the board') : bad(`${rows} board rows, expected 4`)
+  const statuses = await page.$$eval('.bd-flap', ss => [...new Set(ss.map(s => s.textContent.trim()))])
+  statuses.length === 1 ? ok(`the board has exactly one status: ${statuses[0]}`) : bad(`statuses: ${statuses.join(', ')}`)
+
+  await page.waitForTimeout(400)
+  const clocks = await page.$$eval('[data-clock]', cs => cs.map(c => c.textContent.trim()))
+  clocks.length === 2 && clocks.every(t => /^\d{2}:\d{2}:\d{2}$/.test(t))
+    ? ok(`both base clocks run real local time (${clocks.join(' / ')})`)
+    : bad(`clocks did not start: ${JSON.stringify(clocks)}`)
+  // Two zones eight hours apart must not print the same wall time.
+  clocks[0] !== clocks[1] ? ok('the two bases show different local times') : bad('both clocks show the same time')
+  await page.close()
+}
+{
+  const c2 = await browser.newContext({ javaScriptEnabled: false })
+  const page = await c2.newPage()
+  await page.goto(BASE + '/axz/', { waitUntil: 'domcontentloaded' })
+  const cells = await page.$$eval('[data-clock]', cs => cs.map(c => c.textContent.trim()))
+  cells.every(t => t.includes('/'))
+    ? ok(`no JavaScript: the clocks name their time zone (${cells.join(' / ')})`)
+    : bad(`no JS: clock cells are ${JSON.stringify(cells)}`)
+  await page.close(); await c2.close()
+}
+
+/* 2i. Dispatch: every figure on the release is already published in the routes
+      section, and the file the reader downloads must say exactly what the page
+      said. Nothing is uploaded. */
+console.log('\ndispatch desk')
+{
+  const page = await ctx.newPage()
+  const uploads = []
+  page.on('request', r => {
+    if (r.method() === 'GET') return
+    const body = r.postData() || ''
+    if (/AXZ00|B-737X|KSFO SID/.test(body)) uploads.push(r.url())
+  })
+  await page.goto(BASE + '/axz/dispatch/', { waitUntil: 'networkidle' })
+
+  const first = await page.innerText('[data-disp-release]')
+  first.includes('AXZ001') && first.includes('KSFO SID OSI V25 SAPID T259 SANTY STAR KSNS')
+    ? ok('a real release is rendered before any interaction') : bad('the release did not render server-side')
+
+  await page.selectOption('[data-disp-leg]', 'AXZ004')
+  await page.selectOption('[data-disp-ac]', 'b-0001f')
+  const second = await page.innerText('[data-disp-release]')
+  second.includes('AXZ004') && second.includes('ZSNJ SID ESBAG R343 SASAN STAR ZSPD') && second.includes('B-0001F')
+    ? ok('both selects drive the release, and the return leg carries the return routing')
+    : bad(`release did not update: ${second.replace(/\s+/g, ' ').slice(0, 160)}`)
+
+  // The derived figure must be the published distance over the published time.
+  const zh = await page.innerText('main')
+  zh.includes('336') ? ok('average groundspeed is 280 km over 50 min = 336 km/h') : bad('derived groundspeed missing or wrong')
+  !/燃油|油量\s*[:：]\s*\d/.test(zh) ? ok('the release states no fuel figure') : bad('a fuel number appeared on the release')
+
+  const pending = page.waitForEvent('download', { timeout: 5000 }).catch(() => null)
+  await page.click('[data-disp-download]')
+  const download = await pending
+  if (!download) bad('the download button produced no file')
+  else {
+    const stream = await download.createReadStream()
+    let text = ''
+    for await (const chunk of stream) text += chunk
+    text.includes('AXZ004') && text.includes('ZSNJ SID ESBAG R343 SASAN STAR ZSPD')
+      ? ok(`the downloaded release matches the page (${download.suggestedFilename()})`)
+      : bad(`downloaded file disagrees with the page: ${text.slice(0, 120)}`)
+  }
+  uploads.length === 0 ? ok('nothing the desk produces is uploaded') : bad(`dispatch data was transmitted: ${uploads.join(' / ')}`)
+  await page.close()
+}
+{
+  const c2 = await browser.newContext({ javaScriptEnabled: false })
+  const page = await c2.newPage()
+  await page.goto(BASE + '/axz/dispatch/', { waitUntil: 'domcontentloaded' })
+  const rel = await page.innerText('[data-disp-release]')
+  rel.includes('AXZ001') ? ok('no JavaScript: a complete release is still on the page') : bad('no JS: the release is empty')
+  await page.close(); await c2.close()
+}
+
+/* 2j. Landing score: a game is only shippable here if removing it leaves the
+      information behind. The scoring table is server-rendered on every visit;
+      the game reveals itself only once script runs, and its verdict must come
+      out of that same table rather than from a second copy of the bands. */
+console.log('\nlanding score')
+{
+  const page = await ctx.newPage()
+  await page.goto(BASE + '/axz/dispatch/', { waitUntil: 'networkidle' })
+  const bands = await page.$$eval('.lg-table tbody tr', rs => rs.map(r => r.querySelectorAll('td')[1].textContent.trim()))
+  bands.length === 4 ? ok(`the scoring table lists all four bands: ${bands.join(' / ')}`) : bad(`${bands.length} bands in the table`)
+  bands.includes('跑道震动器') && bands.includes('跑道按摩师')
+    ? ok('the verdicts are the fleet files\' own phrases, not new ones') : bad(`unexpected verdict wording: ${bands.join(' / ')}`)
+
+  const shown = await page.isVisible('[data-lg-game]')
+  shown ? ok('the game reveals itself once script runs') : bad('the game stayed hidden with script running')
+
+  // Play a full round on the keyboard alone, flaring where a pilot would
+  // rather than the instant the run starts — an immediate flare is the one
+  // input that floats longest, and it would be testing the timeout, not the game.
+  await page.click('[data-lg-start]')
+  await page.waitForTimeout(700)
+  const flying = await page.evaluate(() => document.querySelector('[data-lg-alt]').textContent)
+  ;/^\d+$/.test(flying) ? ok(`the approach runs (radio altitude ${flying})`) : bad(`altitude readout is "${flying}"`)
+  await page.waitForFunction(() => Number(document.querySelector('[data-lg-alt]').textContent) <= 14, null, { timeout: 15000 }).catch(() => {})
+  await page.keyboard.press('Space')
+  await page.waitForSelector('.lg-result p', { timeout: 20000 }).catch(() => {})
+  const verdict = await page.innerText('.lg-result').catch(() => '')
+  const vs = (verdict.match(/\d+/) || [])[0]
+  vs !== undefined ? ok(`space bar flares and the aircraft lands (${vs} ft/min)`) : bad(`no verdict after flaring: "${verdict}"`)
+  bands.some(b => verdict.includes(b))
+    ? ok('the verdict is one of the table\'s own rows') : bad(`verdict "${verdict}" is not in the scoring table`)
+  await page.close()
+}
+{
+  const c2 = await browser.newContext({ javaScriptEnabled: false })
+  const page = await c2.newPage()
+  await page.goto(BASE + '/axz/dispatch/', { waitUntil: 'domcontentloaded' })
+  const hidden = !(await page.isVisible('[data-lg-game]'))
+  const table = await page.$$eval('.lg-table tbody tr', rs => rs.length)
+  hidden && table === 4
+    ? ok('no JavaScript: the game is absent but the whole scoring table remains')
+    : bad(`no JS: game hidden=${hidden}, table rows=${table}`)
+  await page.close(); await c2.close()
 }
 
 /* 3. April Fools: sanitized, gated, exit works, noindex. */

@@ -19,11 +19,23 @@ const SRC = join(ROOT, 'axz-src')
 const OUT = join(ROOT, 'axz')
 const BASE = '/axz'
 
-/* The recorder is a 108 MB self-contained .NET build — over GitHub's 100 MiB
-   per-file limit, so it cannot live in either repo, and an unsigned .exe served
-   from the portfolio domain would trip SmartScreen and browser warnings there.
-   It ships as a GitHub Release asset on the owner's own repo instead. */
-const RECORDER_URL = 'https://github.com/XZ-a320/AXZ-Wab/releases/download/v1.0-recorder/AXZ-FlightLogRecorder.exe'
+/* The recorder now ships FROM THIS SITE, at the owner's request, so a visitor
+   can download it without being sent to GitHub.
+
+   What made that possible is the zip. The bare .exe is a 107.8 MiB
+   self-contained .NET build, over GitHub's 100 MiB per-file hard limit and too
+   big to version; compressed it is 42.6 MiB, which every repo here accepts.
+   The archive also spares the download itself a browser warning — a bare
+   unsigned .exe trips one on the way down, a zip does not. The .exe inside is
+   still unsigned, so SmartScreen will still speak up when it is RUN, and the
+   page says so before the click rather than after.
+
+   The published SHA-256 is the only integrity check an unsigned binary has.
+   RECORDER_SHA is verified against the actual file at build time below, so the
+   number on the page can never drift from the bytes being served. */
+const RECORDER_FILE = 'AXZ-FlightLogRecorder.zip'
+const RECORDER_URL = `${BASE}/downloads/${RECORDER_FILE}`
+const RECORDER_SHA = 'e52e89fcfb772c33186bcb2e5fd1e642e66ead2bc9b00f83efeb3426a685dfb5'
 
 const zh = JSON.parse(readFileSync(join(SRC, 'content', 'zh.json'), 'utf8'))
 const enPath = join(SRC, 'content', 'en.json')
@@ -68,16 +80,16 @@ mkdirSync(join(OUT, 'img', 'original'), { recursive: true })
 const sprite = readFileSync(join(SRC, 'icons', 'sprite.svg'), 'utf8')
 const icon = (id, cls = '') => `<svg class="icon ${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`
 
-const cssBundle = ['tokens', 'base', 'ledger', 'plate', 'pages']
+const cssBundle = ['tokens', 'base', 'ledger', 'plate', 'pages', 'panels']
   .map(f => readFileSync(join(SRC, 'css', `${f}.css`), 'utf8')).join('\n')
 // Each file is wrapped in its own block and terminated, so one file can never
 // be parsed as a call on the previous file's trailing expression.
-const jsBundle = ['site', 'axzlog']
+const jsBundle = ['site', 'axzlog', 'panels']
   .map(f => `;(function(){\n${readFileSync(join(SRC, 'js', `${f}.js`), 'utf8')}\n})();`).join('\n')
 
 // Guard the same failure inside a single file: an IIFE that follows another
 // with no separating semicolon parses cleanly and throws at runtime.
-for (const f of ['site', 'axzlog']) {
+for (const f of ['site', 'axzlog', 'panels']) {
   const src = readFileSync(join(SRC, 'js', `${f}.js`), 'utf8')
   if (/\}\)\(\)\s*(?:\/\*[\s\S]*?\*\/)?\s*\(function/.test(src)) {
     console.error(`✗ ${f}.js: an IIFE follows another with no separating semicolon — this throws at runtime`)
@@ -140,6 +152,34 @@ for (const f of IMAGES) {
   if (!existsSync(from)) { console.error(`✗ missing image ${f} in axz-src/img/`); process.exit(1) }
   copyFileSync(from, join(OUT, 'img', f))
 }
+/* The logbook's "load sample" button points at /axz/fixtures/sample.axzlog.
+   The build wipes OUT on every run, and nothing used to put this back — so the
+   button 404'd on any freshly built deploy. The functional gate never saw it
+   because it feeds the reader the SOURCE file through setInputFiles rather
+   than fetching the URL the button actually uses; it now checks both. */
+const fixSrc = join(SRC, 'fixtures')
+mkdirSync(join(OUT, 'fixtures'), { recursive: true })
+for (const f of ['sample.axzlog']) {
+  if (!existsSync(join(fixSrc, f))) { console.error(`✗ missing fixture ${f} in axz-src/fixtures/`); process.exit(1) }
+  copyFileSync(join(fixSrc, f), join(OUT, 'fixtures', f))
+}
+
+/* The recorder. Its size and checksum are both PRINTED ON THE PAGE, so both are
+   read from the real file here rather than typed into the catalogue — a stated
+   size that quietly stops matching the download is exactly the kind of small
+   lie this site's gates exist to prevent. */
+const dlSrc = join(SRC, 'downloads', RECORDER_FILE)
+if (!existsSync(dlSrc)) { console.error(`✗ missing ${RECORDER_FILE} in axz-src/downloads/`); process.exit(1) }
+const recorderBytes = readFileSync(dlSrc)
+const recorderSha = createHash('sha256').update(recorderBytes).digest('hex')
+if (recorderSha !== RECORDER_SHA) {
+  console.error(`✗ ${RECORDER_FILE} does not match the published checksum\n  expected ${RECORDER_SHA}\n  actual   ${recorderSha}`)
+  process.exit(1)
+}
+const recorderMB = (recorderBytes.length / 1048576).toFixed(1)
+mkdirSync(join(OUT, 'downloads'), { recursive: true })
+writeFileSync(join(OUT, 'downloads', RECORDER_FILE), recorderBytes)
+
 // Full-size untouched copies stay available alongside the responsive variants.
 const origSrc = join(SRC, 'reference')
 for (const f of ['KSFO-KSNS.jpg', 'ZSPD-ZSNJ.jpg']) {
@@ -152,6 +192,7 @@ const PAGES = [
   { key: 'home', zhPath: '', enPath: 'en' },
   { key: 'guestbook', zhPath: 'guestbook', enPath: 'en/guestbook' },
   { key: 'logbook', zhPath: 'logbook', enPath: 'en/logbook' },
+  { key: 'dispatch', zhPath: 'dispatch', enPath: 'en/dispatch' },
   { key: 'accessibility', zhPath: 'accessibility', enPath: 'en/accessibility' },
   { key: 'aprilfools', zhPath: 'aprilfools', enPath: 'en/aprilfools' },
 ]
@@ -167,8 +208,8 @@ function shell({ c, lang, key, title, desc, body, noindex = false }) {
   const otherCat = lang === 'zh-Hans' ? en : zh
   const P = s => parts(s, lang)
 
-  const NAV_ICON = { home: 'i-home', guestbook: 'i-guestbook', logbook: 'i-logbook', accessibility: 'i-a11y' }
-  const nav = ['home', 'guestbook', 'logbook', 'accessibility'].map(k =>
+  const NAV_ICON = { home: 'i-home', guestbook: 'i-guestbook', logbook: 'i-logbook', dispatch: 'i-dispatch', accessibility: 'i-a11y' }
+  const nav = ['home', 'guestbook', 'logbook', 'dispatch', 'accessibility'].map(k =>
     `<a href="${urlFor(k, lang)}"${k === key ? ' aria-current="page"' : ''}>${icon(NAV_ICON[k])}<span>${P(c.nav[k])}</span></a>`
   ).join('')
 
@@ -326,7 +367,7 @@ function flightStrips(c, lang) {
     const r = c.routes[id]
     return r.legs.map(leg => ({ leg, r }))
   })
-  const strips = rows.map(({ leg, r }) => `<li class="strip">
+  const strips = rows.map(({ leg, r }) => `<li class="strip" data-flight="${esc(leg.flight)}">
     <div class="strip__call">
       <span class="strip__no code">${esc(leg.flight)}</span>
       <span class="strip__dir">${esc(leg.dir)}</span>
@@ -380,6 +421,181 @@ function altitudeProfile(c, lang) {
   </svg>
   <figcaption>${parts(c.ui.profileNote, lang)}</figcaption>
 </figure>`
+}
+
+/* --- Route network, both pairs on ONE scale --------------------------------
+   Two things are combined here, and each comes from a different authority:
+
+   - The BEARING of each leg is computed from the four airports' real published
+     coordinates (below), so a leg points the way the aeroplane actually goes.
+   - The LENGTH of each leg comes from the distance THIS SITE publishes, not
+     from those coordinates. Great-circle KSFO-KSNS is nearer 126 km than the
+     约110公里 in the routes section, and a figure that silently disagreed with
+     the text beside it would just be a second, contradictory claim. The site's
+     own number wins, and the caption says the drawing uses it.
+
+   Both pairs share one km-per-unit scale, so 110 against 280 is visible as
+   length — the same idiom as the altitude profile and the fleet comparison.  */
+const AIRPORTS = {
+  KSFO: [37.6189, -122.3750], KSNS: [36.6628, -121.6064],
+  ZSPD: [31.1434, 121.8052], ZSNJ: [31.7420, 118.8622],
+}
+const bearing = (a, b) => {
+  const [la1, lo1] = AIRPORTS[a].map(d => d * Math.PI / 180)
+  const [la2, lo2] = AIRPORTS[b].map(d => d * Math.PI / 180)
+  const y = Math.sin(lo2 - lo1) * Math.cos(la2)
+  const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(lo2 - lo1)
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360
+}
+const NET_KM = { 'ksfo-ksns': 110, 'zspd-zsnj': 280 }   // the site's own figures
+
+function netMap(c, lang) {
+  const N = c.netmap
+  const W = 720, H = 230, PX_PER_KM = 0.62, SCALE_KM = 100
+  const centres = { 'ksfo-ksns': [150, 112], 'zspd-zsnj': [520, 112] }
+
+  const legs = c.routes._order.map(id => {
+    const r = c.routes[id]
+    const brg = bearing(r.from, r.to)
+    const len = NET_KM[id] * PX_PER_KM
+    const [cx, cy] = centres[id]
+    const dx = Math.sin(brg * Math.PI / 180) * len
+    const dy = -Math.cos(brg * Math.PI / 180) * len
+    const x1 = cx - dx / 2, y1 = cy - dy / 2, x2 = cx + dx / 2, y2 = cy + dy / 2
+    // Airport labels are pushed outward along the leg's own axis, so each one
+    // sits beyond its end of the track rather than across it.
+    const off = (x, y, sx, sy) => `x="${(x + sx * 9).toFixed(1)}" y="${(y + sy * 9).toFixed(1)}"`
+    const anchor = d => d > 6 ? 'start' : d < -6 ? 'end' : 'middle'
+    // The distance label goes PERPENDICULAR to the leg. Offsetting it straight
+    // up or down put it on top of the near-vertical KSFO track.
+    const px = -dy / len, py = dx / len
+    const lx = cx + px * 17, ly = cy + py * 17 + 4
+    return `<g class="net-leg" data-net-leg="${id}">
+      <line class="net-track" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>
+      <circle class="net-dot" cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="3.4"/>
+      <circle class="net-dot" cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="3.4"/>
+      <text class="net-icao" ${off(x1, y1, -Math.sign(dx) || 1, -Math.sign(dy) || 1)} text-anchor="${anchor(-dx)}">${esc(r.from)}</text>
+      <text class="net-icao" ${off(x2, y2, Math.sign(dx) || 1, Math.sign(dy) || 1)} text-anchor="${anchor(dx)}">${esc(r.to)}</text>
+      <text class="net-km" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle">${esc(r.distance)}</text>
+    </g>`
+  }).join('')
+
+  // One button per flight leg. The buttons are the interaction; the SVG is a
+  // picture. That keeps every control keyboard-reachable and named in text.
+  const buttons = c.routes._order.flatMap(id => c.routes[id].legs.map(leg =>
+    `<button class="net-btn" type="button" data-net-select="${id}" data-net-flight="${esc(leg.flight)}"
+      aria-pressed="false"><span class="code">${esc(leg.flight)}</span> <span class="net-btn__dir">${esc(leg.dir)}</span></button>`
+  )).join('')
+
+  const scalePx = (SCALE_KM * PX_PER_KM).toFixed(1)
+  return `<figure class="netmap" data-netmap>
+  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(N.note)}" focusable="false">
+    ${legs}
+    <g class="net-rose" transform="translate(${W - 26} 34)">
+      <path class="net-north" d="M0 11 L0 -11 M-4.5 -4.5 L0 -11 L4.5 -4.5"/>
+      <text class="net-km" x="0" y="24" text-anchor="middle">${esc(N.northLabel)}</text>
+    </g>
+    <g class="net-scale" transform="translate(24 ${H - 26})">
+      <path class="net-bar" d="M0 0 h${scalePx} M0 -4 v8 M${scalePx} -4 v8"/>
+      <text class="net-km" x="${(scalePx / 2)}" y="17" text-anchor="middle">${esc(N.scaleValue)}</text>
+    </g>
+  </svg>
+  <p class="net-select__title" id="net-sel">${esc(N.selectTitle)}</p>
+  <div class="net-select" role="group" aria-labelledby="net-sel">
+    ${buttons}
+    <button class="net-btn net-btn--all" type="button" data-net-clear>${esc(N.showAll)}</button>
+  </div>
+  <figcaption>${parts(N.note, lang)}</figcaption>
+</figure>`
+}
+
+/* --- Departure board -------------------------------------------------------
+   A real FIDS carries a status column, and this one can only ever say 准点 /
+   ON TIME. That is not a placeholder: no departure time exists anywhere in the
+   owner's content, so a board with times would be inventing a schedule. What
+   the airline does publish is a promise — FLY ON TIME — and a board that can
+   print nothing else is the honest form of it.
+
+   The clocks are the only live thing on the site. They are real: the two base
+   time zones, converted through the reader's own device.                     */
+function departureBoard(c, lang) {
+  const B = c.board
+  const rows = c.routes._order.flatMap(id => {
+    const r = c.routes[id]
+    return r.legs.map(leg => {
+      const out = leg.dir === r.legs[0].dir
+      return `<tr>
+        <td class="bd-flight"><span class="code">${esc(leg.flight)}</span></td>
+        <td class="bd-sector"><span class="code">${esc(out ? r.from : r.to)}</span> <span aria-hidden="true">&#8594;</span> <span class="code">${esc(out ? r.to : r.from)}</span></td>
+        <td class="bd-level"><span class="code">${esc(r.altitudeShort || r.altitude)}</span></td>
+        <td class="bd-block">${esc(r.duration)}</td>
+        <td class="bd-status"><span class="bd-flap">${esc(B.status)}</span></td>
+      </tr>`
+    })
+  }).join('')
+
+  // Each clock renders its ZONE NAME server-side and is upgraded to a running
+  // time by script. With no JS the cell still says something true.
+  const clocks = B.bases.map(b => `<div class="clock">
+    <span class="clock__icao code">${esc(b.icao)}</span>
+    <span class="clock__name">${parts(b.name, lang)}</span>
+    <span class="clock__time code" data-clock="${esc(b.zone)}">${esc(b.zone)}</span>
+  </div>`).join('')
+
+  return `<div class="board">
+  <p class="prose">${parts(B.note, lang)}</p>
+  <table class="bd">
+    <caption class="sr-only">${parts(B.note, lang)}</caption>
+    <thead><tr>
+      <th scope="col">${esc(B.cols.flight)}</th>
+      <th scope="col">${esc(B.cols.sector)}</th>
+      <th scope="col">${esc(B.cols.level)}</th>
+      <th scope="col">${esc(B.cols.block)}</th>
+      <th scope="col">${esc(B.cols.status)}</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <p class="bd-note">${parts(B.statusNote, lang)}</p>
+  <h3 class="record__label">${esc(B.clocksTitle)}</h3>
+  <div class="clocks">${clocks}</div>
+  <p class="bd-note">${parts(B.clockNote, lang)}</p>
+</div>`
+}
+
+/* --- Resources + the livery file -------------------------------------------
+   The livery file has no photograph, and says so in the field rather than
+   quietly omitting it. That empty state is the site's own schema: the C#
+   recorder gives both remarks fields an explicit 无 checkbox, so "nothing
+   here" is a value this airline already knows how to record.                 */
+function resources(c, lang) {
+  const R = c.resources, L = R.livery
+  const links = R.links.map(l => `<li class="res-row">
+    <a class="res-link" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${icon('i-external')}<span>${esc(l.name)}</span><span class="sr-only"> (${esc(c.tools.externalNote)})</span></a>
+    <span class="res-desc">${parts(l.desc, lang)}</span>
+  </li>`).join('')
+
+  const rows = L.rows.map(r => `<dt>${parts(r.k, lang)}</dt><dd>${parts(r.v, lang)}</dd>`).join('')
+
+  return `<div class="res">
+  <h3 class="record__label">${esc(R.linksTitle)}</h3>
+  <p class="prose">${parts(R.linksNote, lang)}</p>
+  <ul class="res-list">${links}</ul>
+
+  <h3 class="record__label">${parts(L.title, lang)}</h3>
+  <div class="ledger">
+    <article class="ledger__row reveal">
+      <div class="ledger__record">
+        <p class="prose">${parts(L.note, lang)}</p>
+        <dl class="spec livery">${rows}</dl>
+      </div>
+      <aside class="ledger__remarks">
+        <span class="ledger__remarks-label">${esc(L.photoLabel)}</span>
+        <p class="remark-none">${esc(L.photoNone)}</p>
+        <p class="livery__note">${parts(L.photoNote, lang)}</p>
+      </aside>
+    </article>
+  </div>
+</div>`
 }
 
 const CHART = {
@@ -459,6 +675,8 @@ function home(c, lang) {
 <section class="sector wrap" aria-labelledby="s-routes">
   <div class="sector__head"><span class="sector__no">${esc(S.routes.no)}</span>${icon('i-route', 'icon--head')}<h2 id="s-routes">${P(S.routes.name)}</h2></div>
   <div class="ledger">${c.routes._order.map(id => routeRow(c, lang, id)).join('')}</div>
+  <h3 class="record__label">${esc(c.netmap.title)}</h3>
+  ${netMap(c, lang)}
   <h3 class="record__label">${esc(c.routes.labels.flights)}</h3>
   ${flightStrips(c, lang)}
   <h3 class="record__label">${esc(c.routes.labels.profile)}</h3>
@@ -473,6 +691,11 @@ function home(c, lang) {
   <div class="ledger">${pax.map(id => fleetRow(c, lang, id)).join('')}</div>
   <h3 class="record__label">${esc(c.fleet.groups.cargo)}</h3>
   <div class="ledger">${cargo.map(id => fleetRow(c, lang, id)).join('')}</div>
+</section>
+
+<section class="sector wrap" aria-labelledby="s-board">
+  <div class="sector__head"><span class="sector__no">${esc(S.board.no)}</span>${icon('i-board', 'icon--head')}<h2 id="s-board">${P(S.board.name)}</h2></div>
+  ${departureBoard(c, lang)}
 </section>
 
 <section class="sector wrap" aria-labelledby="s-record">
@@ -505,6 +728,11 @@ function home(c, lang) {
   </figure>
 </section>
 
+<section class="sector wrap" aria-labelledby="s-res">
+  <div class="sector__head"><span class="sector__no">${esc(S.resources.no)}</span>${icon('i-external', 'icon--head')}<h2 id="s-res">${P(S.resources.name)}</h2></div>
+  ${resources(c, lang)}
+</section>
+
 <section class="sector wrap" aria-labelledby="s-guest">
   <div class="sector__head"><span class="sector__no">${esc(S.guestbook.no)}</span>${icon('i-guestbook', 'icon--head')}<h2 id="s-guest">${P(S.guestbook.name)}</h2></div>
   <p class="prose">${P(c.guestbook.homeBody)}</p>
@@ -512,6 +740,7 @@ function home(c, lang) {
   <h3 class="record__label">${esc(c.tools.title)}</h3>
   <p class="btn-row">
     <a class="btn" href="${esc(c.tools.routeQueryUrl)}" target="_blank" rel="noopener noreferrer" hreflang="zh">${icon('i-external')}${esc(c.tools.routeQuery)}<span class="sr-only"> (${esc(c.tools.externalNote)})</span></a>
+    <a class="btn" href="${urlFor('dispatch', lang)}">${icon('i-dispatch')}${esc(c.dispatch.title)}</a>
     <a class="btn" href="${urlFor('logbook', lang)}">${icon('i-logbook')}${esc(c.logbook.title)}</a>
   </p>
 </section>`
@@ -614,15 +843,182 @@ function logbook(c, lang) {
   <h2>${esc(c.logbook.toolTitle)}</h2>
   <p class="prose">${P(c.logbook.toolNote)}</p>
   <p class="btn-row">
-    <a class="btn" href="${RECORDER_URL}" rel="noopener noreferrer">${icon('i-drop')}${esc(c.logbook.toolDownload)}</a>
+    <!-- Same-origin now, so the download attribute applies and the browser
+         saves the file under this name instead of navigating to it. -->
+    <a class="btn" href="${RECORDER_URL}" download="${esc(RECORDER_FILE)}">${icon('i-drop')}${esc(c.logbook.toolDownload)}</a>
   </p>
-  <p class="record__meta">${esc(c.logbook.toolMeta)} &middot; ${esc(c.logbook.toolHost)}</p>
+  <p class="record__meta">${esc(c.logbook.toolMeta.replace('{SIZE}', recorderMB))} &middot; ${esc(c.logbook.toolHost)}</p>
+  <p class="notice">${P(c.logbook.toolWarn)}</p>
+  <dl class="spec sha">
+    <dt>${esc(c.logbook.toolShaLabel)}</dt>
+    <dd><span class="code sha__value">${esc(RECORDER_SHA)}</span></dd>
+  </dl>
+  <p class="record__meta">${esc(c.logbook.toolShaNote)}</p>
 
   <p class="btn-row btn-row--foot">
     <a class="btn" href="${urlFor('home', lang)}">${icon('i-home')}${esc(c.logbook.backHome)}</a>
   </p>
 </section>`
   return shell({ c, lang, key: 'logbook', title: `${c.logbook.title} — ${c.meta.siteName}`, desc: c.logbook.intro, body })
+}
+
+/* --- Dispatch desk ---------------------------------------------------------
+   Everything the release prints is already published in the routes section:
+   the filed routing, the cruise level, the distance and the block time. The
+   one derived figure is average groundspeed, which is distance over block
+   time, and the arithmetic is printed on the page so it can be checked.
+
+   There is deliberately no fuel figure. Fuel needs all-up weight, wind and an
+   alternate; this site publishes none of the three, so any number here would
+   be invented, and an invented number in a document shaped like a real release
+   is worse than a missing one.                                               */
+const DISPATCH_KM = { 'ksfo-ksns': 110, 'zspd-zsnj': 280 }
+const DISPATCH_MIN = { 'ksfo-ksns': 30, 'zspd-zsnj': 50 }
+const MI_PER_KM = 0.621371
+
+function dispatchData(c, lang) {
+  // The release is built in the browser from this table, so the same figures
+  // drive the server-rendered default and every later selection.
+  const out = {}
+  for (const id of c.routes._order) {
+    const r = c.routes[id]
+    const km = DISPATCH_KM[id], min = DISPATCH_MIN[id]
+    const speed = lang === 'zh-Hans'
+      ? Math.round(km / (min / 60))
+      : Math.round((km * MI_PER_KM) / (min / 60))
+    for (const leg of r.legs) {
+      const out2 = leg.dir === r.legs[0].dir
+      out[leg.flight] = {
+        flight: leg.flight, route: leg.plan, dir: leg.dir,
+        sector: `${out2 ? r.from : r.to} - ${out2 ? r.to : r.from}`,
+        level: r.altitude, distance: r.distance, block: r.duration,
+        speed: `${speed} ${c.dispatch.speedUnit}`,
+      }
+    }
+  }
+  return out
+}
+
+function dispatchPage(c, lang) {
+  const P = s => parts(s, lang), D = c.dispatch, LG = c.landing
+  const F = D.fields
+  const data = dispatchData(c, lang)
+  const first = Object.keys(data)[0]
+
+  const legOpts = c.routes._order.flatMap(id => c.routes[id].legs.map(leg =>
+    `<option value="${esc(leg.flight)}">${esc(leg.flight)} · ${esc(leg.dir)} · ${esc(c.routes[id].from)}-${esc(c.routes[id].to)}</option>`)).join('')
+  const acOpts = c.fleet._order.map(id =>
+    `<option value="${esc(id)}">${esc(c.fleet[id].reg)} · ${esc(c.fleet[id].name)}</option>`).join('')
+  const acData = Object.fromEntries(c.fleet._order.map(id => [id, { reg: c.fleet[id].reg, name: c.fleet[id].name }]))
+
+  const row = (k, v, attr = '') => `<dt>${esc(k)}</dt><dd${attr}>${esc(v)}</dd>`
+  const d0 = data[first], a0 = acData[c.fleet._order[0]]
+
+  // Scoring table — the complete static equivalent of the landing game. It is
+  // rendered whether or not the game ever runs, because the site's own rule is
+  // that a motion which cannot be removed and leave the information behind is
+  // not shipped.
+  const bandRows = LG.bands.map(b => `<tr>
+    <td class="code">${esc(b.range)}</td>
+    <td class="lg-remark">${parts(b.remark, lang)}</td>
+  </tr>`).join('')
+
+  const body = `
+<section class="sector wrap">
+  <h1>${P(D.title)}</h1>
+  <p class="record__meta">${esc(D.headerSub)}</p>
+  <p class="prose">${P(D.intro)}</p>
+
+  <div class="disp" data-dispatch
+       data-legs="${esc(JSON.stringify(data))}"
+       data-ac="${esc(JSON.stringify(acData))}"
+       data-issued-label="${esc(F.issued)}">
+    <div class="disp-controls">
+      <div class="field">
+        <label for="disp-leg">${esc(D.legLabel)}</label>
+        <select id="disp-leg" data-disp-leg>${legOpts}</select>
+      </div>
+      <div class="field">
+        <label for="disp-ac">${esc(D.acLabel)}</label>
+        <select id="disp-ac" data-disp-ac>${acOpts}</select>
+      </div>
+    </div>
+    <p class="prose">${P(D.releaseHint)}</p>
+
+    <figure class="release" data-disp-release>
+      <div class="release__head">
+        <span>${esc(D.releaseTitle)}</span>
+        <span class="release__code code" data-disp-flight>${esc(d0.flight)}</span>
+      </div>
+      <dl class="release__body">
+        ${row(F.flight, d0.flight, ' class="code" data-disp-f="flight"')}
+        ${row(F.aircraft, a0.name, ' data-disp-a="name"')}
+        ${row(F.reg, a0.reg, ' class="code" data-disp-a="reg"')}
+        ${row(F.sector, d0.sector, ' class="code" data-disp-f="sector"')}
+        ${row(F.route, d0.route, ' class="route-string" data-disp-f="route"')}
+        ${row(F.level, d0.level, ' class="code" data-disp-f="level"')}
+        ${row(F.distance, d0.distance, ' data-disp-f="distance"')}
+        ${row(F.block, d0.block, ' data-disp-f="block"')}
+        ${row(F.speed, d0.speed, ' class="code" data-disp-f="speed"')}
+        ${row(F.issued, D.issuedPending, ' class="code" data-disp-issued')}
+      </dl>
+    </figure>
+
+    <p class="btn-row">
+      <button class="btn" type="button" data-disp-download>${icon('i-drop')}${esc(D.downloadButton)}</button>
+    </p>
+    <p class="record__meta">${esc(D.downloadNote)}</p>
+  </div>
+
+  <p class="notice notice--quiet">${P(D.noscript)}</p>
+
+  <h2>${esc(D.mathTitle)}</h2>
+  <p class="prose">${esc(D.mathNote)}</p>
+  <ul class="record__events">${D.mathRows.map(m => `<li class="code">${esc(m)}</li>`).join('')}</ul>
+  <p class="prose">${P(D.mathTail)}</p>
+</section>
+
+<section class="sector wrap" data-landing
+  data-no-flare="${esc(LG.noFlare)}" data-too-high="${esc(LG.tooHigh)}" data-too-late="${esc(LG.tooLate)}">
+  <h2>${P(LG.title)}</h2>
+  <p class="prose">${P(LG.intro)}</p>
+
+  <div class="lg" hidden data-lg-game>
+    <!-- viewBox is cropped to the band the aeroplane actually uses. At the full
+         0-200 height half the frame was empty sky and the aircraft read as a
+         speck once the figure stretched across the measure. -->
+    <svg class="lg-view" viewBox="0 40 640 156" role="img" aria-label="${esc(LG.intro)}" focusable="false">
+      <line class="lg-ground" x1="0" y1="170" x2="640" y2="170"/>
+      <rect class="lg-rwy" x="180" y="167" width="420" height="6"/>
+      <g data-lg-ship><g transform="scale(1.6)">
+        <path class="lg-ship" d="M-16 0 L10 0 L18 -3 L10 3 Z"/><path class="lg-ship" d="M-4 0 l-6 -9 l4 0 l9 9 Z"/><path class="lg-ship" d="M-4 0 l-6 9 l4 0 l9 -9 Z"/><path class="lg-ship" d="M-15 0 l-3 -6 l2 0 l4 6 Z"/>
+      </g></g>
+    </svg>
+    <p class="lg-readout">
+      <span class="lg-readout__k">${esc(LG.radioLabel)}</span>
+      <span class="lg-readout__v code" data-lg-alt>—</span>
+    </p>
+    <p class="btn-row">
+      <button class="btn" type="button" data-lg-start data-again="${esc(LG.againButton)}">${esc(LG.startButton)}</button>
+      <button class="btn" type="button" data-lg-flare hidden>${esc(LG.flareButton)}</button>
+    </p>
+    <p class="record__meta">${esc(LG.hint)}</p>
+    <div class="lg-result" role="status" data-lg-result></div>
+  </div>
+
+  <h3 class="record__label">${esc(LG.tableTitle)}</h3>
+  <p class="prose">${P(LG.tableNote)}</p>
+  <table class="bd lg-table">
+    <thead><tr><th scope="col">${esc(LG.colVs)} (${esc(LG.vsUnit)})</th><th scope="col">${esc(LG.colRemark)}</th></tr></thead>
+    <tbody>${bandRows}</tbody>
+  </table>
+
+  <p class="btn-row btn-row--foot">
+    <a class="btn" href="${urlFor('home', lang)}">${icon('i-home')}${esc(D.backHome)}</a>
+  </p>
+</section>`
+
+  return shell({ c, lang, key: 'dispatch', title: `${D.title} — ${c.meta.siteName}`, desc: D.intro, body })
 }
 
 /* --- Accessibility -------------------------------------------------------- */
@@ -692,7 +1088,7 @@ function aprilfools(c, lang) {
 }
 
 /* --- Emit ----------------------------------------------------------------- */
-const RENDER = { home, guestbook, logbook, accessibility: a11y, aprilfools }
+const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, accessibility: a11y, aprilfools }
 let count = 0
 for (const p of PAGES) {
   for (const [lang, cat, sub] of [['zh-Hans', zh, p.zhPath], ['en', en, p.enPath]]) {

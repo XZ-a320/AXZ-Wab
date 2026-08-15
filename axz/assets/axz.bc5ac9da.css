@@ -1,0 +1,1450 @@
+/* ==========================================================================
+   AXZ design tokens
+   Every ratio in a comment below is computed by scripts/check-axz-contrast.mjs
+   and enforced there. Do not hand-edit a ratio; run the checker.
+
+   Shape system: two line weights and nothing else. No radii, no shadows.
+   The one "elevation" is a hard 6px print offset, used in exactly one place.
+   ========================================================================== */
+
+:root {
+  color-scheme: light dark;
+
+  /* --- DAY (default) ---------------------------------------------------- */
+  --paper:        #F3F0E9;   /* page ground, warm bone */
+  --paper-2:      #FBF9F4;   /* inset ledger cells */
+  --paper-shade:  #E2DCCF;   /* DECORATIVE ONLY - the print offset. Never text. */
+
+  --ink:          #15171B;   /* 15.77 on paper - body, headings */
+  --ink-2:        #43484F;   /*  8.10 on paper - secondary prose */
+  --ink-3:        #5E646C;   /*  5.25 on paper - lightest text token in the system */
+
+  --cyan-ink:     #00688F;   /*  5.46 on paper - links, brand text */
+  --cyan:         #00A2E8;   /* brand cyan, sampled from the wordmark.
+                                2.86 on paper => FILL ONLY in day, never text. */
+  --remark:       #A8261D;   /*  6.23 on paper - the 备注 column */
+
+  --rule-hair:    #C7C1B3;   /* 1.58 - ruled-paper rhythm, decorative */
+  --rule-struct:  #7A7365;   /* 4.13 - structural rules, row separation (1.4.11) */
+
+  --focus-outer:  #0B5FA5;   /* 5.78 on paper */
+  --focus-inner:  #F3F0E9;
+
+  /* --- Type ------------------------------------------------------------- */
+  /* Latin FIRST so per-glyph fallback gives Latin to Archivo, not to a CJK
+     face's bundled Latin. ~37% of the rendered width here is Latin. */
+  --font-sans: Archivo, "AXZ Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-kai:  "AXZ Serif", "Noto Serif SC", "Songti SC", STSong, serif;
+  --font-mono: "AXZ Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  /* ratio 1.25, anchored 17px ZH / 18px EN */
+  --fs-mono-xs: 12px;
+  --fs-xs:      13px;
+  --fs-sm:      15px;
+  --fs-base:    17px;
+  --fs-md:      21px;
+  --fs-lg:      27px;
+  --fs-xl:      34px;
+  --fs-2xl:     clamp(38px, 5.2vw, 62px);
+  --fs-display: clamp(52px, 11vw, 148px);   /* masthead only */
+
+  /* --- Space: 8px base, no exceptions ----------------------------------- */
+  --s-h:   4px;
+  --s-1:   8px;
+  --s-15: 12px;
+  --s-2:  16px;
+  --s-3:  24px;
+  --s-4:  32px;
+  --s-6:  48px;
+  --s-8:  64px;
+  --s-12: 96px;
+  --s-16: 128px;
+  --s-24: 192px;
+
+  --measure: 1160px;
+  --gutter: 24px;
+  --row-rhythm: 32px;
+  --tap: 44px;              /* design floor, well above the 24px WCAG minimum */
+
+  /* --- Shape ------------------------------------------------------------ */
+  --print-offset: 6px 6px 0 var(--paper-shade);   /* hard, zero blur, one use */
+
+  /* --- Motion ----------------------------------------------------------- */
+  --ease-ink:   cubic-bezier(.22, .61, .36, 1);   /* default - a pen settling */
+  --ease-page:  cubic-bezier(.65, 0, .35, 1);     /* reveals */
+  --ease-track: linear;                            /* route draws only */
+  --t-1: 120ms;
+  --t-2: 220ms;
+  --t-3: 420ms;
+  --t-4: 900ms;
+}
+
+/* --- NIGHT ---------------------------------------------------------------
+   --night-2 sits 1.07:1 from --night. Separation is carried by RULES, never
+   by contrast, so every component boundary on a nested surface must use
+   --rule-struct (not --rule-hair). Enforced in check-axz-contrast.mjs.        */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="day"]) {
+    --paper:       #0B0D10;
+    --paper-2:     #12161A;
+    --paper-shade: #1B2026;
+
+    --ink:         #E9E5DC;   /* 15.48 on night */
+    --ink-2:       #A8B0B9;   /*  8.87 */
+    --ink-3:       #8A929B;   /*  6.18 */
+
+    --cyan-ink:    #38BDF6;   /*  9.06 - links in night */
+    --cyan:        #00A2E8;   /*  6.79 - text-safe on night */
+    --remark:      #FF6B5E;   /*  6.96 */
+
+    --rule-hair:   #242A31;
+    --rule-struct: #5F6771;   /*  3.40 - non-text contrast, passes 1.4.11 */
+
+    --focus-outer: #7ED0F5;   /* 11.33 */
+    --focus-inner: #0B0D10;
+  }
+}
+
+:root[data-theme="night"] {
+  --paper:       #0B0D10;
+  --paper-2:     #12161A;
+  --paper-shade: #1B2026;
+
+  --ink:         #E9E5DC;
+  --ink-2:       #A8B0B9;
+  --ink-3:       #8A929B;
+
+  --cyan-ink:    #38BDF6;
+  --cyan:        #00A2E8;
+  --remark:      #FF6B5E;
+
+  --rule-hair:   #242A31;
+  --rule-struct: #5F6771;
+
+  --focus-outer: #7ED0F5;
+  --focus-inner: #0B0D10;
+}
+
+/* --- PLATE ---------------------------------------------------------------
+   The frame around the owner's own chart render. Night values that do NOT
+   remap on theme change: --plate is 16.64:1 against day paper, so the chart
+   reads as an inset object in both modes.
+
+   The mark tokens that used to live here (track, fix, airway, terrain...)
+   described the traced SVG. That trace is gone, so they went with it rather
+   than sit here as values a gate pretends to verify.                        */
+
+.plate {
+  --plate:       #0E1114;
+  --plate-ink:   #E9E5DC;   /* 15.06 on plate - text */
+  --plate-ink-2: #9AA3AC;   /*  7.40 on plate - text */
+}
+
+
+/* ==========================================================================
+   AXZ base — reset, typography, focus, landmarks, motion
+   Shape system: border-radius 0 and box-shadow none, site-wide. The only
+   "elevation" is one hard 6px print offset on one photograph.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: 1.75;
+  font-synthesis-weight: none;   /* never synthesize bold on hanzi */
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, p, ul, ol, dl, dd, figure, blockquote { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+
+img, svg { max-width: 100%; height: auto; display: block; }
+
+/* Radius and shadow do not exist in this system. */
+*, *::before, *::after { border-radius: 0; }
+:where(*) { box-shadow: none; }
+
+/* --- Ruled-paper underlay -------------------------------------------------
+   CSS-only, on the 32px row rhythm, removed under prefers-contrast: more.   */
+.ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--row-rhythm) - 1px),
+    var(--rule-hair) calc(var(--row-rhythm) - 1px),
+    var(--rule-hair) var(--row-rhythm)
+  );
+  background-position: 0 0;
+}
+@media (prefers-contrast: more) {
+  .ruled { background-image: none; }
+}
+
+/* --- Focus: two-layer ring, visible on every ground ----------------------- */
+:focus { outline: none; }
+:focus-visible {
+  outline: 3px solid var(--focus-outer);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus-inner);
+}
+.plate :focus-visible,
+.aprilfools :focus-visible {
+  outline-color: #7ED0F5;
+  box-shadow: 0 0 0 2px #0B0D10;
+}
+
+/* Skip link — visible the moment it takes focus, never obscured (SC 2.4.11) */
+.skip {
+  position: absolute;
+  left: var(--s-2);
+  top: calc(-1 * var(--s-8));
+  z-index: 100;
+  padding: var(--s-15) var(--s-3);
+  background: var(--ink);
+  color: var(--paper);
+  text-decoration: none;
+  transition: top var(--t-1) var(--ease-ink);
+}
+.skip:focus-visible { top: var(--s-2); }
+
+/* --- Interactive floor ---------------------------------------------------- */
+a, button, summary, [tabindex] { min-height: 0; }
+a { color: var(--cyan-ink); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }        /* underline only — paper does not lift */
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  min-height: var(--tap);
+  padding: var(--s-15) var(--s-3);
+  border: 1px solid var(--rule-struct);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  transition: background-color var(--t-1) var(--ease-ink), color var(--t-1) var(--ease-ink);
+}
+.btn:hover { background: var(--ink); color: var(--paper); }
+
+/* --- Layout --------------------------------------------------------------- */
+.wrap {
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding-inline: clamp(20px, 5vw, 64px);
+}
+
+/* --- Per-language typography — both are designed, neither inherits -------- */
+:lang(zh-Hans) .prose {
+  font-size: 17px;
+  line-height: 1.75;
+  max-inline-size: 38em;
+  letter-spacing: 0;
+  word-break: keep-all;
+}
+:lang(en) .prose {
+  font-size: 18px;
+  line-height: 1.6;
+  max-inline-size: 68ch;
+  hyphens: manual;
+}
+:lang(zh-Hans) h2 { font: 700 30px/1.45 var(--font-sans); }   /* stepped down for hanzi mass */
+:lang(en) h2 {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  font-variation-settings: 'wght' 700, 'wdth' 96;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  line-height: 1.15;
+}
+/* Never italic on hanzi. */
+:lang(zh-Hans) i, :lang(zh-Hans) em, .zh em { font-style: normal; font-weight: 700; }
+
+/* --- Codes, waypoints, altitudes: mono, tabular, never fractured ---------- */
+.code, .route-string, .reg, .icao {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: 'zero' 1;
+}
+.route-string {
+  word-break: keep-all;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  padding-block: var(--s-h);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .02em;
+}
+.route-string .tok { white-space: nowrap; }
+
+/* --- Motion ---------------------------------------------------------------
+   THE SHIPPING RULE: if a motion cannot be removed and leave a complete,
+   legible, information-equivalent static state, it is not shipped.
+   Reduced motion does not suppress animation — it DECLARES THE FINISHED STATE. */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  .remark-cell { opacity: 1 !important; }
+}
+
+/* The same finished state, applied by the manual stop-animation toggle, so the
+   button is not merely a preference echo. */
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+}
+:root[data-motion="off"] .reveal { opacity: 1 !important; transform: none !important; }
+
+/* --- Screen-reader-only --------------------------------------------------- */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+   AXZ ledger — the site's central component.
+
+   Every record on this site is a row with two columns: what the airline says
+   happened (the record), and what actually happened (备注 / remarks, in red).
+   The adjacency IS the argument. 重大事件 ends on "全年模拟飞行安全运行，无重大事故"
+   and 搞笑黑历史 sits on the same baseline band, in red, immediately beside it.
+
+   The 备注 column comes from the owner's own C# logger, which has two remarks
+   fields, each with an explicit 无 (none) checkbox — so the empty state is
+   part of the schema, not an afterthought.
+   ========================================================================== */
+
+.ledger {
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+
+.ledger__row {
+  display: grid;
+  grid-template-columns: [rec] minmax(0, 1fr) [rem] minmax(0, 21rem);
+  gap: 0 var(--s-6);
+  padding-block: var(--s-4);
+  border-block-end: 1px solid var(--rule-struct);
+}
+.ledger__row:last-child { border-block-end: 0; }
+
+/* Row index — the sector/serial number, mono, hung in the margin. */
+.ledger__no {
+  grid-column: rec;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  margin-block-end: var(--s-1);
+}
+
+.ledger__record { grid-column: rec; min-width: 0; }
+
+/* --- The 备注 column ------------------------------------------------------
+   Red, serif, opened by a proof-reader's caret. Never italic on hanzi.      */
+.ledger__remarks {
+  grid-column: rem;
+  min-width: 0;
+  color: var(--remark);
+  font-family: var(--font-kai);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  border-inline-start: 1px solid var(--rule-struct);
+  padding-inline-start: var(--s-3);
+}
+
+.ledger__remarks-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--remark);
+  margin-block-end: var(--s-15);
+}
+
+.remark-cell { position: relative; padding-inline-start: var(--s-2); }
+.remark-cell + .remark-cell { margin-block-start: var(--s-15); }
+/* U+2038 CARET — opens every cell in the remarks column. */
+.remark-cell::before {
+  content: '\2038';
+  position: absolute;
+  inset-inline-start: 0;
+  color: var(--remark);
+  font-family: var(--font-mono);
+}
+
+/* The empty state the schema already has a rule for. */
+.remark-none {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .1em;
+}
+
+/* --- Record-column internals --------------------------------------------- */
+.record__title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: 1.25;
+  margin-block-end: var(--s-1);
+}
+.record__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  color: var(--ink-3);
+  letter-spacing: .08em;
+  margin-block-end: var(--s-2);
+}
+.record__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-block: var(--s-3) var(--s-1);
+}
+
+/* Numbered event list — the deadpan half of the pair. */
+.record__events { counter-reset: ev; }
+.record__events > li {
+  counter-increment: ev;
+  position: relative;
+  padding-inline-start: var(--s-4);
+  margin-block-end: var(--s-15);
+}
+.record__events > li::before {
+  content: counter(ev, decimal-leading-zero);
+  position: absolute;
+  inset-inline-start: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  color: var(--ink-3);
+  line-height: 1.9;
+}
+
+/* --- Definition rows for route data --------------------------------------- */
+.spec { display: grid; grid-template-columns: minmax(6rem, auto) 1fr; gap: var(--s-1) var(--s-3); }
+.spec dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-block-start: 3px;
+}
+.spec dd { margin: 0; }
+
+/* --- Mobile: the remarks column breaks out as a margin note ---------------
+   Not a degradation — the note keeps its red, its serif and its caret, and
+   gains a rule on the inline start so it still reads as a marginal hand.    */
+@media (max-width: 900px) {
+  .ledger__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-3);
+  }
+  .ledger__no, .ledger__record, .ledger__remarks { grid-column: 1; }
+  .ledger__remarks {
+    border-inline-start: 2px solid var(--remark);
+    padding-inline-start: var(--s-2);
+    margin-block-start: var(--s-1);
+    font-size: var(--fs-base);
+  }
+}
+
+/* ==========================================================================
+   AXZ plate — the route chart.
+
+   The chart is the owner's OWN render, shown directly. It replaced a traced
+   SVG: the original carries detail the trace omitted, and showing it removes
+   any chance of the drawing disagreeing with its source.
+
+   The plate does NOT remap on theme change. These are night charts, and
+   --plate is 16.64:1 against day paper, so it reads as an inset object in
+   both modes. No motion here — the chart is a document, not an animation.
+   ========================================================================== */
+
+.plate {
+  background: var(--plate);
+  color: var(--plate-ink);
+  border: 1px solid var(--rule-struct);
+  padding: var(--s-3);
+}
+
+.plate__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--plate-ink-2);
+  margin-block-end: var(--s-2);
+  padding-block-end: var(--s-1);
+  border-block-end: 1px solid var(--plate-ink-2);
+}
+.plate__pair { color: var(--plate-ink); font-size: var(--fs-sm); letter-spacing: .1em; }
+
+.plate__img { width: 100%; height: auto; display: block; }
+
+.plate__note {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  color: var(--plate-ink-2);
+  margin-block-start: var(--s-2);
+  padding-block-start: var(--s-1);
+  border-block-start: 1px solid var(--plate-ink-2);
+}
+
+/* --- Altitude profile ------------------------------------------------------
+   Both cruise levels on one scale. 31,100 ft over 5,500 ft is the site's most
+   striking number and a table row buries it.                                */
+.profile { margin-block: var(--s-4) var(--s-6); }
+.profile svg { width: 100%; height: auto; overflow: visible; }
+.profile figcaption {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  max-inline-size: 62ch;
+  margin-block-start: var(--s-2);
+}
+.prof-ground { stroke: var(--rule-struct); stroke-width: 1; }
+.prof-ground-l,
+.prof-pair,
+.prof-alt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  fill: var(--ink-3);
+}
+.prof-alt { fill: var(--remark); font-size: 13px; }
+.prof-pair { fill: var(--ink-2); }
+.prof-path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) .profile[data-anim="on"] .prof-path {
+    stroke-dasharray: var(--plen);
+    stroke-dashoffset: var(--plen);
+  }
+  :root:not([data-motion="off"]) .profile[data-anim="on"][data-shown="true"] .prof-path {
+    animation: prof-draw var(--t-4) var(--ease-page) forwards;
+  }
+}
+@keyframes prof-draw { to { stroke-dashoffset: 0; } }
+
+/* ==========================================================================
+   AXZ pages — masthead, nav, sectors, hotspot print, guestbook, logbook, footer
+   ========================================================================== */
+
+/* --- Top bar -------------------------------------------------------------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--paper);
+  border-block-end: 1px solid var(--rule-struct);
+}
+.topbar__in {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 56px;
+  flex-wrap: wrap;
+}
+.topbar__mark { display: inline-flex; align-items: center; text-decoration: none; }
+/* The owner's own wordmark, finally on the site — it appeared on no page
+   before. Two rasters rather than a recolour: the mark is black + cyan, so
+   a filter would take the cyan with it. */
+.mark { width: 76px; height: auto; }
+.mark--dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="day"]) .mark--light { display: none; }
+  :root:not([data-theme="day"]) .mark--dark { display: block; }
+}
+:root[data-theme="night"] .mark--light { display: none; }
+:root[data-theme="night"] .mark--dark { display: block; }
+:root[data-theme="day"] .mark--light { display: block; }
+:root[data-theme="day"] .mark--dark { display: none; }
+.nav { display: flex; gap: var(--s-3); flex-wrap: wrap; margin-inline-start: auto; }
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  text-decoration: none;
+  border-block-end: 2px solid transparent;
+}
+.nav a:hover { color: var(--ink); border-block-end-color: var(--ink); }
+.nav a[aria-current="page"] { color: var(--ink); border-block-end-color: var(--remark); }
+
+.controls { display: flex; gap: var(--s-2); align-items: center; }
+.controls .lang { display: flex; align-items: center; gap: var(--s-1); font-size: var(--fs-sm); }
+.controls .lang a { min-height: var(--tap); display: inline-flex; align-items: center; }
+/* Separator: centred, quiet, and slightly angled so it reads as a divider
+   rather than a character someone typed. */
+.lang__sep {
+  color: var(--rule-struct);
+  font-size: var(--fs-sm);
+  line-height: 1;
+  transform: rotate(12deg);
+  user-select: none;
+}
+.ctrl-btn {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding-inline: var(--s-15);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .1em;
+  color: var(--ink-2);
+  border: 1px solid var(--rule-struct);
+}
+.ctrl-btn:hover { background: var(--ink); color: var(--paper); }
+
+/* --- Masthead ------------------------------------------------------------- */
+.masthead { padding-block: var(--s-12) var(--s-8); border-block-end: 2px solid var(--ink); }
+.masthead__tagline {
+  font-family: var(--font-mono);
+  font-size: var(--fs-display);
+  font-weight: 600;
+  line-height: .92;
+  letter-spacing: -.02em;
+  margin: 0;
+}
+/* The disclaimer, promoted out of a 3.36:1 footer into the hero — where it is
+   also the first thing the remarks column says. */
+.masthead__remark {
+  color: var(--remark);
+  font-family: var(--font-kai);
+  font-size: var(--fs-md);
+  margin-block-start: var(--s-3);
+  padding-inline-start: var(--s-2);
+  border-inline-start: 2px solid var(--remark);
+}
+.masthead__sub {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-block-start: var(--s-4);
+}
+
+/* --- Sector heading ------------------------------------------------------- */
+.sector { padding-block: var(--s-8); }
+.sector__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin-block-end: var(--s-4);
+  padding-block-end: var(--s-2);
+  border-block-end: 2px solid var(--ink);
+}
+.sector__no {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  color: var(--remark);
+  letter-spacing: .1em;
+}
+
+/* --- Hotspot: the one print, the one hard offset -------------------------- */
+.print { margin-block: var(--s-4); max-width: 62ch; }
+.print img { box-shadow: var(--print-offset); }
+.print figcaption {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  color: var(--ink-3);
+  margin-block-start: var(--s-3);
+  letter-spacing: .06em;
+}
+
+/* --- Guestbook ------------------------------------------------------------ */
+.notice {
+  border: 1px solid var(--rule-struct);
+  border-inline-start: 3px solid var(--remark);
+  padding: var(--s-3);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  margin-block-end: var(--s-6);
+}
+.entry { border-block-end: 1px solid var(--rule-struct); padding-block: var(--s-3); }
+.entry:last-child { border-block-end: 0; }
+.entry time {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  color: var(--ink-3);
+  letter-spacing: .08em;
+  margin-block-end: var(--s-1);
+}
+.entry blockquote { font-size: var(--fs-md); }
+
+/* --- Logbook -------------------------------------------------------------- */
+.dropzone {
+  border: 2px dashed var(--rule-struct);
+  padding: var(--s-8) var(--s-3);
+  text-align: center;
+  transition: background-color var(--t-1) var(--ease-ink), border-color var(--t-1) var(--ease-ink);
+}
+.dropzone[data-over="true"] { border-color: var(--remark); background: var(--paper-2); }
+.dropzone__hint { color: var(--ink-2); margin-block-end: var(--s-3); }
+
+.field { margin-block-end: var(--s-3); }
+.field label { display: block; font-size: var(--fs-sm); font-weight: 700; margin-block-end: var(--s-1); }
+.field input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s-15);
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  background: var(--paper-2);
+  border: 1px solid var(--rule-struct);
+}
+.field input:focus-visible { border-color: var(--focus-outer); }
+
+.status { min-height: 1.6em; font-size: var(--fs-sm); }
+.status[data-kind="error"] { color: var(--remark); }
+
+.band { border-block-start: 1px solid var(--rule-struct); padding-block: var(--s-3); }
+.band__name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-block-end: var(--s-2);
+}
+
+/* --- Footer --------------------------------------------------------------- */
+.foot {
+  border-block-start: 2px solid var(--ink);
+  margin-block-start: var(--s-12);
+  padding-block: var(--s-6) var(--s-8);
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+}
+.foot__nav { display: flex; gap: var(--s-3); flex-wrap: wrap; margin-block-end: var(--s-3); }
+.foot__nav a { min-height: var(--tap); display: inline-flex; align-items: center; }
+
+/* --- Reveal: motion that always has a complete static state --------------- */
+.reveal { opacity: 0; transform: translateY(8px); }
+.reveal[data-shown="true"] {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--t-3) var(--ease-page), transform var(--t-3) var(--ease-page);
+}
+/* No JS, no observer, no support: the content is simply present. */
+.no-js .reveal, :root[data-motion="off"] .reveal { opacity: 1; transform: none; }
+
+/* --- April Fools ----------------------------------------------------------
+   Deliberately does NOT match the design system. The original page was crude
+   and that crudeness is the joke; a tasteful version would not be the same
+   artifact. What changed: no 6.67 Hz body flicker (SC 2.2.2 vestibular
+   hazard), every animation behind prefers-reduced-motion and the stop toggle,
+   a working exit, and the BTC address / onion / contact email removed.      */
+.aprilfools {
+  background: #000;
+  color: #0f0;
+  font-family: 'Courier New', monospace;
+  padding: var(--s-4) var(--s-2);
+}
+.aprilfools .af-box {
+  max-width: 900px;
+  margin-inline: auto;
+  border: 2px solid #0f0;
+  padding: var(--s-3);
+}
+.aprilfools .af-h { color: #f66; font-size: var(--fs-lg); text-align: center; text-transform: none; letter-spacing: 0; }
+.aprilfools .af-org { color: #ff0; text-align: center; margin-block-end: var(--s-3); }
+.aprilfools .af-ascii {
+  color: #0f0;
+  font-size: clamp(5px, 1.5vw, 11px);
+  line-height: 1.15;
+  overflow-x: auto;
+  margin-block: var(--s-3);
+}
+.aprilfools .af-term { border: 1px solid #0f0; padding: var(--s-2); margin-block: var(--s-3); }
+.aprilfools .af-term p { margin-block-end: var(--s-h); }
+.aprilfools .af-ok { color: #0f0; }
+/* The removed strings keep the original's inverted-highlight treatment, so the
+   redaction reads as part of the page rather than as damage. */
+.aprilfools .af-mark { background: #0f0; color: #000; padding-inline: var(--s-h); }
+.aprilfools .af-cmd { margin-block: var(--s-3); }
+.aprilfools .af-foot { color: #6f6; font-size: var(--fs-xs); margin-block-start: var(--s-3); text-align: center; }
+.aprilfools .af-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: var(--s-15) var(--s-3);
+  margin-inline-end: var(--s-2);
+  background: #0f0;
+  color: #000;
+  font-family: inherit;
+  font-weight: 700;
+  text-decoration: none;
+}
+.aprilfools .af-btn:hover { background: #6f6; }
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) .aprilfools .af-box { animation: af-glitch .5s steps(2) infinite; }
+}
+@keyframes af-glitch {
+  0%, 100% { transform: translate(0); }
+  40% { transform: translate(-2px, 1px); }
+  80% { transform: translate(1px, -2px); }
+}
+
+/* --- Airframe plan views ---------------------------------------------------
+   Width is set from the type's real length against the longest type in the
+   fleet, so the row is a true-scale comparison rather than four equal boxes. */
+.af-draw svg {
+  height: auto;
+  overflow: visible;
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+}
+/* Line weight must not scale with the drawing, or the A321 would render with a
+   heavier outline than the 737 purely because it is wider on the page. */
+.af-draw svg * { vector-effect: non-scaling-stroke; }
+.af-fin { fill: none; stroke-width: 1.1; }
+.af-door { fill: none; stroke-dasharray: 1.6 1.1; stroke: var(--ink-2); }
+.af-dims {
+  display: flex;
+  gap: var(--s-1);
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .1em;
+  color: var(--ink-3);
+  margin-block-start: var(--s-1);
+}
+.af-dims b { font-weight: 400; color: var(--ink-2); }
+
+/* The outline draws itself in. Static state is the finished drawing. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) [data-anim="on"] .af-part,
+  :root:not([data-motion="off"]) [data-anim="on"] .af-fin {
+    stroke-dasharray: var(--dlen);
+    stroke-dashoffset: var(--dlen);
+    fill-opacity: 0;
+  }
+  :root:not([data-motion="off"]) [data-anim="on"][data-shown="true"] .af-part,
+  :root:not([data-motion="off"]) [data-anim="on"][data-shown="true"] .af-fin {
+    /* Staggered by path index: fuselage first, then wings, tail, nacelles —
+       roughly the order you would draw them, rather than all at once. */
+    animation: af-draw 900ms var(--ease-page) forwards;
+    animation-delay: calc(var(--i, 0) * 110ms);
+  }
+}
+@keyframes af-draw {
+  0%   { stroke-dashoffset: var(--dlen); fill-opacity: 0; }
+  75%  { fill-opacity: 0; }
+  100% { stroke-dashoffset: 0; fill-opacity: 1; }
+}
+
+.notice--quiet { border-inline-start-color: var(--rule-struct); color: var(--ink-3); }
+
+/* --- Fleet at one scale ---------------------------------------------------- */
+.fleet-scale { margin-block: var(--s-3) var(--s-6); }
+.af-list { display: flex; flex-direction: column; gap: var(--s-4); }
+.af-row {
+  display: grid;
+  grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: center;
+  padding-block-end: var(--s-3);
+  border-block-end: 1px solid var(--rule-hair);
+}
+.af-row:last-child { border-block-end: 0; }
+.af-meta { display: flex; flex-direction: column; gap: 2px; }
+.af-meta .reg {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .16em;
+  color: var(--remark);
+}
+.af-name { font-size: var(--fs-sm); }
+/* The drawing is sized as a share of the LONGEST type, inside a fixed track —
+   that is what makes the row a true comparison instead of four equal boxes. */
+.af-draw { max-width: 290px; }
+.af-draw svg { width: var(--af-w, 100%); height: auto; display: block; }
+.fleet-scale figcaption {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  max-inline-size: 64ch;
+  margin-block-start: var(--s-2);
+}
+@media (max-width: 720px) {
+  .af-row { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); }
+}
+
+/* --- Flight progress strips ------------------------------------------------
+   Modelled on a real ATC strip: fixed blocks, hard rules between them, mono
+   throughout, no rounding. The form is the point — a simmer reads it instantly. */
+.strips { margin-block: var(--s-2) var(--s-6); }
+.strip-list { display: grid; gap: var(--s-2); }
+.strip {
+  display: grid;
+  grid-template-columns: minmax(0, 8.5rem) minmax(0, 8rem) minmax(0, 1fr);
+  border: 1px solid var(--rule-struct);
+  border-inline-start: 3px solid var(--remark);
+  background: var(--paper-2);
+}
+.strip > * {
+  padding: var(--s-15) var(--s-2);
+  border-inline-end: 1px solid var(--rule-struct);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  min-width: 0;
+}
+.strip > *:last-child { border-inline-end: 0; }
+.strip__no { font-size: var(--fs-md); font-weight: 600; letter-spacing: .06em; }
+.strip__dir,
+.strip__t {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .12em;
+  color: var(--ink-3);
+}
+.strip__lvl .code { font-size: var(--fs-sm); color: var(--remark); }
+.strip__pair { font-family: var(--font-mono); font-size: var(--fs-sm); letter-spacing: .08em; }
+.strip .route-string { color: var(--ink-2); }
+.strips figcaption {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  margin-block-start: var(--s-2);
+}
+@media (max-width: 720px) {
+  .strip { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .strip__rte { grid-column: 1 / -1; border-block-start: 1px solid var(--rule-struct); }
+  .strip > * { border-inline-end: 0; }
+  .strip__call { border-inline-end: 1px solid var(--rule-struct); }
+}
+
+/* Side elevation sits under the plan view in the same drawing track. */
+.af-draw svg + svg { margin-block-start: var(--s-1); }
+.af-line { fill: none; stroke: var(--ink-2); stroke-width: .9; }
+.af-ground { fill: none; stroke: var(--rule-struct); stroke-width: .9; }
+
+/* --- Masthead aircraft -----------------------------------------------------
+   Julien.scavini's 737-800 top view, shipped as an alpha matte and painted
+   through mask-image so the ink colour is the real --ink token in both themes.
+
+   Sized by HEIGHT, not width: with width driving it the drawing grew past the
+   masthead's bottom rule on wide screens. Height-bounded plus
+   inset-inline-end: 0 keeps it inside its frame on both axes, and .masthead
+   clips whatever is left over.
+
+   Opacity is per-theme and measured, not eyeballed. At 0.13 the night
+   watermark computed 1.34:1 against #0B0D10 — effectively invisible, which is
+   exactly what it looked like. Night is 0.30 (2.34:1); day stays lighter at
+   0.15 because dark ink on light paper already reads at low alpha.          */
+.masthead { overflow: hidden; }
+.masthead__in { position: relative; }
+.masthead__ship { display: none; }
+
+@supports ((mask-image: url(#m)) or (-webkit-mask-image: url(#m))) {
+  .masthead__ship {
+    display: block;
+    position: absolute;
+    inset-block-start: 1%;
+    inset-inline-end: 0;
+    height: min(97%, 620px);
+    aspect-ratio: 1205 / 1041;
+    pointer-events: none;
+    z-index: -1;
+    background-color: var(--ink);
+    opacity: .15;
+    -webkit-mask-image: url("/axz/img/b738-top-1200.webp");
+    mask-image: url("/axz/img/b738-top-1200.webp");
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-position: center right;
+    mask-position: center right;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="day"]) .masthead__ship { opacity: .30; }
+  }
+  :root[data-theme="night"] .masthead__ship { opacity: .30; }
+  :root[data-theme="day"] .masthead__ship { opacity: .15; }
+
+  /* Drawn in, nose to tail. This one is a RASTER, so it cannot stroke-draw the
+     way the vector fleet does — a clip wipe is the honest equivalent for a
+     bitmap, and reads as the drawing being laid down. The base state is the
+     finished drawing; the wipe is added only when motion is welcome. */
+  @media (prefers-reduced-motion: no-preference) {
+    :root:not([data-motion="off"]) .masthead__ship {
+      animation: ship-draw 1800ms var(--ease-page) both;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .masthead__ship {
+      position: static;
+      height: auto;
+      width: min(86%, 380px);
+      margin-block-start: var(--s-3);
+      -webkit-mask-image: url("/axz/img/b738-top-800.webp");
+      mask-image: url("/axz/img/b738-top-800.webp");
+      -webkit-mask-position: center;
+      mask-position: center;
+    }
+  }
+}
+
+@keyframes ship-draw {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+.foot__credit { font-size: var(--fs-xs); margin-block-start: var(--s-2); max-inline-size: 74ch; }
+
+/* --- Compact top bar on small screens --------------------------------------
+   At 390px the bar wrapped to three rows and took ~44% of the viewport before
+   any content appeared. Same elements, same 44px targets, one row less.     */
+@media (max-width: 720px) {
+  .topbar__in { gap: var(--s-15); row-gap: var(--s-1); padding-block: var(--s-1); }
+  .mark { width: 56px; }
+  .nav { gap: var(--s-2); margin-inline-start: 0; order: 3; width: 100%; }
+  .nav a { font-size: var(--fs-xs); min-height: 40px; }
+  .controls { margin-inline-start: auto; gap: var(--s-1); }
+  .controls .lang { font-size: var(--fs-xs); }
+  .controls .lang a { min-height: 40px; }
+  /* 40px, not the site-wide 44px token: it buys back a whole row on a 390px
+     screen. Still well clear of SC 2.5.8's 24px floor, and stated here rather
+     than left as an unexplained drift from the token. */
+  .ctrl-btn { min-height: 40px; padding-inline: var(--s-1); font-size: 10px; letter-spacing: .06em; }
+}
+
+/* --- Logbook gate + drop zone ---------------------------------------------- */
+.gate { margin-block-end: var(--s-6); }
+/* The zone is a <label> around a hidden input, so it is the control itself and
+   a click anywhere in it opens the picker. :focus-within carries the ring,
+   because the focused element is the visually hidden input. */
+.dropzone { display: block; cursor: pointer; }
+.dropzone:hover { border-color: var(--ink-2); }
+.dropzone:focus-within {
+  outline: 3px solid var(--focus-outer);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus-inner);
+}
+.dropzone__hint { display: block; color: var(--ink-2); }
+.dropzone__alt { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-block: var(--s-2); }
+
+/* --- Icons -----------------------------------------------------------------
+   One inline sprite per document. Line icons use stroke: currentColor so they
+   follow the surrounding text colour and need no per-theme variant; the two
+   flags carry their own official colours and are decorative only. */
+.icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  display: inline-block;
+  vertical-align: -0.18em;
+}
+.icon--flag {
+  width: 1.35em;
+  height: .9em;
+  vertical-align: -0.08em;
+  /* A flag is a country, not a language, so it never carries the accessible
+     name — the language's own name sits beside it and does that job. */
+  outline: 1px solid var(--rule-hair);
+  outline-offset: 0;
+}
+.icon--head { width: 1.1em; height: 1.1em; color: var(--ink-3); }
+.icon--drop { width: 2.2em; height: 2.2em; margin-inline: auto; color: var(--ink-3); }
+
+.nav a { gap: var(--s-1); }
+.controls .lang a { gap: 6px; }
+.ctrl-btn--icon { padding-inline: var(--s-15); }
+.ctrl-btn--icon .icon { width: 1.25em; height: 1.25em; vertical-align: middle; }
+.btn .icon { margin-inline-end: 2px; }
+.sector__head .icon--head { align-self: center; }
+
+/* --- Button rows -----------------------------------------------------------
+   The pilot-tool buttons sat on different baselines because one carries an
+   icon and the other did not, and inline-flex children in a <p> align on the
+   text baseline. A flex row aligns them by box instead, so their tops and
+   bottoms line up whatever is inside them. */
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--s-2);
+  margin-block-start: var(--s-2);
+}
+.btn-row .btn { flex: 0 1 auto; }
+.btn-row--foot { margin-block-start: var(--s-6); }
+
+/* ==========================================================================
+   AXZ panels — network map, departure board, resources, dispatch, landing.
+
+   Everything here obeys the system already set in tokens.css: two line
+   weights, no radii, no shadows, mono for anything an aeroplane would print,
+   and only tokens that check-axz-contrast has computed a ratio for.
+   ========================================================================== */
+
+/* --- Route network --------------------------------------------------------
+   The SVG is a picture; the buttons underneath are the interaction. Nothing
+   inside the drawing is focusable, so there is no invisible tab stop and no
+   control that only a mouse can reach.                                      */
+.netmap { margin-block: var(--s-3) var(--s-6); }
+.netmap svg { width: 100%; height: auto; overflow: visible; }
+
+.net-track {
+  stroke: var(--ink);
+  stroke-width: 1.4;
+  fill: none;
+}
+.net-dot { fill: var(--paper); stroke: var(--ink); stroke-width: 1.4; }
+.net-icao {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: .1em;
+  fill: var(--ink);
+}
+.net-km {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  fill: var(--ink-3);
+}
+.net-north, .net-bar { stroke: var(--rule-struct); stroke-width: 1; fill: none; }
+
+/* Selection is carried by weight and colour together, never by colour alone. */
+.netmap[data-selected] .net-leg { opacity: .32; }
+.netmap[data-selected] .net-leg[data-active] { opacity: 1; }
+.net-leg[data-active] .net-track { stroke: var(--remark); stroke-width: 2.4; }
+.net-leg[data-active] .net-dot { stroke: var(--remark); }
+.net-leg[data-active] .net-icao { fill: var(--remark); }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) .net-leg,
+  :root:not([data-motion="off"]) .net-track { transition: opacity var(--t-2) var(--ease-ink), stroke-width var(--t-2) var(--ease-ink); }
+}
+
+.net-select__title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-block: var(--s-3) var(--s-2);
+}
+.net-select { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.net-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: var(--tap);
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--rule-struct);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+/* Selected. Declared BEFORE the hover rule on purpose: both selectors weigh
+   the same, so whichever comes last wins, and a selected button under the
+   cursor was painting --ink text onto an --ink fill. Hover is the later rule
+   and therefore owns the whole colour pair whenever it applies. */
+.net-btn[aria-pressed="true"] {
+  border-color: var(--remark);
+  border-inline-start-width: 3px;
+  color: var(--ink);
+  background: var(--paper-2);
+}
+.net-btn:hover { background: var(--ink); color: var(--paper); }
+.net-btn__dir { font-size: var(--fs-xs); color: var(--ink-3); }
+.net-btn:hover .net-btn__dir { color: var(--paper); }
+.netmap figcaption {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  max-inline-size: 68ch;
+  margin-block-start: var(--s-3);
+}
+
+/* --- Departure board ------------------------------------------------------
+   A table, because it is one. The split-flap is on the clocks, which are the
+   only thing on this site that actually changes.                            */
+.board { margin-block: var(--s-2) var(--s-4); }
+
+.bd {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block: var(--s-3);
+  border-block: 2px solid var(--ink);
+}
+.bd th, .bd td {
+  text-align: start;
+  padding: var(--s-15) var(--s-2);
+  border-block-end: 1px solid var(--rule-struct);
+  vertical-align: baseline;
+}
+.bd tbody tr:last-child td { border-block-end: 0; }
+.bd th {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.bd-flight .code { font-size: var(--fs-md); font-weight: 600; letter-spacing: .06em; }
+.bd-sector, .bd-level { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.bd-level .code { color: var(--remark); }
+.bd-block { font-size: var(--fs-sm); color: var(--ink-2); }
+.bd-status .bd-flap {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--ink);
+  padding: var(--s-h) var(--s-1);
+}
+.bd-note {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  max-inline-size: 64ch;
+  margin-block-start: var(--s-2);
+}
+
+.clocks { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-block: var(--s-2); }
+.clock {
+  display: grid;
+  gap: 2px;
+  min-width: 12rem;
+  padding: var(--s-2);
+  border: 1px solid var(--rule-struct);
+  border-inline-start: 3px solid var(--remark);
+  background: var(--paper-2);
+}
+.clock__icao {
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  color: var(--remark);
+}
+.clock__name { font-size: var(--fs-sm); color: var(--ink-2); }
+/* The zone name is what renders with no script, so this cell has to survive a
+   long string as gracefully as it does "14:32:07". */
+.clock__time {
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums slashed-zero;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+/* The flap. Half a beat, on the digits only, and it never hides the value:
+   the element is legible at every frame of the animation. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) .clock__time[data-flip] {
+    animation: bd-flap var(--t-2) var(--ease-ink);
+    transform-origin: 50% 0;
+  }
+}
+@keyframes bd-flap {
+  0%   { transform: perspective(200px) rotateX(0deg); }
+  45%  { transform: perspective(200px) rotateX(-38deg); }
+  100% { transform: perspective(200px) rotateX(0deg); }
+}
+
+/* --- Resources ------------------------------------------------------------ */
+.res-list { margin-block: var(--s-2) var(--s-6); border-block-start: 1px solid var(--rule-struct); }
+.res-row {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  gap: var(--s-1) var(--s-3);
+  align-items: baseline;
+  padding-block: var(--s-2);
+  border-block-end: 1px solid var(--rule-struct);
+}
+.res-link { display: inline-flex; align-items: center; gap: var(--s-1); min-height: var(--tap); }
+.res-desc { color: var(--ink-2); font-size: var(--fs-sm); }
+@media (max-width: 720px) {
+  .res-row { grid-template-columns: minmax(0, 1fr); }
+}
+
+.spec.livery { margin-block-start: var(--s-2); }
+.livery__note {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  margin-block-start: var(--s-2);
+}
+
+/* --- Dispatch desk --------------------------------------------------------
+   The release is a document, so it is set like one: a ruled head, a two-column
+   body, mono for everything an aeroplane would print.                        */
+.disp { margin-block: var(--s-4); }
+.disp-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--s-3);
+  margin-block-end: var(--s-3);
+}
+.disp select {
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s-1) var(--s-15);
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  background: var(--paper-2);
+  border: 1px solid var(--rule-struct);
+}
+
+.release {
+  border: 1px solid var(--rule-struct);
+  border-inline-start: 3px solid var(--remark);
+  background: var(--paper-2);
+  padding: var(--s-3);
+  margin-block: var(--s-3);
+}
+.release__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-block-end: var(--s-1);
+  margin-block-end: var(--s-2);
+  border-block-end: 1px solid var(--rule-struct);
+}
+.release__code { font-size: var(--fs-sm); color: var(--remark); letter-spacing: .12em; }
+.release__body {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
+  gap: var(--s-1) var(--s-3);
+}
+.release__body dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-block-start: 3px;
+}
+.release__body dd { margin: 0; font-size: var(--fs-sm); min-width: 0; }
+@media (max-width: 560px) {
+  .release__body { grid-template-columns: minmax(0, 1fr); gap: 0 0; }
+  .release__body dt { margin-block-start: var(--s-2); }
+}
+
+/* --- Landing score --------------------------------------------------------
+   The game is hidden until script confirms it can run, because a Begin button
+   that does nothing is worse than no button. The scoring TABLE is always
+   rendered, so the information exists whether or not the game does.          */
+.lg { margin-block: var(--s-3) var(--s-4); }
+/* Capped rather than full-bleed: stretched across the whole measure the frame
+   is 360px tall and the aeroplane inside it reads as a speck. */
+.lg-view {
+  width: 100%;
+  max-width: 660px;
+  height: auto;
+  border: 1px solid var(--rule-struct);
+  background: var(--paper-2);
+}
+.lg-ground { stroke: var(--rule-struct); stroke-width: 1; }
+.lg-rwy { fill: var(--ink-3); }
+.lg-ship { fill: var(--ink); stroke: none; }
+
+.lg-readout {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-block: var(--s-2);
+}
+.lg-readout__k {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.lg-readout__v { font-size: var(--fs-lg); font-variant-numeric: tabular-nums slashed-zero; }
+
+/* The verdict is a remarks cell, because on this site that is what a verdict
+   is: red, serif, opened by the same proof-reader's caret as every other
+   remark in the ledger. */
+.lg-result:empty { display: none; }
+.lg-result {
+  margin-block-start: var(--s-3);
+  padding-inline-start: var(--s-2);
+  border-inline-start: 2px solid var(--remark);
+}
+.lg-result .lg-vs {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xl);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+.lg-result .lg-vs-unit {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-inline-start: var(--s-1);
+}
+.lg-result .lg-remark {
+  display: block;
+  color: var(--remark);
+  font-family: var(--font-kai);
+  font-size: var(--fs-md);
+  margin-block-start: var(--s-1);
+}
+.lg-result .lg-note { color: var(--ink-2); font-size: var(--fs-sm); margin-block-start: var(--s-1); }
+.lg-table .lg-remark { color: var(--remark); font-family: var(--font-kai); }
+.lg-table td { font-size: var(--fs-sm); }
+
+/* --- Recorder checksum -----------------------------------------------------
+   64 hex characters have no spaces to break at, so on a narrow screen the run
+   would either overflow the page or force a horizontal scrollbar on the body.
+   It wraps anywhere instead, and stays selectable as one string. */
+.sha { margin-block: var(--s-2); }
+.sha__value {
+  font-size: var(--fs-mono-xs);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  line-height: 1.6;
+}
