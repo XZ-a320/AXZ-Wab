@@ -333,3 +333,111 @@
   word-break: break-all;
   line-height: 1.6;
 }
+
+/* --- Flight simulator -----------------------------------------------------
+   The stage is a canvas with an SVG panel over it. Everything outside the
+   stage is ordinary page furniture in the site's own components, because the
+   control table and the scoring bands are content, not chrome.              */
+.sim { margin-block: var(--s-4) var(--s-6); }
+.sim-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--s-3);
+  margin-block-end: var(--s-3);
+}
+.sim select {
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s-1) var(--s-15);
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  background: var(--paper-2);
+  border: 1px solid var(--rule-struct);
+}
+.btn--go { border-inline-start: 3px solid var(--remark); }
+
+/* The stage has no height until the engine is in it: an empty 60vh box above
+   a control table would just be a hole in the page. */
+.sim-stage { position: relative; }
+.sim[data-running="true"] .sim-stage {
+  height: min(62vh, 560px);
+  min-height: 320px;
+  border: 1px solid var(--rule-struct);
+  background: var(--paper-2);
+  margin-block: var(--s-3);
+}
+.sim-canvas { display: block; width: 100%; height: 100%; }
+.sim-canvas:focus-visible { outline: 3px solid var(--focus-outer); outline-offset: -3px; }
+
+.sim-hud {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  pointer-events: none;      /* the panel is a readout, not a control surface */
+}
+.sim-pfd { width: 100%; height: auto; max-height: 240px; display: block; }
+
+/* Instrument colours are their own scale, not the page tokens: a PFD is read
+   against a dark cockpit and has to stay legible over sky AND terrain. */
+.sim-sky { fill: #1d3348; }
+.sim-ground { fill: #4a3a22; }
+.sim-horizon-line { stroke: #f2efe6; stroke-width: 2; }
+.sim-ladder { stroke: #e6e2d6; stroke-width: 1.4; }
+.sim-ladder-t, .sim-tape-t { fill: #e6e2d6; font-family: var(--font-mono); font-size: 11px; }
+.sim-adi-ring { fill: none; stroke: #cfcabb; stroke-width: 1.6; }
+.sim-bank-tick { stroke: #cfcabb; stroke-width: 1.4; }
+.sim-bank-ptr { fill: #ffd15c; }
+.sim-aircraft-sym { fill: none; stroke: #ffd15c; stroke-width: 3; }
+.sim-box { fill: rgba(11, 13, 16, .72); stroke: #6d7681; stroke-width: 1; }
+.sim-readout { fill: #0b0d10; stroke: #e6e2d6; stroke-width: 1.4; }
+.sim-value { fill: #fbf9f4; font-family: var(--font-mono); font-size: 21px; font-weight: 600; }
+.sim-small, .sim-mode-l { fill: #b9c0c8; font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; }
+.sim-mode-v { fill: #fbf9f4; font-family: var(--font-mono); font-size: 15px; }
+.sim-mode-v.is-on { fill: #6ee08a; }
+.sim-vs-rail { stroke: #6d7681; stroke-width: 1.4; }
+.sim-vs-needle { stroke: #ffd15c; stroke-width: 3; }
+.sim-cue { fill: #d94436; }
+.sim-warn { fill: transparent; font-family: var(--font-mono); font-size: 22px; letter-spacing: .18em; }
+.sim-warn.is-on { fill: #ff5b4a; }
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="off"]) .sim-warn.is-on { animation: sim-warn 1s steps(2) infinite; }
+}
+@keyframes sim-warn { 50% { opacity: .35; } }
+
+.sim-panel { margin-block-start: var(--s-3); }
+.sim-bar { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-block-end: var(--s-3); }
+.sim-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: var(--s-1) var(--s-3);
+  border-block-start: 1px solid var(--rule-struct);
+  padding-block-start: var(--s-2);
+}
+.sim-cell { display: flex; justify-content: space-between; gap: var(--s-2); align-items: baseline; padding-block: 3px; }
+.sim-cell__k {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .1em;
+  color: var(--ink-3);
+}
+.sim-cell__v { font-size: var(--fs-sm); font-variant-numeric: tabular-nums slashed-zero; }
+
+.sim-log { margin-block: var(--s-2); border-block-start: 1px solid var(--rule-struct); }
+.sim-log__row {
+  padding-block: var(--s-1);
+  border-block-end: 1px solid var(--rule-hair);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.sim-log__row.is-good { color: var(--ink); border-inline-start: 3px solid var(--remark); padding-inline-start: var(--s-2); }
+.sim-log__row.is-warn { color: var(--remark); }
+
+.sim-keys th[scope="row"] { font-weight: 400; color: var(--ink); }
+.sim-keys td { font-size: var(--fs-sm); color: var(--ink-2); }
+
+@media (max-width: 720px) {
+  .sim[data-running="true"] .sim-stage { height: min(52vh, 380px); }
+  .sim-pfd { max-height: 190px; }
+}

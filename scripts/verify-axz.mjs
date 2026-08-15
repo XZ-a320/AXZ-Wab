@@ -452,6 +452,54 @@ console.log('\nlanding score')
   await page.close(); await c2.close()
 }
 
+/* 2k. Flight simulator. The engine is a dynamic import behind a button, so the
+      properties that matter are: the page costs nothing until it is pressed,
+      the whole reference is server-rendered either way, the aeroplane the
+      engine flies is dimensioned from the fleet table rather than a second
+      copy of it, and the landing bands are the dispatch desk's own. */
+console.log('\nflight simulator')
+{
+  const page = await ctx.newPage()
+  const asked = []
+  page.on('request', r => { if (/assets\/sim-/.test(r.url())) asked.push(r.url()) })
+  await page.goto(BASE + '/axz/sim/', { waitUntil: 'networkidle' })
+
+  asked.length === 0
+    ? ok('the engine is not fetched until the reader asks for it')
+    : bad(`the engine downloaded on page load: ${asked.join(' / ')}`)
+
+  const keys = await page.$$eval('.sim-keys tbody tr', rs => rs.length)
+  keys >= 12 ? ok(`the control reference is server-rendered (${keys} rows)`) : bad(`${keys} control rows`)
+  const pad = await page.innerText('.sim-keys')
+  ;/RT|LT|D-pad|十字键/.test(pad) ? ok('gamepad bindings are documented, not just keys') : bad('no gamepad column content')
+
+  // The fleet handed to the engine must match the table that draws sector 02.
+  const fleet = JSON.parse(await page.getAttribute('[data-sim-stage]', 'data-sim-fleet'))
+  Math.abs(fleet['b-737x'].len - 39.47) < 0.01 && Math.abs(fleet['b-321x'].len - 44.51) < 0.01
+    ? ok('the simulator is dimensioned from the fleet table (737-800 39.47 m, A321 44.51 m)')
+    : bad(`fleet dimensions disagree with the published table: ${JSON.stringify(fleet['b-737x'])}`)
+
+  const bands = JSON.parse(await page.getAttribute('[data-sim-stage]', 'data-sim-bands'))
+  const table = await page.$$eval('.lg-table tbody tr', rs => rs.map(r => r.querySelectorAll('td')[1].textContent.trim()))
+  JSON.stringify(bands) === JSON.stringify(table)
+    ? ok(`landing bands match the scoring table exactly: ${bands.join(' / ')}`)
+    : bad(`bands ${JSON.stringify(bands)} but table ${JSON.stringify(table)}`)
+
+  await page.close()
+}
+{
+  const c2 = await browser.newContext({ javaScriptEnabled: false })
+  const page = await c2.newPage()
+  await page.goto(BASE + '/axz/sim/', { waitUntil: 'domcontentloaded' })
+  const rows = await page.$$eval('.sim-keys tbody tr', rs => rs.length)
+  const bandRows = await page.$$eval('.lg-table tbody tr', rs => rs.length)
+  const panelHidden = !(await page.isVisible('[data-sim-panel]'))
+  rows >= 12 && bandRows === 4 && panelHidden
+    ? ok('no JavaScript: the controls and scoring bands are all still there, the readout is not')
+    : bad(`no JS: ${rows} control rows, ${bandRows} bands, panel hidden=${panelHidden}`)
+  await page.close(); await c2.close()
+}
+
 /* 3. April Fools: sanitized, gated, exit works, noindex. */
 console.log('\napril fools')
 {

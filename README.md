@@ -47,6 +47,18 @@
   玩，评分标准是一张服务端渲染的表，不开脚本也在。
 - **资源与联动**（首页 06）。站外链接，加一份 B-1717 的涂装档案——照片那一栏
   写"无"，用的就是记录程序自己的空值规矩。
+- **飞行模拟**（`/axz/sim/`）。浏览器里的 3D 飞行模拟，键盘和手柄都能飞。
+  气动是按系数算的：升力随迎角变、会失速、失速后会掉翼尖，发动机推力有延迟，
+  起落架是弹簧阻尼加轮胎摩擦，尾撬会擦地。飞机的尺寸直接取自
+  `scripts/airframe.mjs` 里那张表——首页画俯视图用的是同一组数字，所以 A321
+  在这里也比 737 长。地形是程序生成的，两个机场、两条跑道、旧金山湾和蒙特雷湾，
+  跟航线那一节写的地标对得上。落地按签派台那张表评分，四个档位一字不差。
+
+  渲染器是自己写的，不是 three.js。这一页要的是平面着色的三角形、线和雾，
+  three.js 是 750 KB，整个引擎自己写只有 128 KB——这个站的字体都从 17.7 MB
+  裁到 196 KB 了，没道理在这里多背 600 KB。引擎是按一下才下载的，
+  不点的话这一页一个字节都不多加载；没有 WebGL 或者没有脚本的时候，
+  操作表和评分标准照样是完整的。
 - **记录程序改成本站直接下载**（`/axz/downloads/AXZ-FlightLogRecorder.zip`）。
   原来放在 GitHub 的发布页，因为那个 exe 有 107.8 MiB，超过 GitHub 单文件
   100 MiB 的上限，进不了仓库。压成 zip 之后是 42.6 MiB，三个仓库都收得下，
@@ -86,8 +98,8 @@ node scripts/build-axz.mjs
 node scripts/check-axz-content.mjs    # 原站每一句中文都还在
 node scripts/check-axz-contrast.mjs   # 29 组对比度实算，不用估值
 node scripts/check-axz-en.mjs         # 英文固定译法 + 结构对齐 + 外链地址不许翻译
-node scripts/axe-axz.mjs              # WCAG 2.2 AA，12 个页面 × 昼夜两套
-node scripts/verify-axz.mjs           # 键盘、判读台、网络图、时刻表、签派台、落地评分、彩蛋页、双语接线
+node scripts/axe-axz.mjs              # WCAG 2.2 AA，14 个页面 × 昼夜两套
+node scripts/verify-axz.mjs           # 键盘、判读台、网络图、时刻表、签派台、落地评分、飞行模拟、彩蛋页、双语接线
 ```
 
 后两道需要先起本地服务：`node .axz-serve.mjs`（端口 4788）。

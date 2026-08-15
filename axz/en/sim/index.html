@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dispatch Desk — Air Xiao Ze</title>
-<meta name="description" content="Pick a sector, pick an aircraft, and this desk issues a release. None of the numbers on it are invented: the routing, cruise level, distance and block time are all already written in the routes section of this site, and the average groundspeed is the distance divided by the time. The arithmetic is written out below.">
+<title>Flight Simulator — Air Xiao Ze</title>
+<meta name="description" content="Fly the two Air Xiao Ze routes in your browser. The aircraft are dimensioned from the same table as the fleet drawings, and the routes, runway headings and cruise levels are the ones already published here. The aerodynamics are coefficient based: lift varies with angle of attack, the wing stalls, the engines take time to spool, the landing gear is a spring and damper, and how gently you arrive depends on how you flare.">
 
-<link rel="canonical" href="https://xiaobrook.com/axz/en/dispatch/">
-<link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/dispatch/">
-<link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/dispatch/">
-<link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/dispatch/">
-<meta property="og:title" content="Dispatch Desk — Air Xiao Ze">
-<meta property="og:description" content="Pick a sector, pick an aircraft, and this desk issues a release. None of the numbers on it are invented: the routing, cruise level, distance and block time are all already written in the routes section of this site, and the average groundspeed is the distance divided by the time. The arithmetic is written out below.">
+<link rel="canonical" href="https://xiaobrook.com/axz/en/sim/">
+<link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/sim/">
+<link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/sim/">
+<link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/sim/">
+<meta property="og:title" content="Flight Simulator — Air Xiao Ze">
+<meta property="og:description" content="Fly the two Air Xiao Ze routes in your browser. The aircraft are dimensioned from the same table as the fleet drawings, and the routes, runway headings and cruise levels are the ones already published here. The aerodynamics are coefficient based: lift varies with angle of attack, the wing stalls, the engines take time to spool, the landing gear is a spring and damper, and how gently you arrive depends on how you flare.">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="en_US">
 <link rel="icon" href="/axz/favicon.svg" type="image/svg+xml">
@@ -71,12 +71,12 @@
       <img class="mark mark--light" src="/axz/img/wordmark-light.webp" alt="" aria-hidden="true" width="114" height="74">
       <img class="mark mark--dark" src="/axz/img/wordmark-dark.webp" alt="" aria-hidden="true" width="114" height="74">
     </a>
-    <nav class="nav" aria-label="Main navigation"><a href="/axz/en/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>Home</span></a><a href="/axz/en/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>Guestbook</span></a><a href="/axz/en/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>Flight Log</span></a><a href="/axz/en/dispatch/" aria-current="page"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>Dispatch</span></a><a href="/axz/en/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>Simulator</span></a><a href="/axz/en/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>Accessibility</span></a></nav>
+    <nav class="nav" aria-label="Main navigation"><a href="/axz/en/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>Home</span></a><a href="/axz/en/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>Guestbook</span></a><a href="/axz/en/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>Flight Log</span></a><a href="/axz/en/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>Dispatch</span></a><a href="/axz/en/sim/" aria-current="page"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>Simulator</span></a><a href="/axz/en/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>Accessibility</span></a></nav>
     <div class="controls">
       <div class="lang">
-        <a lang="zh-Hans" hreflang="zh-Hans" href="/axz/dispatch/"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-cn"/></svg><span>中文</span></a>
+        <a lang="zh-Hans" hreflang="zh-Hans" href="/axz/sim/"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-cn"/></svg><span>中文</span></a>
         <span class="lang__sep" aria-hidden="true">/</span>
-        <a lang="en" hreflang="en" href="/axz/en/dispatch/" aria-current="page"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-us"/></svg><span>English</span></a>
+        <a lang="en" hreflang="en" href="/axz/en/sim/" aria-current="page"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-us"/></svg><span>English</span></a>
       </div>
       <button class="ctrl-btn ctrl-btn--icon" type="button" data-theme-toggle aria-pressed="false"
         data-label-day="Day" data-label-night="Night">
@@ -94,89 +94,156 @@
 <main id="main">
 
 <section class="sector wrap">
-  <h1>Dispatch Desk</h1>
-  <p class="record__meta">Air Xiao Ze (AXZ) · Dispatch</p>
-  <p class="prose">Pick a sector, pick an aircraft, and this desk issues a release. None of the numbers on it are invented: the routing, cruise level, distance and block time are all already written in the routes section of this site, and the average groundspeed is the distance divided by the time. The arithmetic is written out below.</p>
+  <h1>Flight Simulator</h1>
+  <p class="record__meta">Air Xiao Ze (AXZ) · Simulator</p>
+  <p class="prose">Fly the two Air Xiao Ze routes in your browser. The aircraft are dimensioned from the same table as the fleet drawings, and the routes, runway headings and cruise levels are the ones already published here. The aerodynamics are coefficient based: lift varies with angle of attack, the wing stalls, the engines take time to spool, the landing gear is a spring and damper, and how gently you arrive depends on how you flare.</p>
 
-  <div class="disp" data-dispatch
-       data-legs="{&quot;AXZ001&quot;:{&quot;flight&quot;:&quot;AXZ001&quot;,&quot;route&quot;:&quot;KSFO SID OSI V25 SAPID T259 SANTY STAR KSNS&quot;,&quot;dir&quot;:&quot;Outbound&quot;,&quot;sector&quot;:&quot;KSFO - KSNS&quot;,&quot;level&quot;:&quot;5,500 ft&quot;,&quot;distance&quot;:&quot;About 68 mi&quot;,&quot;block&quot;:&quot;About 30 min&quot;,&quot;speed&quot;:&quot;137 mph&quot;},&quot;AXZ002&quot;:{&quot;flight&quot;:&quot;AXZ002&quot;,&quot;route&quot;:&quot;KSNS SID SNS V111 BSR STAR KSFO&quot;,&quot;dir&quot;:&quot;Return&quot;,&quot;sector&quot;:&quot;KSNS - KSFO&quot;,&quot;level&quot;:&quot;5,500 ft&quot;,&quot;distance&quot;:&quot;About 68 mi&quot;,&quot;block&quot;:&quot;About 30 min&quot;,&quot;speed&quot;:&quot;137 mph&quot;},&quot;AXZ003&quot;:{&quot;flight&quot;:&quot;AXZ003&quot;,&quot;route&quot;:&quot;ZSPD SID SASAN R343 ESBAG STAR ZSNJ&quot;,&quot;dir&quot;:&quot;Outbound&quot;,&quot;sector&quot;:&quot;ZSPD - ZSNJ&quot;,&quot;level&quot;:&quot;31,100 ft (9,500 m)&quot;,&quot;distance&quot;:&quot;About 174 mi&quot;,&quot;block&quot;:&quot;About 50 min&quot;,&quot;speed&quot;:&quot;209 mph&quot;},&quot;AXZ004&quot;:{&quot;flight&quot;:&quot;AXZ004&quot;,&quot;route&quot;:&quot;ZSNJ SID ESBAG R343 SASAN STAR ZSPD&quot;,&quot;dir&quot;:&quot;Return&quot;,&quot;sector&quot;:&quot;ZSNJ - ZSPD&quot;,&quot;level&quot;:&quot;31,100 ft (9,500 m)&quot;,&quot;distance&quot;:&quot;About 174 mi&quot;,&quot;block&quot;:&quot;About 50 min&quot;,&quot;speed&quot;:&quot;209 mph&quot;}}"
-       data-ac="{&quot;b-737x&quot;:{&quot;reg&quot;:&quot;B-737X&quot;,&quot;name&quot;:&quot;Boeing 737-800&quot;},&quot;b-321x&quot;:{&quot;reg&quot;:&quot;B-321X&quot;,&quot;name&quot;:&quot;Airbus A321&quot;},&quot;b-1717&quot;:{&quot;reg&quot;:&quot;B-1717&quot;,&quot;name&quot;:&quot;Boeing 737-800 (MC collab)&quot;},&quot;b-0001f&quot;:{&quot;reg&quot;:&quot;B-0001F&quot;,&quot;name&quot;:&quot;Boeing 737-800BCF&quot;}}"
-       data-issued-label="Issued">
-    <div class="disp-controls">
+  <div class="sim" data-sim-stage
+       data-sim-src="/axz/assets/sim-d586b5db/boot.js"
+       data-sim-labels="{&quot;speed&quot;:&quot;SPD&quot;,&quot;altitude&quot;:&quot;ALT&quot;,&quot;heading&quot;:&quot;HDG&quot;,&quot;vs&quot;:&quot;V/S&quot;,&quot;throttle&quot;:&quot;THR&quot;,&quot;flaps&quot;:&quot;FLAP&quot;,&quot;gear&quot;:&quot;GEAR&quot;,&quot;brakes&quot;:&quot;BRK&quot;,&quot;spoilers&quot;:&quot;SPD BRK&quot;,&quot;up&quot;:&quot;UP&quot;,&quot;down&quot;:&quot;DOWN&quot;,&quot;on&quot;:&quot;ON&quot;,&quot;off&quot;:&quot;OFF&quot;,&quot;park&quot;:&quot;PARK&quot;,&quot;stall&quot;:&quot;STALL&quot;,&quot;overspeed&quot;:&quot;OVERSPEED&quot;,&quot;pullup&quot;:&quot;PULL UP&quot;,&quot;gearWarn&quot;:&quot;GEAR&quot;,&quot;crashed&quot;:&quot;Landed at too great a bank angle&quot;,&quot;pfdLabel&quot;:&quot;Primary flight display: airspeed, attitude, altitude, vertical speed and heading&quot;,&quot;kt&quot;:&quot;kt&quot;,&quot;ft&quot;:&quot;ft&quot;,&quot;fpm&quot;:&quot;ft/min&quot;,&quot;nm&quot;:&quot;nm&quot;,&quot;cameras&quot;:{&quot;cockpit&quot;:&quot;Cockpit&quot;,&quot;chase&quot;:&quot;Chase&quot;,&quot;external&quot;:&quot;Orbit&quot;,&quot;tower&quot;:&quot;Tower&quot;},&quot;phases&quot;:{&quot;takeoff&quot;:&quot;Take-off&quot;,&quot;climb&quot;:&quot;Climb&quot;,&quot;cruise&quot;:&quot;Cruise&quot;,&quot;final&quot;:&quot;Final approach&quot;,&quot;landed&quot;:&quot;Landed&quot;},&quot;scenarios&quot;:{&quot;runway&quot;:&quot;Parked on the KSFO threshold, cold&quot;,&quot;takeoff&quot;:&quot;Lined up at KSFO, flaps set&quot;,&quot;approach&quot;:&quot;Ten miles final into KSNS at 3,000 ft&quot;,&quot;cruise&quot;:&quot;Mid route, at cruise level&quot;},&quot;loading&quot;:&quot;Loading the simulator...&quot;,&quot;unsupported&quot;:&quot;Your browser has no working WebGL, so the simulator cannot run. The control table and the scoring bands below are unaffected.&quot;,&quot;failed&quot;:&quot;The simulator failed to start. The control table and the scoring bands below are unaffected.&quot;,&quot;centreline&quot;:&quot;off centreline&quot;,&quot;paused&quot;:&quot;Paused&quot;,&quot;resumed&quot;:&quot;Resumed&quot;,&quot;assistLabel&quot;:&quot;Assist&quot;,&quot;timeLabel&quot;:&quot;Time compression&quot;,&quot;keyboard&quot;:&quot;Keyboard&quot;,&quot;gamepad&quot;:&quot;Gamepad&quot;}"
+       data-sim-fleet="{&quot;b-737x&quot;:{&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;name&quot;:&quot;Boeing 737-800&quot;,&quot;reg&quot;:&quot;B-737X&quot;},&quot;b-321x&quot;:{&quot;len&quot;:44.51,&quot;span&quot;:35.8,&quot;dia&quot;:3.95,&quot;h&quot;:11.76,&quot;engines&quot;:2,&quot;name&quot;:&quot;Airbus A321&quot;,&quot;reg&quot;:&quot;B-321X&quot;},&quot;b-1717&quot;:{&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;name&quot;:&quot;Boeing 737-800 (MC collab)&quot;,&quot;reg&quot;:&quot;B-1717&quot;},&quot;b-0001f&quot;:{&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;name&quot;:&quot;Boeing 737-800BCF&quot;,&quot;reg&quot;:&quot;B-0001F&quot;},&quot;_order&quot;:[&quot;b-737x&quot;,&quot;b-321x&quot;,&quot;b-1717&quot;,&quot;b-0001f&quot;]}"
+       data-sim-bands="[&quot;the Runway Masseur&quot;,&quot;a steady touchdown&quot;,&quot;the Runway Shaker&quot;,&quot;hard landing&quot;]">
+    <div class="sim-controls">
       <div class="field">
-        <label for="disp-leg">Sector</label>
-        <select id="disp-leg" data-disp-leg><option value="AXZ001">AXZ001 · Outbound · KSFO-KSNS</option><option value="AXZ002">AXZ002 · Return · KSFO-KSNS</option><option value="AXZ003">AXZ003 · Outbound · ZSPD-ZSNJ</option><option value="AXZ004">AXZ004 · Return · ZSPD-ZSNJ</option></select>
+        <label for="sim-ac">Aircraft</label>
+        <select id="sim-ac" data-sim-aircraft><option value="b-737x">B-737X · Boeing 737-800</option><option value="b-321x">B-321X · Airbus A321</option><option value="b-1717">B-1717 · Boeing 737-800 (MC collab)</option><option value="b-0001f">B-0001F · Boeing 737-800BCF</option></select>
       </div>
       <div class="field">
-        <label for="disp-ac">Aircraft</label>
-        <select id="disp-ac" data-disp-ac><option value="b-737x">B-737X · Boeing 737-800</option><option value="b-321x">B-321X · Airbus A321</option><option value="b-1717">B-1717 · Boeing 737-800 (MC collab)</option><option value="b-0001f">B-0001F · Boeing 737-800BCF</option></select>
+        <label for="sim-sc">Start position</label>
+        <select id="sim-sc" data-sim-scenario><option value="takeoff" selected>Lined up at KSFO, flaps set</option><option value="runway">Parked on the KSFO threshold, cold</option><option value="approach">Ten miles final into KSNS at 3,000 ft</option><option value="cruise">Mid route, at cruise level</option></select>
       </div>
     </div>
-    <p class="prose">The release below changes with the choices above.</p>
+    <p class="btn-row">
+      <button class="btn btn--go" type="button" data-sim-start><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg>Start the simulator</button>
+    </p>
+    <p class="status" role="status" data-sim-status></p>
+    <p class="record__meta">The simulator downloads only when you press this, about 40 KB. Leave it alone and this page loads nothing extra.</p>
 
-    <figure class="release" data-disp-release>
-      <div class="release__head">
-        <span>Flight Release</span>
-        <span class="release__code code" data-disp-flight>AXZ001</span>
+    <div class="sim-stage" data-sim-mount></div>
+
+    <div class="sim-panel" data-sim-panel hidden>
+      <div class="sim-bar">
+        <button class="btn" type="button" data-sim-action="pause">Pause</button><button class="btn" type="button" data-sim-action="reset">Restart</button><button class="btn" type="button" data-sim-action="camera">View</button><button class="btn" type="button" data-sim-action="assist">Assist</button>
       </div>
-      <dl class="release__body">
-        <dt>Flight</dt><dd class="code" data-disp-f="flight">AXZ001</dd>
-        <dt>Type</dt><dd data-disp-a="name">Boeing 737-800</dd>
-        <dt>Registration</dt><dd class="code" data-disp-a="reg">B-737X</dd>
-        <dt>Sector</dt><dd class="code" data-disp-f="sector">KSFO - KSNS</dd>
-        <dt>Routing</dt><dd class="route-string" data-disp-f="route">KSFO SID OSI V25 SAPID T259 SANTY STAR KSNS</dd>
-        <dt>Cruise level</dt><dd class="code" data-disp-f="level">5,500 ft</dd>
-        <dt>Distance</dt><dd data-disp-f="distance">About 68 mi</dd>
-        <dt>Block time</dt><dd data-disp-f="block">About 30 min</dd>
-        <dt>Average groundspeed</dt><dd class="code" data-disp-f="speed">137 mph</dd>
-        <dt>Issued</dt><dd class="code" data-disp-issued>filled in on issue</dd>
-      </dl>
-    </figure>
-
-    <p class="btn-row">
-      <button class="btn" type="button" data-disp-download><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-drop"/></svg>Download release</button>
-    </p>
-    <p class="record__meta">Saved as a plain text file. It is not uploaded anywhere.</p>
+      <h2 class="record__label">Flight data</h2>
+      <div class="sim-grid"><div class="sim-cell">
+    <span class="sim-cell__k">Indicated airspeed</span>
+    <span class="sim-cell__v code" data-sim-field="ias">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">Altitude</span>
+    <span class="sim-cell__v code" data-sim-field="alt">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">Height above ground</span>
+    <span class="sim-cell__v code" data-sim-field="agl">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">Vertical speed</span>
+    <span class="sim-cell__v code" data-sim-field="vs">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">Heading</span>
+    <span class="sim-cell__v code" data-sim-field="hdg">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">Distance to go</span>
+    <span class="sim-cell__v code" data-sim-field="dist">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">Destination</span>
+    <span class="sim-cell__v code" data-sim-field="dest">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">View</span>
+    <span class="sim-cell__v code" data-sim-field="camera">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">Time compression</span>
+    <span class="sim-cell__v code" data-sim-field="time">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">Assist</span>
+    <span class="sim-cell__v code" data-sim-field="assist">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">Input device</span>
+    <span class="sim-cell__v code" data-sim-field="input">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">Frame rate</span>
+    <span class="sim-cell__v code" data-sim-field="fps">—</span>
+  </div></div>
+      <h2 class="record__label">Flight events</h2>
+      <ul class="sim-log" data-sim-log aria-live="polite"></ul>
+    </div>
   </div>
 
-  <p class="notice notice--quiet">With scripts off, everything the four releases would contain can be read in the routes section of the home page.</p>
+  <h2>Controls</h2>
+  <p class="prose">Keyboard or gamepad. A pad is picked up as soon as it is plugged in, and its sticks have a deadzone and a squared curve so fine inputs are easier. The table below is here with or without scripts.</p>
+  <table class="bd sim-keys">
+    <thead><tr>
+      <th scope="col">Action</th>
+      <th scope="col">Keyboard</th>
+      <th scope="col">Gamepad</th>
+    </tr></thead>
+    <tbody><tr>
+    <th scope="row">Pitch (pull back for nose up)</th>
+    <td class="code">S / W, or Down / Up</td>
+    <td class="code">Left stick, vertical</td>
+  </tr><tr>
+    <th scope="row">Roll</th>
+    <td class="code">A / D, or Left / Right</td>
+    <td class="code">Left stick, horizontal</td>
+  </tr><tr>
+    <th scope="row">Rudder and nosewheel</th>
+    <td class="code">Q / E</td>
+    <td class="code">Right stick, or LB / RB</td>
+  </tr><tr>
+    <th scope="row">Throttle</th>
+    <td class="code">Left Shift up / Left Ctrl down</td>
+    <td class="code">RT up / LT down</td>
+  </tr><tr>
+    <th scope="row">Landing gear</th>
+    <td class="code">G</td>
+    <td class="code">A</td>
+  </tr><tr>
+    <th scope="row">Flaps down / up</th>
+    <td class="code">F / V</td>
+    <td class="code">X / Y</td>
+  </tr><tr>
+    <th scope="row">Spoilers</th>
+    <td class="code">X</td>
+    <td class="code">Right stick click</td>
+  </tr><tr>
+    <th scope="row">Brakes</th>
+    <td class="code">Space or B (hold)</td>
+    <td class="code">B (hold)</td>
+  </tr><tr>
+    <th scope="row">Parking brake</th>
+    <td class="code">P</td>
+    <td class="code">none</td>
+  </tr><tr>
+    <th scope="row">Trim</th>
+    <td class="code">, / .</td>
+    <td class="code">D-pad up / down</td>
+  </tr><tr>
+    <th scope="row">Change view</th>
+    <td class="code">C</td>
+    <td class="code">Left stick click</td>
+  </tr><tr>
+    <th scope="row">Assist on or off</th>
+    <td class="code">N</td>
+    <td class="code">none</td>
+  </tr><tr>
+    <th scope="row">Time compression</th>
+    <td class="code">[ / ]</td>
+    <td class="code">none</td>
+  </tr><tr>
+    <th scope="row">Back to the start position</th>
+    <td class="code">R</td>
+    <td class="code">Back</td>
+  </tr><tr>
+    <th scope="row">Pause</th>
+    <td class="code">Esc</td>
+    <td class="code">Start</td>
+  </tr></tbody>
+  </table>
 
-  <h2>Where these numbers come from</h2>
-  <p class="prose">Average groundspeed = distance divided by block time, worked once for each sector:</p>
-  <ul class="record__events"><li class="code">KSFO ↔ KSNS: 68 mi divided by 0.5 h = 136 mph</li><li class="code">ZSPD ↔ ZSNJ: 174 mi divided by 0.833 h = 209 mph</li></ul>
-  <p class="prose">This desk does not give you a fuel figure. Fuel needs all-up weight, wind and an alternate, and this site has none of the three. A made-up number would be worse than no number. For a release you can actually file, use SimBrief.</p>
-</section>
+  <h2>What the assist does</h2>
+  <p class="prose">A keyboard has no analogue axis and does not spring back to centre, so a layer of assist is on by default: it damps pitch and roll, works the rudder to take out sideslip, and rolls slowly level when you let go. Press N to switch it off. With it off you get the bare aerodynamics, which flies more like the real thing and is harder.</p>
 
-<section class="sector wrap" data-landing
-  data-no-flare="Never flared at all." data-too-high="Flared early, and floated a while before touching down." data-too-late="Flared late.">
-  <h2>Landing Score</h2>
-  <p class="prose">A 737 is on final. Press once when it is time to flare, and see what the vertical speed is at touchdown. The remark you get is one the fleet files already use.</p>
-
-  <div class="lg" hidden data-lg-game>
-    <!-- viewBox is cropped to the band the aeroplane actually uses. At the full
-         0-200 height half the frame was empty sky and the aircraft read as a
-         speck once the figure stretched across the measure. -->
-    <svg class="lg-view" viewBox="0 40 640 156" role="img" aria-label="A 737 is on final. Press once when it is time to flare, and see what the vertical speed is at touchdown. The remark you get is one the fleet files already use." focusable="false">
-      <line class="lg-ground" x1="0" y1="170" x2="640" y2="170"/>
-      <rect class="lg-rwy" x="180" y="167" width="420" height="6"/>
-      <g data-lg-ship><g transform="scale(1.6)">
-        <path class="lg-ship" d="M-16 0 L10 0 L18 -3 L10 3 Z"/><path class="lg-ship" d="M-4 0 l-6 -9 l4 0 l9 9 Z"/><path class="lg-ship" d="M-4 0 l-6 9 l4 0 l9 -9 Z"/><path class="lg-ship" d="M-15 0 l-3 -6 l2 0 l4 6 Z"/>
-      </g></g>
-    </svg>
-    <p class="lg-readout">
-      <span class="lg-readout__k">Radio altitude</span>
-      <span class="lg-readout__v code" data-lg-alt>—</span>
-    </p>
-    <p class="btn-row">
-      <button class="btn" type="button" data-lg-start data-again="Go again">Begin approach</button>
-      <button class="btn" type="button" data-lg-flare hidden>Flare</button>
-    </p>
-    <p class="record__meta">Press the space bar, or use the button above.</p>
-    <div class="lg-result" role="status" data-lg-result></div>
-  </div>
-
-  <h3 class="record__label">How it is scored</h3>
-  <p class="prose">You do not have to play to read this: the bands below are the whole scoring table.</p>
+  <h2>How the landing is scored</h2>
+  <p class="prose">Touchdown vertical speed is graded against the table on the dispatch desk, using the same bands and the same wording. Landing at KSNS also reports how far off the centreline you were, in metres.</p>
   <table class="bd lg-table">
     <thead><tr><th scope="col">Touchdown vertical speed (ft/min)</th><th scope="col">Remarks</th></tr></thead>
     <tbody><tr>
@@ -195,13 +262,14 @@
   </table>
 
   <p class="btn-row btn-row--foot">
+    <a class="btn" href="/axz/en/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg>Dispatch Desk</a>
     <a class="btn" href="/axz/en/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg>Back to home</a>
   </p>
 </section>
 </main>
 <footer class="foot">
   <div class="wrap">
-    <nav class="foot__nav" aria-label="Footer navigation"><a href="/axz/en/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>Home</span></a><a href="/axz/en/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>Guestbook</span></a><a href="/axz/en/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>Flight Log</span></a><a href="/axz/en/dispatch/" aria-current="page"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>Dispatch</span></a><a href="/axz/en/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>Simulator</span></a><a href="/axz/en/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>Accessibility</span></a></nav>
+    <nav class="foot__nav" aria-label="Footer navigation"><a href="/axz/en/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>Home</span></a><a href="/axz/en/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>Guestbook</span></a><a href="/axz/en/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>Flight Log</span></a><a href="/axz/en/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>Dispatch</span></a><a href="/axz/en/sim/" aria-current="page"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>Simulator</span></a><a href="/axz/en/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>Accessibility</span></a></nav>
     <p>Air Xiao Ze (AXZ) © 2026</p>
     <p>A virtual airline. For flight simulation only.</p>
     <p class="foot__credit">Aircraft plan view by Julien.scavini via Wikimedia Commons, CC BY-SA 3.0, cropped and recoloured for this site. <a href="https://commons.wikimedia.org/wiki/File:Boeing_737-800_v1.0.png" rel="license noopener noreferrer" target="_blank">Opens in a new window</a></p>

@@ -84,12 +84,12 @@ const cssBundle = ['tokens', 'base', 'ledger', 'plate', 'pages', 'panels']
   .map(f => readFileSync(join(SRC, 'css', `${f}.css`), 'utf8')).join('\n')
 // Each file is wrapped in its own block and terminated, so one file can never
 // be parsed as a call on the previous file's trailing expression.
-const jsBundle = ['site', 'axzlog', 'panels']
+const jsBundle = ['site', 'axzlog', 'panels', 'simload']
   .map(f => `;(function(){\n${readFileSync(join(SRC, 'js', `${f}.js`), 'utf8')}\n})();`).join('\n')
 
 // Guard the same failure inside a single file: an IIFE that follows another
 // with no separating semicolon parses cleanly and throws at runtime.
-for (const f of ['site', 'axzlog', 'panels']) {
+for (const f of ['site', 'axzlog', 'panels', 'simload']) {
   const src = readFileSync(join(SRC, 'js', `${f}.js`), 'utf8')
   if (/\}\)\(\)\s*(?:\/\*[\s\S]*?\*\/)?\s*\(function/.test(src)) {
     console.error(`✗ ${f}.js: an IIFE follows another with no separating semicolon — this throws at runtime`)
@@ -101,6 +101,23 @@ const cssName = `axz.${hash(cssBundle)}.css`
 const jsName = `axz.${hash(jsBundle)}.js`
 writeFileSync(join(OUT, 'assets', cssName), cssBundle)
 writeFileSync(join(OUT, 'assets', jsName), jsBundle)
+
+/* --- Simulator engine -----------------------------------------------------
+   The engine is a set of ES modules that import each other by relative path,
+   so the files cannot be hashed individually without rewriting every import.
+   The DIRECTORY carries the hash instead: relative imports keep resolving
+   inside it, and a changed engine lands on a new URL.
+
+   That matters here more than usual. The parent site serves .js as immutable
+   for a year, so a stable path would strand every returning visitor on the old
+   build — the same trap that a `?v=` query token fell into once before.       */
+const SIM_FILES = ['math', 'gl', 'world', 'model', 'fdm', 'input', 'hud', 'main', 'boot']
+const simSources = SIM_FILES.map(f => readFileSync(join(SRC, 'js', 'sim', `${f}.js`), 'utf8'))
+const simDir = `sim-${hash(simSources.join('\n'))}`
+mkdirSync(join(OUT, 'assets', simDir), { recursive: true })
+SIM_FILES.forEach((f, i) => writeFileSync(join(OUT, 'assets', simDir, `${f}.js`), simSources[i]))
+const SIM_ENTRY = `${BASE}/assets/${simDir}/boot.js`
+const simBytes = simSources.reduce((n, s) => n + Buffer.byteLength(s), 0)
 
 // Fonts, already subset by subset-axz-fonts.mjs
 const fontDir = join(SRC, 'fonts-out')
@@ -193,6 +210,7 @@ const PAGES = [
   { key: 'guestbook', zhPath: 'guestbook', enPath: 'en/guestbook' },
   { key: 'logbook', zhPath: 'logbook', enPath: 'en/logbook' },
   { key: 'dispatch', zhPath: 'dispatch', enPath: 'en/dispatch' },
+  { key: 'sim', zhPath: 'sim', enPath: 'en/sim' },
   { key: 'accessibility', zhPath: 'accessibility', enPath: 'en/accessibility' },
   { key: 'aprilfools', zhPath: 'aprilfools', enPath: 'en/aprilfools' },
 ]
@@ -208,8 +226,8 @@ function shell({ c, lang, key, title, desc, body, noindex = false }) {
   const otherCat = lang === 'zh-Hans' ? en : zh
   const P = s => parts(s, lang)
 
-  const NAV_ICON = { home: 'i-home', guestbook: 'i-guestbook', logbook: 'i-logbook', dispatch: 'i-dispatch', accessibility: 'i-a11y' }
-  const nav = ['home', 'guestbook', 'logbook', 'dispatch', 'accessibility'].map(k =>
+  const NAV_ICON = { home: 'i-home', guestbook: 'i-guestbook', logbook: 'i-logbook', dispatch: 'i-dispatch', sim: 'i-fleet', accessibility: 'i-a11y' }
+  const nav = ['home', 'guestbook', 'logbook', 'dispatch', 'sim', 'accessibility'].map(k =>
     `<a href="${urlFor(k, lang)}"${k === key ? ' aria-current="page"' : ''}>${icon(NAV_ICON[k])}<span>${P(c.nav[k])}</span></a>`
   ).join('')
 
@@ -1021,6 +1039,130 @@ function dispatchPage(c, lang) {
   return shell({ c, lang, key: 'dispatch', title: `${D.title} — ${c.meta.siteName}`, desc: D.intro, body })
 }
 
+/* --- Flight simulator ------------------------------------------------------
+   Everything on this page that carries information is server-rendered: what
+   the simulator is, every control on both a keyboard and a pad, what the
+   assist does, and the scoring bands. The engine is a dynamic import behind a
+   button, so a reader who never presses it downloads none of it — and a
+   browser with no WebGL still gets the whole reference.
+
+   The aircraft table handed to the engine is the SAME one that draws the plan
+   views in sector 02. The thing you fly is dimensioned from the figures the
+   fleet page publishes.                                                      */
+function simPage(c, lang) {
+  const P = s => parts(s, lang), S = c.sim, LG = c.landing
+  const fleet = {}
+  for (const id of c.fleet._order) {
+    const t = TYPES[id]
+    if (!t) continue
+    fleet[id] = { len: t.len, span: t.span, dia: t.dia, h: t.h, engines: t.engines, name: c.fleet[id].name, reg: c.fleet[id].reg }
+  }
+  fleet._order = c.fleet._order
+
+  // Only the strings the engine actually prints, so the attribute stays small.
+  const labels = {
+    ...S.hud, ...S.units,
+    cameras: S.cameras, phases: S.phases, scenarios: S.scenarios,
+    loading: S.loading, unsupported: S.unsupported, failed: S.failed,
+    centreline: S.centreline, paused: S.paused, resumed: S.resumed,
+    assistLabel: S.assistLabel, timeLabel: S.timeLabel,
+    keyboard: S.keyboard, gamepad: S.gamepad,
+  }
+  const bands = LG.bands.map(b => b.remark)
+
+  const acOpts = c.fleet._order.filter(id => TYPES[id]).map(id =>
+    `<option value="${esc(id)}">${esc(c.fleet[id].reg)} · ${esc(c.fleet[id].name)}</option>`).join('')
+  const scOpts = ['takeoff', 'runway', 'approach', 'cruise'].map(k =>
+    `<option value="${esc(k)}"${k === 'takeoff' ? ' selected' : ''}>${esc(S.scenarios[k])}</option>`).join('')
+
+  const ctlRows = S.controls.map(r => `<tr>
+    <th scope="row">${P(r.a)}</th>
+    <td class="code">${esc(r.k)}</td>
+    <td class="code">${esc(r.p)}</td>
+  </tr>`).join('')
+
+  const fieldOrder = ['ias', 'alt', 'agl', 'vs', 'hdg', 'dist', 'dest', 'camera', 'time', 'assist', 'input', 'fps']
+  const fieldCells = fieldOrder.map(k => `<div class="sim-cell">
+    <span class="sim-cell__k">${esc(S.fields[k])}</span>
+    <span class="sim-cell__v code" data-sim-field="${k}">—</span>
+  </div>`).join('')
+
+  const bandRows = LG.bands.map(b => `<tr>
+    <td class="code">${esc(b.range)}</td>
+    <td class="lg-remark">${parts(b.remark, lang)}</td>
+  </tr>`).join('')
+
+  const body = `
+<section class="sector wrap">
+  <h1>${P(S.title)}</h1>
+  <p class="record__meta">${esc(S.headerSub)}</p>
+  <p class="prose">${P(S.intro)}</p>
+
+  <div class="sim" data-sim-stage
+       data-sim-src="${esc(SIM_ENTRY)}"
+       data-sim-labels="${esc(JSON.stringify(labels))}"
+       data-sim-fleet="${esc(JSON.stringify(fleet))}"
+       data-sim-bands="${esc(JSON.stringify(bands))}">
+    <div class="sim-controls">
+      <div class="field">
+        <label for="sim-ac">${esc(S.aircraftLabel)}</label>
+        <select id="sim-ac" data-sim-aircraft>${acOpts}</select>
+      </div>
+      <div class="field">
+        <label for="sim-sc">${esc(S.scenarioLabel)}</label>
+        <select id="sim-sc" data-sim-scenario>${scOpts}</select>
+      </div>
+    </div>
+    <p class="btn-row">
+      <button class="btn btn--go" type="button" data-sim-start>${icon('i-fleet')}${esc(S.startButton)}</button>
+    </p>
+    <p class="status" role="status" data-sim-status></p>
+    <p class="record__meta">${esc(S.startNote)}</p>
+
+    <div class="sim-stage" data-sim-mount></div>
+
+    <div class="sim-panel" data-sim-panel hidden>
+      <div class="sim-bar">
+        ${['pause', 'reset', 'camera', 'assist'].map(a =>
+    `<button class="btn" type="button" data-sim-action="${a}">${esc(S.actions[a])}</button>`).join('')}
+      </div>
+      <h2 class="record__label">${esc(S.readoutTitle)}</h2>
+      <div class="sim-grid">${fieldCells}</div>
+      <h2 class="record__label">${esc(S.logTitle)}</h2>
+      <ul class="sim-log" data-sim-log aria-live="polite"></ul>
+    </div>
+  </div>
+
+  <h2>${esc(S.controlsTitle)}</h2>
+  <p class="prose">${P(S.controlsNote)}</p>
+  <table class="bd sim-keys">
+    <thead><tr>
+      <th scope="col">${esc(S.colAction)}</th>
+      <th scope="col">${esc(S.colKey)}</th>
+      <th scope="col">${esc(S.colPad)}</th>
+    </tr></thead>
+    <tbody>${ctlRows}</tbody>
+  </table>
+
+  <h2>${esc(S.assistTitle)}</h2>
+  <p class="prose">${P(S.assistBody)}</p>
+
+  <h2>${esc(S.scoringTitle)}</h2>
+  <p class="prose">${P(S.scoringNote)}</p>
+  <table class="bd lg-table">
+    <thead><tr><th scope="col">${esc(LG.colVs)} (${esc(LG.vsUnit)})</th><th scope="col">${esc(LG.colRemark)}</th></tr></thead>
+    <tbody>${bandRows}</tbody>
+  </table>
+
+  <p class="btn-row btn-row--foot">
+    <a class="btn" href="${urlFor('dispatch', lang)}">${icon('i-dispatch')}${esc(c.dispatch.title)}</a>
+    <a class="btn" href="${urlFor('home', lang)}">${icon('i-home')}${esc(S.backHome)}</a>
+  </p>
+</section>`
+
+  return shell({ c, lang, key: 'sim', title: `${S.title} — ${c.meta.siteName}`, desc: S.intro, body })
+}
+
 /* --- Accessibility -------------------------------------------------------- */
 function a11y(c, lang) {
   const P = s => parts(s, lang), A = c.accessibility
@@ -1088,7 +1230,7 @@ function aprilfools(c, lang) {
 }
 
 /* --- Emit ----------------------------------------------------------------- */
-const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, accessibility: a11y, aprilfools }
+const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, sim: simPage, accessibility: a11y, aprilfools }
 let count = 0
 for (const p of PAGES) {
   for (const [lang, cat, sub] of [['zh-Hans', zh, p.zhPath], ['en', en, p.enPath]]) {

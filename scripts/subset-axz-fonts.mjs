@@ -53,7 +53,7 @@ const displayOf = c => [
   c.routes?.labels, c.guestbook, c.logbook?.bands, c.accessibility?.sections, c.ui,
   // Panels added after the first build. Each of these renders at least one
   // heading or a bold label, so the 700 weight has to carry their glyphs.
-  c.netmap, c.board, c.resources, c.dispatch, c.landing,
+  c.netmap, c.board, c.resources, c.dispatch, c.landing, c.sim,
 ]
 // The English guestbook still shows the three real entries in Chinese.
 const enWithEntries = [en, zh.guestbook?.entries]
