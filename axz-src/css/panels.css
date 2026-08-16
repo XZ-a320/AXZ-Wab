@@ -598,3 +598,24 @@
   inset-block-end: 68px;
 }
 .sim[data-phone="true"] .sim-pfd { max-height: 132px; }
+
+/* --- Roster ---------------------------------------------------------------
+   The tag is what stops this table implying the airline owns eight aircraft.
+   It is filled for the four it does and outlined for the four it does not. */
+.sim-roster th[scope="row"] { font-weight: 400; }
+.sim-roster td { font-size: var(--fs-sm); color: var(--ink-2); white-space: nowrap; }
+.ros-tag {
+  display: inline-block;
+  margin-inline-start: var(--s-1);
+  padding: 1px var(--s-1);
+  border: 1px solid var(--rule-struct);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: var(--ink-3);
+  vertical-align: 2px;
+}
+.ros-tag.is-own { border-color: var(--remark); color: var(--remark); }
+@media (max-width: 900px) {
+  .sim-roster { display: block; overflow-x: auto; }
+}

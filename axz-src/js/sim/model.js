@@ -32,6 +32,11 @@ export function liveryFor(reg) {
  * `spec` is a row of the fleet table: { len, span, dia, h, engines, cargo }.
  */
 export function aircraftMesh(spec, livery) {
+  // A high-wing single is not a small airliner. Straight untapered wing on top
+  // of the cabin, a strut holding it there, a propeller on the nose and no
+  // nacelles at all: sharing the swept-wing builder and scaling it down would
+  // have produced a very small 737, which is not what a Cessna looks like.
+  if (spec.prop) return lightMesh(spec, livery)
   const B = makeBuilder()
   const L = spec.len, S = spec.span, r = spec.dia / 2
   const noseZ = -L * 0.45, tailZ = L * 0.55
@@ -79,6 +84,25 @@ export function aircraftMesh(spec, livery) {
     B.tri(nLast[0], nLast[i], nLast[i + 1], livery.belly)
   }
 
+  /* Upper deck. A stretched fairing along the top of the forward fuselage,
+     faired in at the back. On a 747 this is the whole silhouette. */
+  if (spec.upperDeck) {
+    const d0 = noseZ + L * 0.06, d1 = noseZ + L * 0.30, d2 = noseZ + L * 0.40
+    const yTop = r * 1.32, ySide = r * 0.62
+    const w = r * 0.78
+    for (const sgn of [-1, 1]) {
+      B.quad(
+        { x: sgn * w, y: ySide, z: d0 }, { x: sgn * w, y: ySide, z: d2 },
+        { x: sgn * w * 0.92, y: yTop, z: d1 }, { x: sgn * w * 0.92, y: yTop, z: d0 + L * 0.02 },
+        sgn > 0 ? BONE : shade(BONE, 0.94))
+    }
+    B.quad({ x: -w * 0.92, y: yTop, z: d0 + L * 0.02 }, { x: w * 0.92, y: yTop, z: d0 + L * 0.02 },
+      { x: w * 0.92, y: yTop, z: d1 }, { x: -w * 0.92, y: yTop, z: d1 }, BONE)
+    // The fair-in aft, which is the long sloping shoulder.
+    B.quad({ x: -w * 0.92, y: yTop, z: d1 }, { x: w * 0.92, y: yTop, z: d1 },
+      { x: w, y: ySide, z: d2 }, { x: -w, y: ySide, z: d2 }, shade(BONE, 0.97))
+  }
+
   // Flight deck windows: a dark wedge on the shoulder, both sides.
   const wz = noseZ + L * 0.055, wz2 = noseZ + L * 0.125
   for (const sgn of [-1, 1]) {
@@ -97,7 +121,7 @@ export function aircraftMesh(spec, livery) {
   const halfSpan = S / 2
   const rootLE = -L * 0.055, rootTE = L * 0.145
   const sweep = L * 0.20, tipChord = L * 0.055
-  const dihedral = 0.105                     // ~6 degrees
+  const dihedral = spec.dihedral || 0.105    // ~6 degrees unless the type says otherwise
   const thickRoot = r * 0.30, thickTip = r * 0.09
 
   const wingSurface = (sgn) => {
@@ -125,17 +149,31 @@ export function aircraftMesh(spec, livery) {
       B.quad(tTE, utTE, uTE, rTE, shade(GREY, 0.85))
       B.quad(utLE, utTE, tTE, tLE, accent)
     }
-    // Winglet, canted up from the tip.
-    const wl = { x: sgn * halfSpan * 0.99, y: tipY + thickTip, z: rootLE + sweep + tipChord * 0.15 }
-    const wlT = { x: sgn * halfSpan * 1.02, y: tipY + L * 0.055, z: rootLE + sweep + tipChord * 0.35 }
-    B.quad2(wl, { x: wl.x, y: wl.y, z: wl.z + tipChord * 0.75 }, { x: wlT.x, y: wlT.y, z: wlT.z + tipChord * 0.42 }, wlT, accent)
+    /* Tip treatment. A 787 has no winglet: it has a long raked extension that
+       sweeps back and barely rises, and that silhouette is most of how you
+       tell one from an A320 at distance. Everything else gets the canted
+       winglet. */
+    if (spec.rakedTips) {
+      const rk = { x: sgn * halfSpan * 1.10, y: tipY + halfSpan * 0.035, z: rootLE + sweep + tipChord * 1.5 }
+      B.quad2(
+        { x: sgn * halfSpan, y: tipY + thickTip, z: rootLE + sweep },
+        { x: sgn * halfSpan, y: tipY + thickTip, z: rootLE + sweep + tipChord },
+        { x: rk.x, y: rk.y, z: rk.z + tipChord * 0.30 }, rk, accent)
+    } else {
+      const wl = { x: sgn * halfSpan * 0.99, y: tipY + thickTip, z: rootLE + sweep + tipChord * 0.15 }
+      const wlT = { x: sgn * halfSpan * 1.02, y: tipY + L * 0.055, z: rootLE + sweep + tipChord * 0.35 }
+      B.quad2(wl, { x: wl.x, y: wl.y, z: wl.z + tipChord * 0.75 }, { x: wlT.x, y: wlT.y, z: wlT.z + tipChord * 0.42 }, wlT, accent)
+    }
     return { tipY, rLE, tLE }
   }
   const wingL = wingSurface(-1), wingR = wingSurface(1)
 
   /* --- Engines ------------------------------------------------------------ */
-  const nacelle = (sgn) => {
-    const px = sgn * halfSpan * 0.34
+  // Span fraction per engine. A four-holer's inboard and outboard nacelles are
+  // at genuinely different stations, and putting all four at one fraction was
+  // the difference between a 747 and a 737 with two extra lumps.
+  const nacelle = (sgn, frac) => {
+    const px = sgn * halfSpan * frac
     const py = -r * 0.28 + Math.abs(px) * dihedral - r * 0.52
     const pz = rootLE + sweep * 0.22 - L * 0.06
     const nr = r * 0.52, nl = L * 0.115
@@ -162,7 +200,12 @@ export function aircraftMesh(spec, livery) {
       { x: px, y: py + nr * 2.0, z: pz + nl * 0.35 },
       shade(GREY, 0.8))
   }
-  for (let e = 0; e < (spec.engines || 2); e++) nacelle(e % 2 === 0 ? -1 : 1)
+  const nEng = spec.engines || 2
+  if (nEng >= 4) {
+    for (const sgn of [-1, 1]) { nacelle(sgn, 0.28); nacelle(sgn, 0.52) }
+  } else if (nEng === 2) {
+    nacelle(-1, 0.34); nacelle(1, 0.34)
+  }
 
   /* --- Tail --------------------------------------------------------------- */
   const tz = tailZ - L * 0.20
@@ -210,7 +253,9 @@ export function gearMesh(spec) {
   // A 737-800's fuselage centreline sits a bit over 3 m up, so the leg has to
   // put the wheel about 1.9 m below the belly, not the 2.9 m an eyeballed
   // 1.55 radii gave — which parked the aeroplane a storey above its own runway.
-  const legLen = r * 1.02
+  // A light single sits much lower relative to its own fuselage than a jet on
+  // podded gear does, and its tail sits far higher off the ground.
+  const legLen = spec.prop ? r * 0.62 : r * 1.02
   const yTop = -r * 0.92
   const yBot = yTop - legLen
 
@@ -231,7 +276,9 @@ export function gearMesh(spec) {
        degrees, which is where a 737-800 strikes its tail. Without it, full
        back stick rotated the aeroplane to seventy-five degrees on the runway
        and it flew away like a party balloon. */
-    { x: 0, y: -r * 0.16, z: L * 0.495, tail: true },
+    // Tail skid station. A high-wing single has a much longer tail arm and
+    // strikes far later, which is why the fraction is not shared.
+    { x: 0, y: spec.prop ? -r * 0.02 : -r * 0.16, z: L * (spec.prop ? 0.545 : 0.495), tail: true },
   ]
 
   for (const c of contacts) {
@@ -375,4 +422,127 @@ export function aircraftLines(spec, col) {
       { x: sgn * halfSpan, y: tipY, z: rootLE + sweep + tipChord }, col)
   }
   return LB.build()
+}
+
+
+/* --- Light single ---------------------------------------------------------
+   Built to the same conventions as the jet (origin at the CG, nose at -Z) so
+   the flight model, the decals and the gear all keep working unchanged. What
+   differs is the shape, because the shape is the point: the wing is above the
+   cabin, it does not sweep, it is held up by a strut, and the thrust comes
+   from a disc on the front rather than pods underneath.                     */
+function lightMesh(spec, livery) {
+  const B = makeBuilder()
+  const L = spec.len, S = spec.span, r = spec.dia / 2
+  const noseZ = -L * 0.42, tailZ = L * 0.58
+  const accent = livery.accent
+  const skin = BONE, trim = accent
+
+  // Cabin: a boxy six-sided body, tapering into a slim tail boom.
+  const box = (z0, z1, w0, h0, w1, h1, yo0, yo1, col) => {
+    const A = [
+      { x: -w0, y: yo0 - h0, z: z0 }, { x: w0, y: yo0 - h0, z: z0 },
+      { x: w0, y: yo0 + h0, z: z0 }, { x: -w0, y: yo0 + h0, z: z0 },
+    ]
+    const Bv = [
+      { x: -w1, y: yo1 - h1, z: z1 }, { x: w1, y: yo1 - h1, z: z1 },
+      { x: w1, y: yo1 + h1, z: z1 }, { x: -w1, y: yo1 + h1, z: z1 },
+    ]
+    B.quad(A[3], A[2], Bv[2], Bv[3], col)                       // roof
+    B.quad(Bv[0], Bv[1], A[1], A[0], shade(col, 0.72))          // floor
+    B.quad(A[1], A[2], Bv[2], Bv[1], shade(col, 0.92))          // right
+    B.quad(Bv[0], Bv[3], A[3], A[0], shade(col, 0.86))          // left
+    return Bv
+  }
+  const w = r * 0.92, h = r * 1.05
+  box(noseZ, noseZ + L * 0.16, w * 0.52, h * 0.55, w, h, 0, 0, skin)      // cowl
+  box(noseZ + L * 0.16, L * 0.10, w, h, w, h, 0, 0, skin)                 // cabin
+  box(L * 0.10, tailZ - L * 0.06, w, h, w * 0.30, h * 0.34, 0, r * 0.30, skin)  // boom
+
+  // Windscreen and side glass, as one dark wrap over the cabin shoulder.
+  for (const sgn of [-1, 1]) {
+    B.quad2(
+      { x: sgn * w * 1.01, y: h * 0.18, z: noseZ + L * 0.17 },
+      { x: sgn * w * 1.01, y: h * 0.18, z: L * 0.02 },
+      { x: sgn * w * 1.01, y: h * 0.86, z: L * 0.02 },
+      { x: sgn * w * 1.01, y: h * 0.86, z: noseZ + L * 0.20 },
+      GLASS)
+  }
+  B.quad2(
+    { x: -w * 0.92, y: h * 0.92, z: noseZ + L * 0.19 }, { x: w * 0.92, y: h * 0.92, z: noseZ + L * 0.19 },
+    { x: w * 0.72, y: h * 0.30, z: noseZ + L * 0.10 }, { x: -w * 0.72, y: h * 0.30, z: noseZ + L * 0.10 },
+    GLASS)
+
+  /* Wing: straight, untapered, ON TOP, with a couple of degrees of dihedral.
+     No sweep at all — sweep is for going fast and this does not. */
+  const halfSpan = S / 2
+  const yTop = h * 1.02
+  const cRoot = L * 0.20, thick = r * 0.16
+  const wz0 = noseZ + L * 0.30, wz1 = wz0 + cRoot
+  for (const sgn of [-1, 1]) {
+    const tipY = yTop + halfSpan * 0.030
+    const a = { x: 0, y: yTop, z: wz0 }, b = { x: 0, y: yTop, z: wz1 }
+    const c = { x: sgn * halfSpan, y: tipY, z: wz1 - cRoot * 0.06 }
+    const d = { x: sgn * halfSpan, y: tipY, z: wz0 + cRoot * 0.06 }
+    const up = p => ({ x: p.x, y: p.y + thick, z: p.z })
+    const top = shade(skin, 1.0), bot = shade(skin, 0.66)
+    if (sgn > 0) {
+      B.quad(up(a), up(d), up(c), up(b), top)
+      B.quad(a, b, c, d, bot)
+      B.quad(a, d, up(d), up(a), shade(skin, 0.9))
+      B.quad(b, up(b), up(c), c, shade(skin, 0.8))
+      B.quad(d, c, up(c), up(d), trim)
+    } else {
+      B.quad(up(b), up(c), up(d), up(a), top)
+      B.quad(d, c, b, a, bot)
+      B.quad(up(a), up(d), d, a, shade(skin, 0.9))
+      B.quad(c, up(c), up(b), b, shade(skin, 0.8))
+      B.quad(up(d), up(c), c, d, trim)
+    }
+    // Lift strut, cabin floor out to mid-span. The give-away of the type.
+    if (spec.strut) {
+      const s0 = { x: sgn * w * 0.9, y: -h * 0.72, z: L * 0.02 }
+      const s1 = { x: sgn * halfSpan * 0.52, y: yTop - thick * 0.2, z: wz0 + cRoot * 0.55 }
+      const t = r * 0.055
+      B.quad2({ x: s0.x, y: s0.y, z: s0.z - t }, { x: s1.x, y: s1.y, z: s1.z - t },
+        { x: s1.x, y: s1.y, z: s1.z + t }, { x: s0.x, y: s0.y, z: s0.z + t }, shade(GREY, 1.0))
+    }
+  }
+
+  /* Propeller. A hub, two blades, and a translucent-looking disc so it reads
+     as turning rather than as a stopped stick. */
+  const px = 0, py = 0, pz = noseZ - L * 0.012
+  const pr = r * 1.35
+  for (let i = 0; i < 10; i++) {
+    const a0 = (i / 10) * Math.PI * 2, a1 = ((i + 1) / 10) * Math.PI * 2
+    B.tri({ x: px, y: py, z: pz },
+      { x: px + Math.cos(a0) * pr, y: py + Math.sin(a0) * pr, z: pz },
+      { x: px + Math.cos(a1) * pr, y: py + Math.sin(a1) * pr, z: pz },
+      [0.20, 0.21, 0.23])
+  }
+  for (const a of [0, Math.PI / 2]) {
+    const bw = r * 0.10
+    B.quad2(
+      { x: px + Math.cos(a) * pr, y: py + Math.sin(a) * pr, z: pz - bw },
+      { x: px - Math.cos(a) * pr, y: py - Math.sin(a) * pr, z: pz - bw },
+      { x: px - Math.cos(a) * pr, y: py - Math.sin(a) * pr, z: pz + bw },
+      { x: px + Math.cos(a) * pr, y: py + Math.sin(a) * pr, z: pz + bw },
+      INK)
+  }
+  B.quad2({ x: -r * 0.16, y: -r * 0.16, z: pz - r * 0.1 }, { x: r * 0.16, y: -r * 0.16, z: pz - r * 0.1 },
+    { x: r * 0.16, y: r * 0.16, z: pz - r * 0.1 }, { x: -r * 0.16, y: r * 0.16, z: pz - r * 0.1 }, trim)
+
+  // Tail: straight fin and a straight stabiliser, both unswept.
+  const tz = tailZ - L * 0.16
+  const finH = spec.h * 0.42
+  B.quad2({ x: 0, y: r * 0.42, z: tz }, { x: 0, y: r * 0.42, z: tz + L * 0.15 },
+    { x: 0, y: r * 0.42 + finH, z: tz + L * 0.15 }, { x: 0, y: r * 0.42 + finH, z: tz + L * 0.06 }, trim)
+  const hs = S * 0.34
+  for (const sgn of [-1, 1]) {
+    const y0 = r * 0.40
+    B.quad2({ x: 0, y: y0, z: tz + L * 0.02 }, { x: 0, y: y0, z: tz + L * 0.12 },
+      { x: sgn * hs, y: y0 + hs * 0.02, z: tz + L * 0.11 }, { x: sgn * hs, y: y0 + hs * 0.02, z: tz + L * 0.03 },
+      shade(skin, 0.98))
+  }
+  return B.build()
 }

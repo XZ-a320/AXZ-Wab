@@ -554,6 +554,38 @@ console.log('\nflight simulator')
       : bad(`the canvas is nearly flat: only ${gfx.distinct} distinct colours across the frame`)
   }
 
+  /* Every type must hold a trimmed approach in the wind. This is a regression
+     for a bug that had been live for two builds: the assist drove steady-state
+     SIDESLIP to zero, but a crosswind approach requires steady sideslip, so it
+     kept yawing and on the heavier types wound up into a departure. Adding the
+     747 is what made it visible; the 737 had been quietly doing it too. */
+  const roster = JSON.parse(await page.getAttribute('[data-sim-stage]', 'data-sim-fleet'))
+  const types = roster._order || []
+  types.length === 8 ? ok(`${types.length} types are selectable`) : bad(`${types.length} types, expected 8`)
+  const flown = await page.evaluate(async (ids) => {
+    const s = window.__axzSimHandle.sim
+    const out = []
+    for (const id of ids) {
+      s.setAircraft(id); s.setScenario('approach')
+      await new Promise(r => setTimeout(r, 500))
+      const a0 = s.readout()
+      await new Promise(r => setTimeout(r, 6000))
+      const a1 = s.readout()
+      out.push({
+        id, ias: Math.round(a1.ias), vs: Math.round(a1.vs),
+        alpha: Math.abs(s.ac.alpha * 57.3),
+        // Vref scales with the type, so the check is that it HELD its speed,
+        // not that it matches some absolute number.
+        held: Math.abs(a1.ias - a0.ias) < 12 && Math.abs(a1.vs) < 1500 && Math.abs(s.ac.alpha * 57.3) < 20,
+      })
+    }
+    return out
+  }, types)
+  const departed = flown.filter(f => !f.held)
+  departed.length === 0
+    ? ok(`all ${flown.length} types hold a trimmed approach in a crosswind`)
+    : bad(`departed: ${departed.map(d => d.id + ' a=' + d.alpha.toFixed(0) + ' vs=' + d.vs).join(', ')}`)
+
   /* Escape must actually pause. It was listed in the bindings and printed in
      the control table but missing from the set of keys the handler owns, so
      the documented pause key silently did nothing. */

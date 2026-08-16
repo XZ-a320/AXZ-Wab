@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync, rmSy
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
-import { airframe, sideview, TYPES, scaleBase } from './airframe.mjs'
+import { airframe, sideview, TYPES, scaleBase, SIM_TYPES, AXZ_ORDER, SIM_ONLY } from './airframe.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -1051,13 +1051,27 @@ function dispatchPage(c, lang) {
    fleet page publishes.                                                      */
 function simPage(c, lang) {
   const P = s => parts(s, lang), S = c.sim, LG = c.landing
+  /* The simulator's roster is NOT the airline's fleet. AXZ operates four
+     aircraft; the other four are types the simulator can fly, and the page
+     says which is which. Names for the AXZ four come from the catalogue so
+     they read the same as sector 02; the rest carry the manufacturer's. */
   const fleet = {}
-  for (const id of c.fleet._order) {
-    const t = TYPES[id]
+  const order = [...AXZ_ORDER, ...SIM_ONLY]
+  for (const id of order) {
+    const t = SIM_TYPES[id]
     if (!t) continue
-    fleet[id] = { len: t.len, span: t.span, dia: t.dia, h: t.h, engines: t.engines, name: c.fleet[id].name, reg: c.fleet[id].reg }
+    fleet[id] = {
+      len: t.len, span: t.span, dia: t.dia, h: t.h, engines: t.engines,
+      mass: t.mass, wingArea: t.wingArea, thrust: t.thrust, vne: t.vne,
+      prop: !!t.prop, upperDeck: !!t.upperDeck, rakedTips: !!t.rakedTips,
+      highWing: !!t.highWing, strut: !!t.strut, fixedGear: !!t.fixedGear,
+      dihedral: t.dihedral,
+      name: t.axz ? c.fleet[id].name : t.name,
+      reg: t.axz ? c.fleet[id].reg : t.reg,
+      axz: !!t.axz,
+    }
   }
-  fleet._order = c.fleet._order
+  fleet._order = order
 
   // Only the strings the engine actually prints, so the attribute stays small.
   const labels = {
@@ -1078,8 +1092,17 @@ function simPage(c, lang) {
 
   const flOpts = ['AXZ001', 'AXZ002', 'AXZ003', 'AXZ004'].map(k =>
     `<option value="${esc(k)}">${esc(S.flights[k])}</option>`).join('')
-  const acOpts = c.fleet._order.filter(id => TYPES[id]).map(id =>
-    `<option value="${esc(id)}">${esc(c.fleet[id].reg)} · ${esc(c.fleet[id].name)}</option>`).join('')
+  // Grouped, because "which of these does the airline actually own" is a
+  // question the picker should answer without anybody having to ask.
+  const acOpt = id => {
+    const t = SIM_TYPES[id]
+    const reg = t.axz ? c.fleet[id].reg : t.reg
+    const nm = t.axz ? c.fleet[id].name : t.name
+    return `<option value="${esc(id)}">${esc(reg)} · ${esc(nm)}</option>`
+  }
+  const acOpts =
+    `<optgroup label="${esc(S.fleetGroup)}">${AXZ_ORDER.map(acOpt).join('')}</optgroup>` +
+    `<optgroup label="${esc(S.otherGroup)}">${SIM_ONLY.map(acOpt).join('')}</optgroup>`
   const scOpts = ['takeoff', 'runway', 'approach', 'cruise'].map(k =>
     `<option value="${esc(k)}"${k === 'takeoff' ? ' selected' : ''}>${esc(S.scenarios[k])}</option>`).join('')
 
@@ -1088,6 +1111,31 @@ function simPage(c, lang) {
     <td class="code">${esc(r.k)}</td>
     <td class="code">${esc(r.p)}</td>
   </tr>`).join('')
+
+  /* Roster table. Every number is DERIVED from SIM_TYPES rather than written
+     out, so the page and the aeroplane can never disagree: wing loading and
+     aspect ratio are arithmetic on the published figures, and the approach
+     speed comes out of the same stall equation the flight model uses. */
+  const G = 9.80665
+  const rosterRows = [...AXZ_ORDER, ...SIM_ONLY].map(id => {
+    const t = SIM_TYPES[id]
+    const AR = (t.span * t.span) / t.wingArea
+    const wl = t.mass / t.wingArea
+    const stallA = (t.prop ? 16.5 : 15.5) * Math.PI / 180
+    const CLmax = 0.15 + 1.05 + 5.2 * (stallA + 1.6 * Math.PI / 180)
+    const vs = Math.sqrt((2 * t.mass * G) / (1.225 * t.wingArea * CLmax)) * 1.943844
+    const nm = t.axz ? c.fleet[id].name : t.name
+    const reg = t.axz ? c.fleet[id].reg : t.reg
+    return `<tr>
+      <th scope="row"><span class="code">${esc(reg)}</span> ${P(nm)}
+        <span class="ros-tag${t.axz ? ' is-own' : ''}">${esc(t.axz ? S.rosterOwn : S.rosterSim)}</span></th>
+      <td class="code">${t.len.toFixed(1)} × ${t.span.toFixed(1)} m</td>
+      <td class="code">${(t.mass / 1000).toFixed(t.mass < 5000 ? 2 : 0)} t</td>
+      <td class="code">${t.prop ? (t.thrust / 1000).toFixed(1) : Math.round(t.thrust / 1000)} kN${t.prop ? ' ×1' : ' ×' + t.engines}</td>
+      <td class="code">${Math.round(wl)} kg/m² · ${AR.toFixed(1)}</td>
+      <td class="code">${Math.round(vs * 1.3)} kt</td>
+    </tr>`
+  }).join('')
 
   const fieldOrder = ['flight', 'ias', 'alt', 'agl', 'vs', 'hdg', 'wind', 'papi',
     'dist', 'dest', 'camera', 'time', 'assist', 'input', 'fps']
@@ -1161,6 +1209,20 @@ function simPage(c, lang) {
 
   <h2>${esc(S.assistTitle)}</h2>
   <p class="prose">${P(S.assistBody)}</p>
+
+  <h2>${esc(S.rosterTitle)}</h2>
+  <p class="prose">${P(S.rosterNote)}</p>
+  <table class="bd sim-roster">
+    <thead><tr>
+      <th scope="col">${esc(S.rosterCols.type)}</th>
+      <th scope="col">${esc(S.rosterCols.dims)}</th>
+      <th scope="col">${esc(S.rosterCols.mass)}</th>
+      <th scope="col">${esc(S.rosterCols.power)}</th>
+      <th scope="col">${esc(S.rosterCols.wing)}</th>
+      <th scope="col">${esc(S.rosterCols.vref)}</th>
+    </tr></thead>
+    <tbody>${rosterRows}</tbody>
+  </table>
 
   <h2>${esc(S.phoneTitle)}</h2>
   <p class="prose">${P(S.phoneBody)}</p>

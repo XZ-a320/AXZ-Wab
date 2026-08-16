@@ -84,6 +84,7 @@ export class Sim {
     this.treeCentre = { x: 1e9, z: 1e9 }
     this.post = new Post(this.gl)
     this.shadows = new ShadowMap(this.gl, 2048)
+    this.shadowsFar = new ShadowMap(this.gl, 2048)
     this.sound = new Sound()
     this.shake = 0
     this.wreck = { t: 0 }
@@ -214,7 +215,13 @@ export class Sim {
       const x = ksns.x - d.x * (back + ksns.rwy.len / 2)
       const z = ksns.z - d.z * (back + ksns.rwy.len / 2)
       ac.setFlap(3); ac.gearDown = true; ac.gearPos = 1
-      ac.place(x, ksns.elev + 582, z, ksns.rwy.hdg, 72, { gamma: -3 * DEG, trimmed: true })
+      /* Vref for THIS type. A fixed 72 m/s put the Cessna on final at 136 kt,
+         which is nearly three times its approach speed and about twice its
+         never-exceed. The glide slope is three degrees for everyone; the speed
+         down it is not. */
+      const vref = ac.vrefMs()
+      const w0 = this.wind.sample(582, 0)
+      ac.place(x, ksns.elev + 582, z, ksns.rwy.hdg, vref, { gamma: -3 * DEG, trimmed: true, wind: w0 })
       this.input.throttle = ac.throttle
       this.mission = { active: true, phase: 'final', best: null }
     } else {
@@ -225,7 +232,12 @@ export class Sim {
       ac.setFlap(0); ac.gearDown = false; ac.gearPos = 0
       // The cruise level the site publishes for THIS leg: 1,676 m on the
       // California pair, 9,500 m on the China pair.
-      ac.place(x, this.leg.cruise, z, brg, this.leg.cruise > 5000 ? 158 : 128, { trimmed: true })
+      // A light single cannot hold the airline's cruise level, so it gets the
+      // highest it can actually manage, at its own cruise speed.
+      const alt = Math.min(this.leg.cruise, ac.ceilingM())
+      const spd = ac.cfg.prop ? 58 : (alt > 5000 ? 158 : 128)
+      const w1 = this.wind.sample(alt, 0)
+      ac.place(x, alt, z, brg, spd, { trimmed: true, wind: w1 })
       this.input.throttle = ac.throttle
       this.mission = { active: true, phase: 'cruise', best: null }
     }
@@ -655,11 +667,32 @@ export class Sim {
       this.shadows.draw(this.acMesh, acModel)
       if (ac.gearPos > 0.02) this.shadows.draw(this.gearMesh, acModel)
       this.shadows.end()
+
+      /* Second cascade: an order of magnitude wider, aimed at the ground
+         AHEAD of the aeroplane rather than under it, because that is where
+         the terrain you are about to look at is. It takes the far mesh too,
+         since at this scale distant hills are exactly what should be
+         shading each other. */
+      if (this.shadowsFar.ok) {
+        const fwd = qrot(ac.q, { x: 0, y: 0, z: -1 })
+        const aheadDist = clamp(900 + ac.pos.y * 1.2, 900, 4000)
+        const focus = {
+          x: ac.pos.x + fwd.x * aheadDist, y: elevation(ac.pos.x, ac.pos.z),
+          z: ac.pos.z + fwd.z * aheadDist,
+        }
+        this.shadowsFar.aim(focus, env.light, clamp(1600 + ac.pos.y * 1.6, 1600, 7000))
+        this.shadowsFar.begin()
+        this.shadowsFar.draw(this.near, this.identity)
+        this.shadowsFar.draw(this.far, this.identity)
+        for (const mm of this.props) this.shadowsFar.draw(mm, this.identity)
+        this.shadowsFar.end()
+      }
       // The depth pass rebinds the framebuffer and viewport; put them back.
       if (usePost) this.post.bindScene()
       else R.gl.viewport(0, 0, this.canvas.width, this.canvas.height)
     }
     env.shadow = this.shadows
+    env.shadowFar = this.shadowsFar
 
     R.use('solid', proj, view, env)
     R.draw(this.far, this.identity)

@@ -788,7 +788,21 @@
       "view": "View"
     },
     "phoneTitle": "Flying it on a phone",
-    "phoneBody": "Phone mode goes fullscreen, locks to landscape, and flies on the gyroscope: tilt the phone forward and back for pitch, rotate it left and right for roll. Neutral is however you were holding it when you pressed the button, so hold it comfortably, and press Recentre whenever you want to reset that. Throttle is the vertical strip on the left, rudder is the horizontal one along the bottom and springs back to centre, and the buttons on the right are gear, flaps, spoilers, brakes and view. iOS asks once for motion permission; decline it and everything still works except the tilt."
+    "phoneBody": "Phone mode goes fullscreen, locks to landscape, and flies on the gyroscope: tilt the phone forward and back for pitch, rotate it left and right for roll. Neutral is however you were holding it when you pressed the button, so hold it comfortably, and press Recentre whenever you want to reset that. Throttle is the vertical strip on the left, rudder is the horizontal one along the bottom and springs back to centre, and the buttons on the right are gear, flaps, spoilers, brakes and view. iOS asks once for motion permission; decline it and everything still works except the tilt.",
+    "fleetGroup": "Air Xiao Ze fleet",
+    "otherGroup": "Other types (simulator only)",
+    "rosterTitle": "Aircraft you can fly",
+    "rosterNote": "The first four are Air Xiao Ze’s own aircraft. The last four are not: they are additional types the simulator offers, and they have nothing to do with this airline. Every figure is the manufacturer’s published one, and the stall and approach speeds are computed from those figures rather than typed in. The same equations fly the 250-tonne 747 and the one-tonne Cessna; the only branch is propeller against jet thrust.",
+    "rosterCols": {
+      "type": "Type",
+      "dims": "Length × span",
+      "mass": "Weight",
+      "power": "Thrust",
+      "wing": "Wing loading / AR",
+      "vref": "Approach speed"
+    },
+    "rosterOwn": "Air Xiao Ze",
+    "rosterSim": "Simulator type"
   },
   "aprilfools": {
     "date": "April 1, 2026",

@@ -53,30 +53,49 @@ uniform vec3 uFogColor;
 uniform float uFogNear, uFogFar;
 uniform vec3 uCamPos;
 uniform float uSpecular, uShininess;
-uniform mat4 uLightVP;
-uniform sampler2D uShadow;
-uniform float uShadowOn, uShadowTexel;
+uniform mat4 uLightVP, uLightVP2;
+uniform sampler2D uShadow, uShadow2;
+uniform float uShadowOn, uShadowTexel, uShadowTexel2;
 
-float shadowFactor() {
-  if (uShadowOn < 0.5) return 1.0;
-  vec4 lp = uLightVP * vec4(vWorld, 1.0);
-  vec3 p = lp.xyz / lp.w * 0.5 + 0.5;
-  // Outside the cascade, or behind the light, is lit. A cascade that shadowed
-  // everything outside itself would black out the whole distance.
-  if (p.x < 0.005 || p.x > 0.995 || p.y < 0.005 || p.y > 0.995 || p.z > 1.0) return 1.0;
-  // Slope-scaled bias: a surface edge-on to the light needs far more than one
-  // facing it, and a single constant bias either acnes or peters.
-  float ndl = max(dot(normalize(vNormal), uLightDir), 0.0);
-  float bias = clamp(0.0016 * tan(acos(clamp(ndl, 0.0, 1.0))), 0.0004, 0.006);
+bool inBox(vec3 p) {
+  return p.x > 0.005 && p.x < 0.995 && p.y > 0.005 && p.y < 0.995 && p.z < 1.0;
+}
+
+/* Two cascades. The near one is tight around the aeroplane, where a crisp
+   wing shadow matters; the far one is an order of magnitude wider and picks up
+   hills, the length of the runway and the city, which the near box cannot
+   reach. Sampling the near one first and only falling through to the far one
+   outside it means each pixel costs one lookup, not two. */
+float sampleMap(sampler2D map, vec3 p, float texel, float bias) {
   float lit = 0.0;
   for (int y = -1; y <= 1; y++) {
     for (int x = -1; x <= 1; x++) {
-      vec2 o = vec2(float(x), float(y)) * uShadowTexel;
-      float d = texture2D(uShadow, p.xy + o).r;
+      vec2 o = vec2(float(x), float(y)) * texel;
+      float d = texture2D(map, p.xy + o).r;
       lit += (p.z - bias > d) ? 0.0 : 1.0;
     }
   }
   return lit / 9.0;
+}
+
+float shadowFactor() {
+  if (uShadowOn < 0.5) return 1.0;
+  // Slope-scaled bias: a surface edge-on to the light needs far more than one
+  // facing it, and a single constant bias either acnes or peters.
+  float ndl = max(dot(normalize(vNormal), uLightDir), 0.0);
+  float slope = tan(acos(clamp(ndl, 0.0, 1.0)));
+
+  vec4 lp = uLightVP * vec4(vWorld, 1.0);
+  vec3 p = lp.xyz / lp.w * 0.5 + 0.5;
+  if (inBox(p)) return sampleMap(uShadow, p, uShadowTexel, clamp(0.0016 * slope, 0.0004, 0.006));
+
+  vec4 lp2 = uLightVP2 * vec4(vWorld, 1.0);
+  vec3 p2 = lp2.xyz / lp2.w * 0.5 + 0.5;
+  // A wider box spreads the same depth range over more world, so it needs a
+  // proportionally larger bias or the whole distance acnes.
+  if (inBox(p2)) return sampleMap(uShadow2, p2, uShadowTexel2, clamp(0.0042 * slope, 0.0016, 0.020));
+
+  return 1.0;
 }
 
 void main() {
@@ -334,6 +353,9 @@ export class Renderer {
         uShadow: gl.getUniformLocation(p, 'uShadow'),
         uShadowOn: gl.getUniformLocation(p, 'uShadowOn'),
         uShadowTexel: gl.getUniformLocation(p, 'uShadowTexel'),
+        uLightVP2: gl.getUniformLocation(p, 'uLightVP2'),
+        uShadow2: gl.getUniformLocation(p, 'uShadow2'),
+        uShadowTexel2: gl.getUniformLocation(p, 'uShadowTexel2'),
       }
     }
 
@@ -549,6 +571,12 @@ export class Renderer {
         gl.activeTexture(gl.TEXTURE3)
         gl.bindTexture(gl.TEXTURE_2D, sm.tex)
         gl.uniform1i(L.uShadow, 3)
+        const far = env.shadowFar
+        gl.uniformMatrix4fv(L.uLightVP2, false, (far && far.ok ? far : sm).lightVP)
+        gl.uniform1f(L.uShadowTexel2, 1 / ((far && far.ok ? far : sm).size))
+        gl.activeTexture(gl.TEXTURE4)
+        gl.bindTexture(gl.TEXTURE_2D, (far && far.ok ? far : sm).tex)
+        gl.uniform1i(L.uShadow2, 4)
         gl.activeTexture(gl.TEXTURE0)
       }
     }

@@ -215,3 +215,79 @@ export function sideview(spec) {
     paths: { fuse, fin, stab, wing, nacelle, win, door, ground, legs },
   }
 }
+
+/* ==========================================================================
+   Simulator types.
+
+   IMPORTANT, and the reason this is a separate table from TYPES above:
+   AIR XIAO ZE OPERATES FOUR AIRCRAFT. That is what the site says and it is
+   not this file's business to change it. Everything below with `axz: false`
+   is a type the SIMULATOR can fly, not an aeroplane the airline owns, and the
+   simulator page says so in as many words. The fleet page keeps reading TYPES
+   and is untouched.
+
+   The 747-400 earns its place: the site's own top story is a photograph of
+   B-2472, an Air China 747-400 at Hongqiao. The Cessna is here because a
+   1.1-tonne single is the hardest possible test of a flight model tuned on a
+   65-tonne twinjet, and if the same equations fly both then they are equations
+   rather than a lookup table.
+
+   Every figure is the manufacturer's published one. Mass is a typical
+   operating weight, not MTOW, because that is what you actually fly at.
+   ========================================================================== */
+export const SIM_TYPES = {
+  'b-737x': {
+    name: 'Boeing 737-800', axz: true, reg: 'B-737X',
+    len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2,
+    mass: 65000, wingArea: 124.6, thrust: 242000, vne: 340, prop: false,
+  },
+  'b-321x': {
+    name: 'Airbus A321', axz: true, reg: 'B-321X',
+    len: 44.51, span: 35.80, dia: 3.95, h: 11.76, engines: 2,
+    mass: 71000, wingArea: 122.6, thrust: 293000, vne: 350, prop: false,
+  },
+  'b-1717': {
+    name: 'Boeing 737-800', axz: true, reg: 'B-1717',
+    len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2,
+    mass: 65000, wingArea: 124.6, thrust: 242000, vne: 340, prop: false,
+  },
+  'b-0001f': {
+    name: 'Boeing 737-800BCF', axz: true, reg: 'B-0001F', cargo: true,
+    len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2,
+    // A freighter is heavier for the same airframe, and it lands faster for it.
+    mass: 71000, wingArea: 124.6, thrust: 242000, vne: 340, prop: false,
+  },
+
+  /* --- Not AXZ aircraft. Simulator types only. --------------------------- */
+  'a320': {
+    name: 'Airbus A320', axz: false, reg: 'SIM-320',
+    len: 37.57, span: 35.80, dia: 3.95, h: 11.76, engines: 2,
+    mass: 62000, wingArea: 122.6, thrust: 240000, vne: 350, prop: false,
+  },
+  'b744': {
+    name: 'Boeing 747-400', axz: false, reg: 'SIM-744',
+    len: 70.66, span: 64.44, dia: 6.50, h: 19.41, engines: 4,
+    mass: 250000, wingArea: 541.2, thrust: 1014000, vne: 365, prop: false,
+    // The hump. Everything about how this aeroplane reads at a glance.
+    upperDeck: true,
+  },
+  'b789': {
+    name: 'Boeing 787-9', axz: false, reg: 'SIM-789',
+    len: 62.81, span: 60.12, dia: 5.77, h: 17.02, engines: 2,
+    mass: 180000, wingArea: 377, thrust: 640000, vne: 360, prop: false,
+    // Raked tips rather than a winglet, and a famously flexible wing.
+    rakedTips: true, dihedral: 0.135,
+  },
+  'c172': {
+    name: 'Cessna 172S', axz: false, reg: 'SIM-172',
+    len: 8.28, span: 11.00, dia: 1.25, h: 2.72, engines: 1,
+    mass: 1050, wingArea: 16.2, thrust: 3400, vne: 163, prop: true,
+    // High wing on a strut, fixed gear, and a propeller disc.
+    highWing: true, fixedGear: true, strut: true,
+  },
+}
+
+/** The four the airline actually operates, in the order the site lists them. */
+export const AXZ_ORDER = ['b-737x', 'b-321x', 'b-1717', 'b-0001f']
+/** Everything else the simulator offers. */
+export const SIM_ONLY = ['a320', 'b744', 'b789', 'c172']

@@ -47,23 +47,35 @@ export const FLAP_STEPS = FLAPS.length
 
 /** Everything the model needs about a type, derived from the fleet table. */
 export function makeConfig(spec) {
+  /* Everything used to be derived from LENGTH with 737 constants, which was
+     fine while every type in the table was a 737. It is not fine for a 250 t
+     747 with four engines or a 1.05 t single, so mass, wing area and thrust
+     are now the type's own published figures and only the inertias are
+     estimated from geometry.
+
+     The test of whether this is a flight model or a lookup table is whether
+     the same equations fly the Cessna and the 747 without special cases.
+     They do; the only branch below is prop versus jet, and that is a real
+     difference in how thrust behaves, not a fudge. */
   const b = spec.span
-  const AR = 10.3                       // both types sit within a few percent
-  const S = (b * b) / AR
+  const S = spec.wingArea || (b * b) / 10.3
+  const AR = (b * b) / S
   const c = S / b
-  const mass = 1650 * spec.len          // ~65 t for the 737-800, ~73 t for the A321
-  const k = spec.len / 39.47            // scale everything else off the 737
+  const mass = spec.mass || 1650 * spec.len
   return {
     name: spec.name, S, b, c, mass, AR,
-    maxThrust: 242000 * k,
-    // Inertia about the BODY axes: X is the pitch axis, Y yaw, Z roll.
+    maxThrust: spec.thrust || 242000 * (spec.len / 39.47),
+    prop: !!spec.prop,
+    // Radii of gyration as fractions of the airframe, which is the standard
+    // way to estimate these when you do not have the real inertia tensor.
     Ix: mass * Math.pow(spec.len * 0.21, 2),
     Iy: mass * Math.pow(((spec.len + b) / 2) * 0.25, 2),
     Iz: mass * Math.pow(b * 0.17, 2),
     gearK: mass * 13,
     gearC: mass * 2.9,
-    vne: 340,                           // kt, barber pole
-    stallAlpha: 15.5 * DEG,
+    vne: spec.vne || 340,
+    // A light aeroplane's wing stalls a shade later than a swept jet's.
+    stallAlpha: (spec.prop ? 16.5 : 15.5) * DEG,
   }
 }
 
@@ -175,7 +187,7 @@ export class Aircraft {
   }
 
   /** Put the aeroplane somewhere at a given speed, heading and flight path. */
-  place(x, y, z, headingDeg, speedMs, { onGround = false, gamma = 0, trimmed = false } = {}) {
+  place(x, y, z, headingDeg, speedMs, { onGround = false, gamma = 0, trimmed = false, wind = null } = {}) {
     // Sitting at exactly the uncompressed gear height means zero penetration,
     // which reads as "no contact", which makes the very next frame look like a
     // touchdown and logged a phantom greaser every time a session started.
@@ -195,14 +207,23 @@ export class Aircraft {
       this.thrustLag = onGround ? 0.03 : 0.35
     }
     this.q = qFromEuler(h, pitch, 0)
-    // Velocity follows the FLIGHT PATH, not the nose: on a glideslope the two
-    // differ by exactly the angle of attack, and starting them aligned would
-    // put the wing at zero alpha and drop the aeroplane out of the sky.
-    this.vel = {
+    /* Velocity follows the FLIGHT PATH, not the nose: on a glideslope the two
+       differ by exactly the angle of attack, and starting them aligned would
+       put the wing at zero alpha and drop the aeroplane out of the sky.
+
+       And speedMs is an AIRSPEED, so the wind is added on top to get the
+       ground velocity. Setting the ground velocity to Vref instead meant that
+       in an eight-knot wind the aeroplane's actual airspeed was several knots
+       off the speed it had just been trimmed for. On the 737 that was a wobble;
+       on the 250-tonne 747, whose response to being out of trim is slow enough
+       to build, it wound up into a departure and a crash every time. */
+    const air = {
       x: Math.sin(h) * Math.cos(gamma) * speedMs,
       y: Math.sin(gamma) * speedMs,
       z: -Math.cos(h) * Math.cos(gamma) * speedMs,
     }
+    this.vel = wind ? { x: air.x + wind.x, y: air.y + wind.y, z: air.z + wind.z } : air
+    if (wind) { this.wind.x = wind.x; this.wind.y = wind.y; this.wind.z = wind.z }
     this.omega = { x: 0, y: 0, z: 0 }
     this.onGround = onGround
     this.wasAirborne = !onGround
@@ -297,7 +318,20 @@ export class Aircraft {
     }
 
     // Thrust along the nose, falling off with density like a real engine.
-    const thrust = this.crashed ? 0 : this.thrustLag * cfg.maxThrust * Math.min(1, rho / 1.225 + 0.12)
+    /* Thrust. A jet's is roughly constant with speed and falls with density.
+       A propeller converts roughly constant POWER, so its thrust falls off as
+       speed rises and is largest standing still — which is why a light single
+       accelerates hard off the mark and then stops gaining. */
+    let thrust = 0
+    if (!this.crashed) {
+      const dens = Math.min(1, rho / 1.225 + (cfg.prop ? 0.0 : 0.12))
+      if (cfg.prop) {
+        const vRef = Math.max(V, 12)
+        thrust = this.thrustLag * cfg.maxThrust * dens * clamp(24 / vRef, 0.22, 1)
+      } else {
+        thrust = this.thrustLag * cfg.maxThrust * dens
+      }
+    }
     Fb = vadd(Fb, { x: 0, y: 0, z: -thrust })
 
     // Keep the non-gravitational force separately: a G meter reads SPECIFIC
@@ -306,7 +340,7 @@ export class Aircraft {
     const Faero = qrot(this.q, Fb)
     let F = vadd(Faero, { x: 0, y: -cfg.mass * G, z: 0 })
 
-    let M = this.aeroMoments(qbar, V, flap)
+    let M = this.aeroMoments(qbar, V, flap, dt)
     // Tumble: no control, and the damping that a pilot's hands supplied is gone.
     if (this.crashed) {
       M = { x: M.x * 0.15 + qbar * 12, y: M.y * 0.15 - qbar * 7, z: M.z * 0.15 + qbar * 9 }
@@ -349,7 +383,7 @@ export class Aircraft {
     }
   }
 
-  aeroMoments(qbar, V, flap) {
+  aeroMoments(qbar, V, flap, dtHint = 1 / 240) {
     const cfg = this.cfg
     const Vs = Math.max(V, 25)          // rate terms blow up at taxi speed
     const qS = qbar * cfg.S
@@ -408,8 +442,24 @@ export class Aircraft {
     if (this.assist && !this.onGround) {
       Mroll -= (-this.omega.z) * cfg.Iz * 1.25
       Myaw -= (-this.omega.y) * cfg.Iy * 0.9
-      // Coordinate: kill the slip the pilot did not ask for.
-      Myaw += -this.beta * cfg.Iy * 1.6
+      /* Coordination. This used to drive the sideslip itself to zero, which is
+         wrong and was the bug that made every jet approach in a crosswind end
+         in a departure: in a crosswind, steady sideslip is the CORRECT state —
+         it is what crabbing is — so a term that keeps trying to remove it just
+         keeps yawing the aeroplane, and on a heavy with a long yaw time
+         constant that winds up until the nose leaves the flight path entirely.
+
+         What a pilot's feet actually do is damp the sideslip RATE and take out
+         the yaw the ailerons caused, so that is what this does now. The steady
+         crab is left alone, which is also why the crosswind landing the tips
+         talk about is now a thing you have to fly rather than something the
+         assist quietly undoes. */
+      const betaRate = (this.beta - (this.betaPrev || 0)) / Math.max(dtHint, 1e-4)
+      this.betaPrev = this.beta
+      Myaw += -clamp(betaRate, -1.5, 1.5) * cfg.Iy * 0.35
+      // Cancel the adverse yaw the ailerons just made, which is the other half
+      // of what coordinated feet are for.
+      Myaw += this.ctl.aileron * qS * cfg.b * 0.022
       // Gentle roll levelling when the stick is centred, like a trimmed aeroplane.
       if (Math.abs(this.ctl.aileron) < 0.06) {
         const right = qrot(this.q, { x: 1, y: 0, z: 0 })
@@ -520,6 +570,17 @@ export class Aircraft {
   get flapDeg() { return FLAPS[this.flap].deg }
   get flapVfe() { return FLAPS[this.flap].vfe }
   toggleGear() { if (!this.onGround || this.gearPos < 1) this.gearDown = !this.gearDown; else this.gearDown = !this.gearDown }
+  /**
+   * Reference approach speed for the CURRENT configuration, in m/s.
+   * 1.3 times the stall, which is where the airline number comes from, and it
+   * is per-type because the scenarios used to hand every aeroplane the 737's
+   * 140 kt — including a Cessna whose Vref is 48.
+   */
+  vrefMs() { return (this.stallSpeedKt() * 1.3) / 1.943844 }
+
+  /** Practical ceiling. A normally-aspirated single does not go to FL310. */
+  ceilingM() { return this.cfg.prop ? 4100 : 12000 }
+
   /** Stall speed right now, in knots — what the HUD's low-speed cue is drawn from. */
   stallSpeedKt() {
     const flap = FLAPS[this.flap]
