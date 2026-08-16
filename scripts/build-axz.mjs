@@ -111,7 +111,7 @@ writeFileSync(join(OUT, 'assets', jsName), jsBundle)
    That matters here more than usual. The parent site serves .js as immutable
    for a year, so a stable path would strand every returning visitor on the old
    build — the same trap that a `?v=` query token fell into once before.       */
-const SIM_FILES = ['math', 'gl', 'tex', 'post', 'sound', 'world', 'model', 'fdm', 'particles', 'input', 'hud', 'main', 'boot']
+const SIM_FILES = ['math', 'gl', 'tex', 'post', 'sound', 'world', 'model', 'fdm', 'particles', 'input', 'mobile', 'hud', 'main', 'boot']
 const simSources = SIM_FILES.map(f => readFileSync(join(SRC, 'js', 'sim', `${f}.js`), 'utf8'))
 const simDir = `sim-${hash(simSources.join('\n'))}`
 mkdirSync(join(OUT, 'assets', simDir), { recursive: true })
@@ -1066,7 +1066,12 @@ function simPage(c, lang) {
     loading: S.loading, unsupported: S.unsupported, failed: S.failed,
     centreline: S.centreline, paused: S.paused, resumed: S.resumed,
     assistLabel: S.assistLabel, timeLabel: S.timeLabel, soundLabel: S.soundLabel,
-    crashReasons: S.crashReasons,
+    crashReasons: S.crashReasons, crashTips: S.crashTips,
+    tipLabel: S.tipLabel, restart: S.restart,
+    gyroscope: S.gyroscope, gyroOn: S.gyroOn, gyroUnavailable: S.gyroUnavailable,
+    recentre: S.touch.recentre, exit: S.touch.exit,
+    flapsDown: S.touch.flapsDown, flapsUp: S.touch.flapsUp, view: S.touch.view,
+    pause: S.actions.pause,
     keyboard: S.keyboard, gamepad: S.gamepad,
   }
   const bands = LG.bands.map(b => b.remark)
@@ -1123,11 +1128,13 @@ function simPage(c, lang) {
     </div>
     <p class="btn-row">
       <button class="btn btn--go" type="button" data-sim-start>${icon('i-fleet')}${esc(S.startButton)}</button>
+      <button class="btn" type="button" data-sim-phone hidden aria-pressed="false">${esc(S.phoneButton)}</button>
     </p>
     <p class="status" role="status" data-sim-status></p>
     <p class="record__meta">${esc(S.startNote)}</p>
 
     <div class="sim-stage" data-sim-mount></div>
+    <div class="sim-crash" data-sim-crash hidden role="alert"></div>
 
     <div class="sim-panel" data-sim-panel hidden>
       <div class="sim-bar">
@@ -1154,6 +1161,9 @@ function simPage(c, lang) {
 
   <h2>${esc(S.assistTitle)}</h2>
   <p class="prose">${P(S.assistBody)}</p>
+
+  <h2>${esc(S.phoneTitle)}</h2>
+  <p class="prose">${P(S.phoneBody)}</p>
 
   <h2>${esc(S.crashTitle)}</h2>
   <p class="prose">${P(S.crashBody)}</p>

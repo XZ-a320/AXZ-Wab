@@ -520,6 +520,29 @@ console.log('\nflight simulator')
   after === 1 ? ok('the engine builds exactly one audio context, from the start gesture')
               : bad(`${after} audio contexts after start`)
 
+  /* Escape must actually pause. It was listed in the bindings and printed in
+     the control table but missing from the set of keys the handler owns, so
+     the documented pause key silently did nothing. */
+  await page.evaluate(() => document.querySelector('.sim-canvas').focus())
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+  const pausedAttr = await page.getAttribute('[data-sim-stage]', 'data-paused')
+  pausedAttr === 'true' ? ok('Escape pauses the simulator') : bad(`Escape did not pause (data-paused=${pausedAttr})`)
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(200)
+
+  /* And the sim must not eat keys aimed at the rest of the page. The listener
+     is on window, so without a focus check WASD moved the elevator while
+     somebody was reading the control table below. */
+  const camBefore = await page.textContent('[data-sim-field="camera"]')
+  await page.evaluate(() => document.querySelector('[data-sim-scenario]').focus())
+  await page.keyboard.press('KeyC')
+  await page.waitForTimeout(400)
+  const camAfter = await page.textContent('[data-sim-field="camera"]')
+  camBefore === camAfter
+    ? ok('keys are ignored while the page, not the sim, has focus')
+    : bad(`the sim consumed a key aimed elsewhere: ${camBefore} -> ${camAfter}`)
+
   const pressed = await page.getAttribute('[data-sim-action="sound"]', 'aria-pressed')
   pressed === 'false' ? ok('sound starts muted and is opt-in') : bad(`sound button starts aria-pressed=${pressed}`)
   await page.click('[data-sim-action="sound"]')

@@ -9,6 +9,7 @@
    ========================================================================== */
 
 import { Sim } from './main.js'
+import { MobileControls, isPhone } from './mobile.js'
 
 export async function boot(cfg) {
   const stage = cfg.stage
@@ -25,6 +26,12 @@ export async function boot(cfg) {
     cells[node.getAttribute('data-sim-field')] = node
   }
   const log = stage.querySelector('[data-sim-log]')
+  /* Same reason as the log above, and this is the SECOND time this bit: the
+     Sim constructor sets the opening scenario, that fires an event, and the
+     handler touches this binding. Anything the event handler reads has to be
+     initialised before the constructor runs, not merely declared somewhere in
+     the function. */
+  const crashBox = stage.querySelector('[data-sim-crash]')
   const setText = (k, v) => { if (cells[k]) cells[k].textContent = v }
 
   let sim
@@ -61,6 +68,7 @@ export async function boot(cfg) {
       pushLog(L.phases[ev.phase] || ev.phase, 'info')
     } else if (ev.type === 'crash') {
       pushLog((L.crashReasons && L.crashReasons[ev.reason]) || L.crashed, 'warn')
+      showCrash(ev)
     } else if (ev.type === 'assist') {
       pushLog(L.assistLabel + ' ' + (ev.on ? L.on : L.off), 'info')
     } else if (ev.type === 'timescale') {
@@ -69,10 +77,50 @@ export async function boot(cfg) {
       stage.setAttribute('data-paused', String(ev.paused))
       pushLog(ev.paused ? L.paused : L.resumed, 'info')
     } else if (ev.type === 'scenario') {
+      hideCrash()
       if (log) log.innerHTML = ''
       pushLog(L.scenarios[ev.kind] || ev.kind, 'info')
     }
   }
+
+  /* --- Crash panel --------------------------------------------------------
+     A crash that only prints a red word teaches nothing. This says what broke,
+     the number that broke it, and the one thing to do differently, then offers
+     the restart directly rather than making the reader hunt for R. */
+  function showCrash(ev) {
+    if (!crashBox) return
+    const tip = (L.crashTips && L.crashTips[ev.reason]) || ''
+    const reason = (L.crashReasons && L.crashReasons[ev.reason]) || L.crashed
+    crashBox.innerHTML = ''
+    const h = document.createElement('p')
+    h.className = 'sim-crash__head'
+    h.textContent = reason
+    crashBox.appendChild(h)
+    if (ev.detail) {
+      const d = document.createElement('p')
+      d.className = 'sim-crash__num code'
+      d.textContent = ev.detail
+      crashBox.appendChild(d)
+    }
+    if (tip) {
+      const t = document.createElement('p')
+      t.className = 'sim-crash__tip'
+      t.textContent = L.tipLabel + ' ' + tip
+      crashBox.appendChild(t)
+    }
+    const again = document.createElement('button')
+    again.type = 'button'
+    again.className = 'btn sim-crash__again'
+    again.textContent = L.restart
+    again.addEventListener('click', () => {
+      sim.setScenario(sim.scenario)
+      sim.canvas.focus()
+    })
+    crashBox.appendChild(again)
+    crashBox.hidden = false
+    again.focus()
+  }
+  function hideCrash() { if (crashBox) { crashBox.hidden = true; crashBox.innerHTML = '' } }
 
   function pushLog(text, kind) {
     if (!log) return
@@ -110,7 +158,7 @@ export async function boot(cfg) {
     setText('time', r.timeScale + '×')
     setText('assist', r.assist ? L.on : L.off)
     setText('fps', Math.round(r.fps))
-    setText('input', r.pad ? L.gamepad : L.keyboard)
+    setText('input', r.gyro ? L.gyroscope : r.pad ? L.gamepad : L.keyboard)
   }
 
   /* --- Controls around the canvas ---------------------------------------- */
@@ -165,6 +213,23 @@ export async function boot(cfg) {
   sim.sound.setEnabled(false)
   const sndBtn = stage.querySelector('[data-sim-action="sound"]')
   if (sndBtn) sndBtn.setAttribute('aria-pressed', 'false')
+
+  /* --- Phone mode ---------------------------------------------------------
+     Offered whenever the device looks like a phone. It has to be a press, not
+     a detection: fullscreen, orientation lock and the motion sensor all
+     require a user gesture, and all three are refused without one. */
+  const phoneBtn = stage.querySelector('[data-sim-phone]')
+  if (phoneBtn) {
+    if (isPhone() || sim.gyro.available) phoneBtn.hidden = false
+    phoneBtn.addEventListener('click', async () => {
+      if (!sim.mobile) sim.mobile = new MobileControls(stage, sim, L)
+      if (sim.mobile.active) { sim.mobile.exit(); phoneBtn.setAttribute('aria-pressed', 'false'); return }
+      await sim.mobile.enter(sim.gyro)
+      phoneBtn.setAttribute('aria-pressed', 'true')
+      if (!sim.mobile.gyroOn) pushLog(L.gyroUnavailable, 'warn')
+      else pushLog(L.gyroOn, 'info')
+    })
+  }
 
   sim.start()
   return {

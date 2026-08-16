@@ -24,7 +24,7 @@ import { Particles, Effects, Clouds, KIND, explode, burn } from './particles.js'
 import { Post } from './post.js'
 import { Sound } from './sound.js'
 import * as TEX from './tex.js'
-import { Input } from './input.js'
+import { Input, Gyro } from './input.js'
 import { HUD, navInfo } from './hud.js'
 
 const NEAR_SIZE = 11000, NEAR_RES = 96      // ~115 m cells under the aeroplane
@@ -57,7 +57,8 @@ export class Sim {
     this.container.appendChild(this.hudRoot)
     this.hud = new HUD(this.hudRoot, this.L)
 
-    this.input = new Input(this.canvas)
+    this.input = new Input(this.canvas, this.container)
+    this.gyro = new Gyro()
     this.cameraMode = 0
     this.orbit = { yaw: 0.6, pitch: 0.22, dist: 90 }
     this.timeScale = 1
@@ -284,6 +285,13 @@ export class Sim {
 
     if (!this.paused) {
       const ac = this.ac
+      /* Gyro overrides pitch and roll when it is live. It is sampled here
+         rather than inside Input because it is a whole-device sensor, not a
+         key, and because phone mode owns whether it is running at all. */
+      const g = this.gyro.sample(dtReal)
+      if (g) { this.input.axes.pitch = g.pitch; this.input.axes.roll = g.roll }
+      if (this.mobile) this.mobile.apply()
+
       if (ac.crashed) {
         ac.ctl.elevator = 0; ac.ctl.aileron = 0; ac.ctl.rudder = 0
         ac.throttle = 0
@@ -467,7 +475,12 @@ export class Sim {
     ac.throttle = 0; ac.thrustLag = 0
     this.input.throttle = 0
     ac.brakes = 1
-    this.onEvent({ type: 'crash', reason, energy })
+    // The numbers that caused it, so the tip has something to point at.
+    const bankDeg = Math.abs(qToEuler(ac.q).bank) * RAD
+    const detail = reason === 'hard' ? Math.round(ac.lastTouchdownFpm || 0) + ' ' + (this.L.fpm || 'ft/min')
+      : reason === 'bank' ? Math.round(bankDeg) + '°'
+        : Math.round(ac.tas * MS_TO_KT) + ' kt'
+    this.onEvent({ type: 'crash', reason, energy, detail })
   }
 
   bandFor(fpm) {
@@ -752,6 +765,7 @@ export class Sim {
       timeScale: this.timeScale,
       assist: ac.assist,
       pad: this.input.usingPad ? this.input.padName : '',
+      gyro: this.gyro.active,
       camera: CAMERAS[this.cameraMode],
       flight: this.flightId,
       origin: this.origin.icao,

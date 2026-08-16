@@ -1556,3 +1556,160 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   .sim[data-running="true"] .sim-stage { height: min(52vh, 380px); }
   .sim-pfd { max-height: 190px; }
 }
+
+/* --- Crash panel ----------------------------------------------------------
+   Sits under the stage rather than over it: covering the wreck with a modal
+   hides the one thing that shows you what happened. role="alert" carries it to
+   a screen reader without stealing focus from the aeroplane. */
+.sim-crash {
+  border: 1px solid var(--rule-struct);
+  border-inline-start: 3px solid var(--remark);
+  background: var(--paper-2);
+  padding: var(--s-3);
+  margin-block-start: var(--s-3);
+}
+.sim-crash__head { font-size: var(--fs-md); color: var(--remark); }
+.sim-crash__num {
+  font-size: var(--fs-xl);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums slashed-zero;
+  margin-block: var(--s-1);
+}
+.sim-crash__tip {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  max-inline-size: 68ch;
+  margin-block: var(--s-2);
+}
+.sim-crash__again { margin-block-start: var(--s-1); }
+
+/* --- Phone mode -----------------------------------------------------------
+   Nothing in the middle. On a phone held in landscape the middle is where you
+   are looking; the left and right thirds are the only places a thumb reaches
+   without regripping, so that is where every control goes.                  */
+.sim[data-phone="true"] .sim-stage {
+  position: fixed;
+  inset: 0;
+  height: 100dvh !important;
+  width: 100vw;
+  z-index: 60;
+  margin: 0;
+  border: 0;
+}
+.sim-touch {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  pointer-events: none;               /* only the controls take input */
+  /* Clear of notches and the home indicator on both axes. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+  font-family: var(--font-mono);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.sim-touch > * { pointer-events: auto; }
+
+.sim-touch__thr {
+  position: absolute;
+  inset-inline-start: 14px;
+  inset-block: 22% 22%;
+  width: 62px;
+  border: 1px solid rgba(233, 229, 220, .55);
+  background: rgba(11, 13, 16, .42);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.sim-touch__thrfill {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  height: 0;
+  background: rgba(0, 162, 232, .40);
+  pointer-events: none;
+}
+.sim-touch__thrlabel {
+  position: absolute;
+  inset-block-start: 6px;
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: #e9e5dc;
+  pointer-events: none;
+}
+.sim-touch__thrval {
+  position: relative;
+  font-size: 13px;
+  color: #fbf9f4;
+  padding-block-end: 8px;
+  pointer-events: none;
+}
+
+.sim-touch__rud {
+  position: absolute;
+  inset-inline: 96px 172px;
+  inset-block-end: 14px;
+  height: 46px;
+  border: 1px solid rgba(233, 229, 220, .55);
+  background: rgba(11, 13, 16, .42);
+}
+.sim-touch__rudknob {
+  position: absolute;
+  inset-block: 4px;
+  inset-inline-start: 50%;
+  width: 46px;
+  margin-inline-start: -23px;
+  background: rgba(0, 162, 232, .55);
+  pointer-events: none;
+}
+
+.sim-touch__pad {
+  position: absolute;
+  inset-inline-end: 12px;
+  inset-block: 18% 74px;
+  display: grid;
+  grid-template-columns: repeat(2, 74px);
+  gap: 8px;
+  align-content: center;
+}
+.sim-touch__btn {
+  min-height: 46px;
+  border: 1px solid rgba(233, 229, 220, .55);
+  background: rgba(11, 13, 16, .42);
+  color: #f3f0e9;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .06em;
+}
+.sim-touch__btn[data-on] { background: rgba(217, 68, 54, .68); }
+
+.sim-touch__bar {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 12px;
+  display: flex;
+  gap: 6px;
+}
+.sim-touch__barbtn {
+  min-height: 38px;
+  padding-inline: 10px;
+  border: 1px solid rgba(233, 229, 220, .45);
+  background: rgba(11, 13, 16, .52);
+  color: #e9e5dc;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+/* In phone mode the desktop panel and the PFD's lower half would fight the
+   thumbs for the same pixels. */
+.sim[data-phone="true"] .sim-panel { display: none; }
+.sim[data-phone="true"] .sim-pfd { max-height: 150px; }
+
+/* The rudder strip and the PFD were both anchored to the bottom edge and
+   overlapped. In phone mode the instrument panel is lifted clear to leave the
+   bottom band to the thumb that steers. */
+.sim[data-phone="true"] .sim-hud {
+  inset-block-end: 68px;
+}
+.sim[data-phone="true"] .sim-pfd { max-height: 132px; }

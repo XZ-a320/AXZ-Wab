@@ -768,7 +768,27 @@
       "bank": "Banked too far at touchdown, wingtip first",
       "gear": "Landed with the gear up"
     },
-    "soundLabel": "Sound"
+    "soundLabel": "Sound",
+    "tipLabel": "Next time:",
+    "restart": "Try again",
+    "crashTips": {
+      "hard": "Start easing back at about 20 feet and add the back pressure gradually rather than all at once. Aim to have the sink rate under 200 ft/min before the wheels arrive; the dispatch desk only calls it the Runway Masseur under 60.",
+      "bank": "In a crosswind, use the sideslip: rudder toward the centreline, aileron into the wind, and arrive with the nose down the runway and the wings close to level. The wind row in the flight data tells you which side it is coming from.",
+      "gear": "Press G on final to lower the gear. Both the flight data and the PFD show GEAR in green when it is down and locked; if it is not green, it is not down."
+    },
+    "gyroscope": "Gyroscope",
+    "gyroOn": "Gyroscope on. Hold the phone how you like, then press Recentre.",
+    "gyroUnavailable": "No gyroscope available on this device. The on-screen rudder and throttle still fly it.",
+    "phoneButton": "Phone mode (fullscreen + gyroscope)",
+    "touch": {
+      "recentre": "Recentre",
+      "exit": "Exit",
+      "flapsDown": "Flap+",
+      "flapsUp": "Flap−",
+      "view": "View"
+    },
+    "phoneTitle": "Flying it on a phone",
+    "phoneBody": "Phone mode goes fullscreen, locks to landscape, and flies on the gyroscope: tilt the phone forward and back for pitch, rotate it left and right for roll. Neutral is however you were holding it when you pressed the button, so hold it comfortably, and press Recentre whenever you want to reset that. Throttle is the vertical strip on the left, rudder is the horizontal one along the bottom and springs back to centre, and the buttons on the right are gear, flaps, spoilers, brakes and view. iOS asks once for motion permission; decline it and everything still works except the tilt."
   },
   "aprilfools": {
     "date": "April 1, 2026",

@@ -42,10 +42,18 @@ const OWNED = new Set([
   'KeyB', 'KeyP', 'KeyC', 'KeyN', 'KeyR', 'Comma', 'Period',
   'BracketLeft', 'BracketRight', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
   'ShiftLeft', 'ControlLeft', 'Space',
+  // Escape was listed in BINDINGS and documented in the control table but was
+  // missing here, so the pause key silently did nothing.
+  'Escape',
 ])
 
+// Escape keeps its default behaviour as well as pausing: preventing it would
+// take away the browser's own way out of fullscreen, which on a phone is the
+// only way out.
+const NO_PREVENT = new Set(['Escape'])
+
 export class Input {
-  constructor(target) {
+  constructor(target, scope) {
     this.keys = new Set()
     this.pressed = new Set()          // edge-triggered, cleared every frame
     this.axes = { pitch: 0, roll: 0, yaw: 0 }
@@ -62,7 +70,12 @@ export class Input {
       const t = e.target
       if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return
       if (!OWNED.has(e.code)) return
-      e.preventDefault()
+      /* Only when the simulator has focus. The listener is on window, so
+         without this check WASD moved the elevator while somebody was reading
+         the control table further down the page, and Space scrolled nothing
+         because the sim had eaten it. */
+      if (!this.hasFocus()) return
+      if (!NO_PREVENT.has(e.code)) e.preventDefault()
       if (!this.keys.has(e.code)) this.pressed.add(e.code)
       this.keys.add(e.code)
     }
@@ -74,6 +87,7 @@ export class Input {
     this.onBlur = () => this.keys.clear()
 
     this.target = target || window
+    this.scope = scope || null
     window.addEventListener('keydown', this.onKeyDown, { passive: false })
     window.addEventListener('keyup', this.onKeyUp)
     window.addEventListener('blur', this.onBlur)
@@ -91,6 +105,14 @@ export class Input {
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('keyup', this.onKeyUp)
     window.removeEventListener('blur', this.onBlur)
+  }
+
+  /** True when the canvas, or anything inside the sim stage, holds focus. */
+  hasFocus() {
+    const a = document.activeElement
+    if (!a) return false
+    if (a === this.target) return true
+    return !!(this.scope && this.scope.contains(a))
   }
 
   down(code) { return this.keys.has(code) }
@@ -189,4 +211,124 @@ export class Input {
   }
 
   endFrame() { this.pressed.clear() }
+}
+
+/* ==========================================================================
+   Gyroscope.
+
+   A phone has no keyboard and a thumb on glass is a poor yoke, but it does
+   have the one thing a keyboard never had: two real analogue axes, in the
+   attitude of the device itself. Tilting a phone to fly an aeroplane is the
+   most natural mapping available on that hardware.
+
+   Three things make it usable rather than a novelty:
+
+   CALIBRATION. There is no correct way to hold a phone, so "neutral" is
+   wherever the device was when the pilot switched this on, and can be re-taken
+   at any time. Without it you have to hold the phone dead flat, which nobody
+   does and which is uncomfortable within a minute.
+
+   SCREEN ROTATION. beta and gamma are reported in the DEVICE frame. In
+   landscape, the device's long axis is horizontal, so beta and gamma have
+   swapped roles and one of them has flipped sign. Ignoring that gives controls
+   that are rotated ninety degrees from the picture, which reads as the sim
+   being broken.
+
+   SMOOTHING. Raw orientation is noisy at the tenth-of-a-degree level and hands
+   shake. The signal is low-passed before it becomes a control input.
+   ========================================================================== */
+export class Gyro {
+  constructor() {
+    this.available = typeof window !== 'undefined' && 'DeviceOrientationEvent' in window
+    this.active = false
+    this.needsPermission = !!(this.available &&
+      typeof DeviceOrientationEvent.requestPermission === 'function')
+    this.raw = { pitch: 0, roll: 0 }
+    this.neutral = { pitch: 0, roll: 0 }
+    this.smooth = { pitch: 0, roll: 0 }
+    this.got = false
+    // Degrees of tilt for full deflection. Twenty-two is about as far as a
+    // wrist goes comfortably without losing sight of the screen.
+    this.range = { pitch: 22, roll: 26 }
+    this.onOrient = e => this.read(e)
+  }
+
+  /** Must be called from a user gesture on iOS, which gates the sensor. */
+  async enable() {
+    if (!this.available) return false
+    if (this.needsPermission) {
+      try {
+        const res = await DeviceOrientationEvent.requestPermission()
+        if (res !== 'granted') return false
+      } catch (e) { return false }
+    }
+    window.addEventListener('deviceorientation', this.onOrient)
+    this.active = true
+    this.got = false
+    return true
+  }
+
+  disable() {
+    window.removeEventListener('deviceorientation', this.onOrient)
+    this.active = false
+  }
+
+  screenAngle() {
+    const so = window.screen && window.screen.orientation
+    if (so && typeof so.angle === 'number') return so.angle
+    return typeof window.orientation === 'number' ? window.orientation : 0
+  }
+
+  read(e) {
+    if (e.beta == null || e.gamma == null) return
+    const b = e.beta, g = e.gamma
+    // Rotate the device-frame tilt into the frame the picture is drawn in.
+    let pitch, roll
+    switch (((this.screenAngle() % 360) + 360) % 360) {
+      case 90: pitch = -g; roll = b; break
+      case 180: pitch = -b; roll = -g; break
+      case 270: pitch = g; roll = -b; break
+      default: pitch = b; roll = g
+    }
+    this.raw.pitch = pitch
+    this.raw.roll = roll
+    if (!this.got) { this.calibrate(); this.got = true }
+  }
+
+  /** Take the current attitude as neutral. */
+  calibrate() {
+    this.neutral.pitch = this.raw.pitch
+    this.neutral.roll = this.raw.roll
+    this.smooth.pitch = 0
+    this.smooth.roll = 0
+  }
+
+  /**
+   * Control axes in the same -1..1 convention the gamepad uses, so the sim
+   * never has to ask where an input came from.
+   */
+  sample(dt) {
+    if (!this.active || !this.got) return null
+    const dp = this.raw.pitch - this.neutral.pitch
+    const dr = this.raw.roll - this.neutral.roll
+    // Low-pass, frame-rate independent.
+    const k = 1 - Math.exp(-11 * dt)
+    this.smooth.pitch += (dp - this.smooth.pitch) * k
+    this.smooth.roll += (dr - this.smooth.roll) * k
+
+    const dead = 1.4                    // degrees of slop around neutral
+    const shape = (v, range) => {
+      const m = Math.abs(v)
+      if (m < dead) return 0
+      const n = clamp((m - dead) / (range - dead), 0, 1)
+      // Squared, like the stick: fine near neutral, quick at the edges.
+      return Math.sign(v) * n * n
+    }
+    return {
+      // Tilting the top of the phone AWAY from you pushes the nose down, which
+      // is the same direction a stick goes.
+      pitch: shape(this.smooth.pitch, this.range.pitch),
+      roll: shape(this.smooth.roll, this.range.roll),
+    }
+  }
 }

@@ -84,6 +84,19 @@ export class Sound {
      an octave or so up, tracking N1), the core rumble (a low tone), and the
      jet itself (broadband noise through a lowpass that opens with thrust). */
   buildEngine() {
+    /* Rebuilt. The first version led with a sawtooth at 78-246 Hz, which is
+       a bass buzz: it read as a synthesiser drone rather than an engine,
+       because a turbofan's dominant tone is NOT down there. What a jet
+       actually is, in order of energy:
+
+         - broadband exhaust noise, with the spectrum opening upward as thrust
+           comes up. This is most of the sound and it is noise, not a tone.
+         - a high blade-passing whine, up around one to three kilohertz, which
+           is the part your ear identifies as "jet".
+         - a low body rumble under both.
+
+       So: no sawtooth anywhere, noise carries the weight, and the only tonal
+       elements are the whine and its second harmonic, kept quiet. */
     const ctx = this.ctx
     this.eng = {}
 
@@ -91,43 +104,54 @@ export class Sound {
     g.connect(this.master)
     this.eng.out = g
 
-    const fan = ctx.createOscillator()
-    fan.type = 'sawtooth'
-    fan.frequency.value = 90
-    const fanF = ctx.createBiquadFilter()
-    fanF.type = 'bandpass'; fanF.frequency.value = 900; fanF.Q.value = 3.2
-    const fanG = ctx.createGain(); fanG.gain.value = 0.16
-    fan.connect(fanF); fanF.connect(fanG); fanG.connect(g)
-    fan.start()
-    this.eng.fan = fan; this.eng.fanF = fanF; this.eng.fanG = fanG
-
-    // A second, slightly detuned fan. Two engines are never exactly in phase,
-    // and the beat between them is most of what makes it sound like an
-    // aeroplane rather than a synthesiser.
-    const fan2 = ctx.createOscillator()
-    fan2.type = 'sawtooth'
-    fan2.frequency.value = 91.7
-    const fan2G = ctx.createGain(); fan2G.gain.value = 0.10
-    fan2.connect(fanF); fan2.connect(fan2G); fan2G.connect(g)
-    fan2.start()
-    this.eng.fan2 = fan2
-
-    const core = ctx.createOscillator()
-    core.type = 'triangle'
-    core.frequency.value = 46
-    const coreG = ctx.createGain(); coreG.gain.value = 0.30
-    core.connect(coreG); coreG.connect(g)
-    core.start()
-    this.eng.core = core; this.eng.coreG = coreG
-
+    // --- Broadband exhaust. Two filters: a lowpass that opens with thrust,
+    // and a highpass that keeps the bottom end from turning to mud.
     const jet = ctx.createBufferSource()
     jet.buffer = this.noise; jet.loop = true
-    const jetF = ctx.createBiquadFilter()
-    jetF.type = 'lowpass'; jetF.frequency.value = 500; jetF.Q.value = 0.7
+    const jetHP = ctx.createBiquadFilter()
+    jetHP.type = 'highpass'; jetHP.frequency.value = 160
+    const jetLP = ctx.createBiquadFilter()
+    jetLP.type = 'lowpass'; jetLP.frequency.value = 400; jetLP.Q.value = 0.6
     const jetG = ctx.createGain(); jetG.gain.value = 0.5
-    jet.connect(jetF); jetF.connect(jetG); jetG.connect(g)
+    jet.connect(jetHP); jetHP.connect(jetLP); jetLP.connect(jetG); jetG.connect(g)
     jet.start()
-    this.eng.jetF = jetF; this.eng.jetG = jetG
+    this.eng.jetLP = jetLP; this.eng.jetG = jetG
+
+    // --- Body rumble: the same noise, taken low.
+    const rum = ctx.createBufferSource()
+    rum.buffer = this.noise; rum.loop = true
+    const rumLP = ctx.createBiquadFilter()
+    rumLP.type = 'lowpass'; rumLP.frequency.value = 90; rumLP.Q.value = 1.4
+    const rumG = ctx.createGain(); rumG.gain.value = 0.9
+    rum.connect(rumLP); rumLP.connect(rumG); rumG.connect(g)
+    rum.start()
+    this.eng.rumG = rumG
+
+    // --- Blade-passing whine. A sine, not a sawtooth: a saw at this frequency
+    // brings a stack of harmonics that turn into a reedy buzz. The second
+    // harmonic is added separately and much quieter, which is the amount of
+    // edge a fan actually has.
+    const whine = ctx.createOscillator()
+    whine.type = 'sine'; whine.frequency.value = 700
+    const whineG = ctx.createGain(); whineG.gain.value = 0
+    whine.connect(whineG); whineG.connect(g)
+    whine.start()
+    const whine2 = ctx.createOscillator()
+    whine2.type = 'sine'; whine2.frequency.value = 1400
+    const whine2G = ctx.createGain(); whine2G.gain.value = 0
+    whine2.connect(whine2G); whine2G.connect(g)
+    whine2.start()
+    this.eng.whine = whine; this.eng.whineG = whineG
+    this.eng.whine2 = whine2; this.eng.whine2G = whine2G
+
+    /* --- Breathing. A slow, shallow wobble on the exhaust level. Steady noise
+       at a fixed gain sounds synthetic within about two seconds; real engine
+       noise never sits perfectly still. */
+    const lfo = ctx.createOscillator()
+    lfo.type = 'sine'; lfo.frequency.value = 0.27
+    const lfoG = ctx.createGain(); lfoG.gain.value = 0.055
+    lfo.connect(lfoG); lfoG.connect(jetG.gain)
+    lfo.start()
   }
 
   /** Airflow over the hull, plus the rumble of wheels on concrete. */
@@ -297,15 +321,19 @@ export class Sound {
     // the thrust does.
     const n1 = clamp(ac.thrustLag, 0, 1)
     const inside = cameraInside ? 1 : 0
-    const fanHz = 78 + n1 * 168
-    this.eng.fan.frequency.setTargetAtTime(fanHz, t, tc)
-    this.eng.fan2.frequency.setTargetAtTime(fanHz * 1.019, t, tc)
-    this.eng.core.frequency.setTargetAtTime(38 + n1 * 54, t, tc)
-    this.eng.fanF.frequency.setTargetAtTime(620 + n1 * 1500, t, tc)
-    this.eng.jetF.frequency.setTargetAtTime(240 + n1 * 2100, t, tc)
-    this.eng.jetG.gain.setTargetAtTime(0.18 + n1 * 0.55, t, tc)
-    // Quieter and duller from the flight deck than from outside.
-    const engVol = (0.10 + n1 * 0.5) * (inside ? 0.55 : 1)
+    // Exhaust opens upward with thrust; that sweep IS the sound of spooling.
+    this.eng.jetLP.frequency.setTargetAtTime(320 + n1 * 3800, t, tc)
+    this.eng.jetG.gain.setTargetAtTime(0.22 + n1 * 0.72, t, tc)
+    this.eng.rumG.gain.setTargetAtTime(0.35 + n1 * 0.85, t, tc)
+    // Blade passing. Rises about an octave and a half across the range, and is
+    // deliberately quiet: it identifies the sound rather than carrying it.
+    const bpf = 620 + n1 * 1750
+    this.eng.whine.frequency.setTargetAtTime(bpf, t, tc)
+    this.eng.whine2.frequency.setTargetAtTime(bpf * 2, t, tc)
+    // Muffled from inside the flight deck, which is where the whine mostly goes.
+    this.eng.whineG.gain.setTargetAtTime(n1 * 0.075 * (inside ? 0.35 : 1), t, tc)
+    this.eng.whine2G.gain.setTargetAtTime(n1 * n1 * 0.028 * (inside ? 0.25 : 1), t, tc)
+    const engVol = (0.12 + n1 * 0.55) * (inside ? 0.6 : 1)
     this.eng.out.gain.setTargetAtTime(ac.crashed ? 0 : engVol, t, 0.15)
 
     // Airflow rises with indicated airspeed and with anything hanging out in it.
