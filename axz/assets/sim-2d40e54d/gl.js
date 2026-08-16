@@ -19,31 +19,112 @@ attribute vec3 aPos;
 attribute vec3 aNormal;
 attribute vec3 aColor;
 uniform mat4 uProj, uView, uModel;
-uniform vec3 uLightDir;
-uniform float uAmbient;
 varying vec3 vColor;
+varying vec3 vNormal;
+varying vec3 vWorld;
 varying float vFogDepth;
 void main() {
   vec4 world = uModel * vec4(aPos, 1.0);
   vec4 eye = uView * world;
   gl_Position = uProj * eye;
   vFogDepth = -eye.z;
-  // Normals: the model matrix carries rotation and a UNIFORM scale only, so
-  // normalising the rotated normal is exact — no inverse-transpose needed.
-  vec3 n = normalize((uModel * vec4(aNormal, 0.0)).xyz);
-  float d = max(dot(n, uLightDir), 0.0);
-  vColor = aColor * (uAmbient + (1.0 - uAmbient) * d);
+  vWorld = world.xyz;
+  // The model matrix carries rotation and a UNIFORM scale only, so normalising
+  // the rotated normal is exact; no inverse-transpose needed.
+  vNormal = normalize((uModel * vec4(aNormal, 0.0)).xyz);
+  vColor = aColor;
 }`
 
+/* Lighting moved into the fragment stage so it can take a shadow lookup and a
+   specular term per pixel. Doing it per vertex, as the first version did, put
+   the highlight at the corners of the facets and made the shadow edge follow
+   the triangulation. */
 const FRAG = `
-precision mediump float;
+precision highp float;
 varying vec3 vColor;
+varying vec3 vNormal;
+varying vec3 vWorld;
 varying float vFogDepth;
+uniform vec3 uLightDir;
+uniform vec3 uSunColor;
+uniform vec3 uSkyColor;
+uniform float uAmbient;
 uniform vec3 uFogColor;
 uniform float uFogNear, uFogFar;
+uniform vec3 uCamPos;
+uniform float uSpecular, uShininess;
+uniform mat4 uLightVP;
+uniform sampler2D uShadow;
+uniform float uShadowOn, uShadowTexel;
+
+float shadowFactor() {
+  if (uShadowOn < 0.5) return 1.0;
+  vec4 lp = uLightVP * vec4(vWorld, 1.0);
+  vec3 p = lp.xyz / lp.w * 0.5 + 0.5;
+  // Outside the cascade, or behind the light, is lit. A cascade that shadowed
+  // everything outside itself would black out the whole distance.
+  if (p.x < 0.005 || p.x > 0.995 || p.y < 0.005 || p.y > 0.995 || p.z > 1.0) return 1.0;
+  // Slope-scaled bias: a surface edge-on to the light needs far more than one
+  // facing it, and a single constant bias either acnes or peters.
+  float ndl = max(dot(normalize(vNormal), uLightDir), 0.0);
+  float bias = clamp(0.0016 * tan(acos(clamp(ndl, 0.0, 1.0))), 0.0004, 0.006);
+  float lit = 0.0;
+  for (int y = -1; y <= 1; y++) {
+    for (int x = -1; x <= 1; x++) {
+      vec2 o = vec2(float(x), float(y)) * uShadowTexel;
+      float d = texture2D(uShadow, p.xy + o).r;
+      lit += (p.z - bias > d) ? 0.0 : 1.0;
+    }
+  }
+  return lit / 9.0;
+}
+
 void main() {
-  float f = clamp((vFogDepth - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
-  gl_FragColor = vec4(mix(vColor, uFogColor, f), 1.0);
+  vec3 n = normalize(vNormal);
+  vec3 v = normalize(uCamPos - vWorld);
+  vec3 base = vColor;
+
+  /* Water. Identified geometrically rather than by a material flag: the sea is
+     the only thing in this world that is flat, level and exactly at zero, and
+     land starts twenty metres up. Cheaper than an extra vertex attribute and
+     it cannot fall out of sync with the terrain builder. */
+  float water = (abs(vWorld.y) < 0.25 && n.y > 0.98) ? 1.0 : 0.0;
+  float spec = uSpecular;
+  float shine = uShininess;
+  if (water > 0.5) {
+    // Ripple the normal so the glint breaks up instead of being a mirror disc.
+    float w = sin(vWorld.x * 0.021 + vWorld.z * 0.013) * 0.5
+            + sin(vWorld.x * 0.007 - vWorld.z * 0.031) * 0.5;
+    n = normalize(n + vec3(w * 0.035, 0.0, w * 0.028));
+    // Fresnel: water seen edge-on reflects the sky, water seen from above is
+    // dark. This one term is most of what makes it read as a liquid.
+    float fres = pow(1.0 - clamp(dot(n, v), 0.0, 1.0), 4.0);
+    base = mix(base, uSkyColor, clamp(fres, 0.0, 0.82));
+    spec = 1.5;
+    shine = 190.0;
+  }
+
+  float ndl = max(dot(n, uLightDir), 0.0);
+  float sh = shadowFactor();
+  // A hemisphere ambient rather than a flat constant: surfaces facing up catch
+  // sky light, surfaces facing down do not, which keeps the shaded sides from
+  // going uniformly grey.
+  vec3 amb = mix(uFogColor * 0.55, uSkyColor, clamp(n.y * 0.5 + 0.5, 0.0, 1.0)) * uAmbient;
+  /* Diffuse is NOT scaled down by the ambient. Splitting the budget between
+     them capped a fully sunlit surface at 1.0 before tone mapping, and after
+     the ACES shoulder that landed as a mid grey: the aeroplane came out the
+     colour of the runway. Let the sum run above 1 and let the tone curve do
+     what it is for. */
+  vec3 col = base * (amb + uSunColor * ndl * sh);
+
+  if (spec > 0.001) {
+    vec3 h = normalize(uLightDir + v);
+    float s = pow(max(dot(n, h), 0.0), shine) * spec * sh;
+    col += uSunColor * s;
+  }
+
+  float fog = clamp((vFogDepth - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
+  gl_FragColor = vec4(mix(col, uFogColor, fog), 1.0);
 }`
 
 // Lines carry their own colour and skip lighting entirely: a hairline that
@@ -59,6 +140,21 @@ void main() {
   gl_Position = uProj * eye;
   vFogDepth = -eye.z;
   vColor = aColor;
+}`
+
+/* Lines need their own fragment stage. They shared the surface one until the
+   surface shader grew normals, a world position and a shadow lookup, none of
+   which a line emits — and a program whose fragment varyings do not all exist
+   in its vertex shader fails to LINK, which took the whole simulator down. */
+const LINE_FRAG = `
+precision mediump float;
+varying vec3 vColor;
+varying float vFogDepth;
+uniform vec3 uFogColor;
+uniform float uFogNear, uFogFar;
+void main() {
+  float f = clamp((vFogDepth - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
+  gl_FragColor = vec4(mix(vColor, uFogColor, f), 1.0);
 }`
 
 /* --- Billboards -----------------------------------------------------------
@@ -214,7 +310,7 @@ export class Renderer {
     this.canvas = canvas
 
     this.solid = program(gl, VERT, FRAG)
-    this.line = program(gl, LINE_VERT, FRAG)
+    this.line = program(gl, LINE_VERT, LINE_FRAG)
     this.loc = {}
     for (const [name, p] of [['solid', this.solid], ['line', this.line]]) {
       this.loc[name] = {
@@ -229,6 +325,15 @@ export class Renderer {
         uFogColor: gl.getUniformLocation(p, 'uFogColor'),
         uFogNear: gl.getUniformLocation(p, 'uFogNear'),
         uFogFar: gl.getUniformLocation(p, 'uFogFar'),
+        uSunColor: gl.getUniformLocation(p, 'uSunColor'),
+        uSkyColor: gl.getUniformLocation(p, 'uSkyColor'),
+        uCamPos: gl.getUniformLocation(p, 'uCamPos'),
+        uSpecular: gl.getUniformLocation(p, 'uSpecular'),
+        uShininess: gl.getUniformLocation(p, 'uShininess'),
+        uLightVP: gl.getUniformLocation(p, 'uLightVP'),
+        uShadow: gl.getUniformLocation(p, 'uShadow'),
+        uShadowOn: gl.getUniformLocation(p, 'uShadowOn'),
+        uShadowTexel: gl.getUniformLocation(p, 'uShadowTexel'),
       }
     }
 
@@ -425,7 +530,37 @@ export class Renderer {
     gl.uniform3f(L.uFogColor, env.fog[0], env.fog[1], env.fog[2])
     gl.uniform1f(L.uFogNear, env.fogNear)
     gl.uniform1f(L.uFogFar, env.fogFar)
+    if (L.uSunColor) {
+      const sc = env.sun || [1.0, 0.97, 0.90]
+      const sk = env.skyTint || env.fog
+      gl.uniform3f(L.uSunColor, sc[0], sc[1], sc[2])
+      gl.uniform3f(L.uSkyColor, sk[0], sk[1], sk[2])
+      gl.uniform3f(L.uCamPos, env.camPos.x, env.camPos.y, env.camPos.z)
+      // Material defaults to matte; setMaterial raises it for the airframe.
+      gl.uniform1f(L.uSpecular, 0.0)
+      gl.uniform1f(L.uShininess, 24)
+      const sm = env.shadow
+      gl.uniform1f(L.uShadowOn, sm && sm.ok ? 1 : 0)
+      if (sm && sm.ok) {
+        gl.uniformMatrix4fv(L.uLightVP, false, sm.lightVP)
+        gl.uniform1f(L.uShadowTexel, 1 / sm.size)
+        // Unit 3: units 0-1 belong to the sprite and composite passes, and a
+        // shadow map that shared one of them would be unbound mid-frame.
+        gl.activeTexture(gl.TEXTURE3)
+        gl.bindTexture(gl.TEXTURE_2D, sm.tex)
+        gl.uniform1i(L.uShadow, 3)
+        gl.activeTexture(gl.TEXTURE0)
+      }
+    }
     this.current = { kind, L }
+  }
+
+  /** Specular for the next draws. Terrain is matte; an airframe is not. */
+  setMaterial(specular, shininess) {
+    const L = this.current && this.current.L
+    if (!L || !L.uSpecular) return
+    this.gl.uniform1f(L.uSpecular, specular)
+    this.gl.uniform1f(L.uShininess, shininess)
   }
 
   draw(mesh, model) {

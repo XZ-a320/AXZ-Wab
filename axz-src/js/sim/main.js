@@ -22,6 +22,7 @@ import { aircraftMesh, gearMesh, liveryFor, decalQuads } from './model.js'
 import { Aircraft, Wind, FLAP_STEPS } from './fdm.js'
 import { Particles, Effects, Clouds, KIND, explode, burn } from './particles.js'
 import { Post } from './post.js'
+import { ShadowMap } from './shadow.js'
 import { Sound } from './sound.js'
 import * as TEX from './tex.js'
 import { Input, Gyro } from './input.js'
@@ -82,6 +83,7 @@ export class Sim {
     this.sParts = { 0: [], 1: [] }
     this.treeCentre = { x: 1e9, z: 1e9 }
     this.post = new Post(this.gl)
+    this.shadows = new ShadowMap(this.gl, 2048)
     this.sound = new Sound()
     this.shake = 0
     this.wreck = { t: 0 }
@@ -628,10 +630,36 @@ export class Sim {
       })
     }
     const env = {
-      light: vnorm({ x: 0.42, y: 0.78, z: 0.32 }),
-      ambient: 0.52,
+      light: this.sun,
+      // Warmer and stronger than the ambient, so the lit faces read as sunlit
+      // rather than merely brighter.
+      sun: [1.06, 1.00, 0.92],
+      skyTint: [0.42 - 0.28 * hi, 0.58 - 0.34 * hi, 0.86 - 0.30 * hi],
+      ambient: 0.34,
+      camPos: this.camPos,
       fog: sky, fogNear, fogFar,
     }
+
+    /* Depth pass. The cascade follows the AEROPLANE, not the camera: in tower
+       view the camera is a mile away while the shadow that matters is still
+       the one under the wing. Only what can plausibly cast into that box is
+       drawn — the near terrain, the airport furniture and the aircraft. The
+       far mesh is 2 km per cell and would contribute nothing but cost. */
+    const acModel = m4model(ac.pos, ac.q, 1)
+    if (this.shadows.ok) {
+      this.shadows.aim(ac.pos, env.light, clamp(120 + ac.radioAlt * 0.55, 140, 900))
+      this.shadows.begin()
+      this.shadows.draw(this.near, this.identity)
+      for (const m of this.runways) this.shadows.draw(m, this.identity)
+      for (const m of this.props) this.shadows.draw(m, this.identity)
+      this.shadows.draw(this.acMesh, acModel)
+      if (ac.gearPos > 0.02) this.shadows.draw(this.gearMesh, acModel)
+      this.shadows.end()
+      // The depth pass rebinds the framebuffer and viewport; put them back.
+      if (usePost) this.post.bindScene()
+      else R.gl.viewport(0, 0, this.canvas.width, this.canvas.height)
+    }
+    env.shadow = this.shadows
 
     R.use('solid', proj, view, env)
     R.draw(this.far, this.identity)
@@ -641,17 +669,19 @@ export class Sim {
 
     // The aeroplane is not drawn in cockpit view — you are sitting in it.
     if (CAMERAS[this.cameraMode] !== 'cockpit') {
-      const model = m4model(ac.pos, ac.q, 1)
-      R.draw(this.acMesh, model)
-      if (ac.gearPos > 0.02) R.draw(this.gearMesh, model)
+      // Painted aluminium: a tight, bright highlight. This is the one object in
+      // the scene that should catch the sun as a glint rather than a sheen.
+      R.setMaterial(0.55, 68)
+      R.draw(this.acMesh, acModel)
+      if (ac.gearPos > 0.02) R.draw(this.gearMesh, acModel)
+      R.setMaterial(0, 24)
     }
 
     // Decals: the wordmark, the fin mark and the cabin windows, each a quad
     // sitting a few centimetres off the skin. Type wants a texture, and one
     // textured quad beats trying to letter an aeroplane out of triangles.
     if (CAMERAS[this.cameraMode] !== 'cockpit' && this.decals) {
-      const model = m4model(ac.pos, ac.q, 1)
-      for (const d of this.decals) R.textured(d.mesh, model, this.tex[d.tex], proj, view, env)
+      for (const d of this.decals) R.textured(d.mesh, acModel, this.tex[d.tex], proj, view, env)
     }
 
     R.use('line', proj, view, env)
@@ -726,7 +756,7 @@ export class Sim {
     if (usePost) {
       this.post.finish(this.canvas.width, this.canvas.height, {
         bloom: ac.crashed ? 1.0 : 0.85,
-        exposure: 1.06,
+        exposure: 1.12,
         vignette: 0.20,
         threshold: 0.80,
       })

@@ -231,6 +231,8 @@ export async function boot(cfg) {
     })
   }
 
+  window.__axzSimHandle = { sim }
+
   sim.start()
   return {
     sim,

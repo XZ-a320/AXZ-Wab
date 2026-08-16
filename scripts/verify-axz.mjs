@@ -520,6 +520,40 @@ console.log('\nflight simulator')
   after === 1 ? ok('the engine builds exactly one audio context, from the start gesture')
               : bad(`${after} audio contexts after start`)
 
+  /* The renderer's optional passes. Both degrade rather than fail, so the
+     assertion is that whichever path runs, the scene actually paints: a
+     framebuffer misconfiguration shows up as a canvas that is one flat colour,
+     which no amount of "no console errors" would catch. */
+  const gfx = await page.evaluate(() => new Promise(res => {
+    const s = window.__axzSimHandle && window.__axzSimHandle.sim
+    if (!s) return res(null)
+    const gl = s.gl, cv = s.canvas
+    const orig = s.render.bind(s)
+    let got = null
+    s.render = () => {
+      orig()
+      if (!got) {
+        const w = cv.width, h = cv.height
+        const seen = new Set()
+        for (let i = 0; i < 9; i++) {
+          for (let j = 0; j < 9; j++) {
+            const b = new Uint8Array(4)
+            gl.readPixels(Math.round(w * (0.1 + i * 0.1)), Math.round(h * (0.1 + j * 0.1)), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, b)
+            seen.add(b[0] + ',' + b[1] + ',' + b[2])
+          }
+        }
+        got = { post: s.post.ok, shadows: s.shadows.ok, distinct: seen.size }
+        s.render = orig
+      }
+    }
+    setTimeout(() => res(got), 900)
+  }))
+  if (gfx) {
+    gfx.distinct >= 8
+      ? ok(`the scene renders real content (${gfx.distinct} distinct colours sampled, post=${gfx.post}, shadows=${gfx.shadows})`)
+      : bad(`the canvas is nearly flat: only ${gfx.distinct} distinct colours across the frame`)
+  }
+
   /* Escape must actually pause. It was listed in the bindings and printed in
      the control table but missing from the set of keys the handler owns, so
      the documented pause key silently did nothing. */

@@ -111,7 +111,7 @@ writeFileSync(join(OUT, 'assets', jsName), jsBundle)
    That matters here more than usual. The parent site serves .js as immutable
    for a year, so a stable path would strand every returning visitor on the old
    build — the same trap that a `?v=` query token fell into once before.       */
-const SIM_FILES = ['math', 'gl', 'tex', 'post', 'sound', 'world', 'model', 'fdm', 'particles', 'input', 'mobile', 'hud', 'main', 'boot']
+const SIM_FILES = ['math', 'gl', 'tex', 'post', 'sound', 'world', 'model', 'fdm', 'particles', 'shadow', 'input', 'mobile', 'hud', 'main', 'boot']
 const simSources = SIM_FILES.map(f => readFileSync(join(SRC, 'js', 'sim', `${f}.js`), 'utf8'))
 const simDir = `sim-${hash(simSources.join('\n'))}`
 mkdirSync(join(OUT, 'assets', simDir), { recursive: true })
