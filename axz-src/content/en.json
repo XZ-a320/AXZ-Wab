@@ -731,7 +731,8 @@
       "pause": "Pause",
       "reset": "Restart",
       "camera": "View",
-      "assist": "Assist"
+      "assist": "Assist",
+      "sound": "Sound"
     },
     "logTitle": "Flight events",
     "logEmpty": "Nothing yet.",
@@ -757,7 +758,17 @@
     "weatherTitle": "Wind",
     "weatherBody": "There is a wind, and it gusts. The wind row gives the direction it blows from and its speed in knots, then H or T for the headwind or tailwind component on the destination runway. The wind slows and backs near the surface, so the crosswind in the flare is not the crosswind on final. The aerodynamics run on the relative airflow rather than the ground track: a headwind lowers your ground speed without touching your airspeed, and a crosswind will drift you off the centreline if you do not crab into it.",
     "effectsBody": "Tyre smoke is released on the touchdown frame and scaled by the vertical speed, so how much smoke you see is how hard the arrival was about to be graded. Wingtip vapour appears only when the wing is near its lift limit, which is high load factor or high angle of attack, the same condition under which a real one condenses its vortex cores. Engine exhaust needs both thrust and dense air to show; contrails need 7,200 m. Clouds, trees and the shadow are hashed from coordinates, so the same place always has the same cloud.",
-    "effectsTitle": "Everything you can see has a reason"
+    "effectsTitle": "Everything you can see has a reason",
+    "soundTitle": "Sound",
+    "soundBody": "The sound is synthesised on the spot; no audio file is downloaded. The engine is two slightly detuned sawtooths over filtered noise, with pitch and level tracking N1, so it spools when the thrust spools, which a looped sample cannot do. Airflow follows indicated airspeed and gets louder with the gear, flaps or spoilers out. Wheel rumble follows ground speed. The stall warning is intermittent, the overspeed warning clacks, and the thud at touchdown is scaled by the vertical speed. Audio is only created after you press Start, so the page itself is silent.",
+    "crashTitle": "What happens if you crash",
+    "crashBody": "There are three ways to break it, all read off the physics: touching down above 1,200 ft/min, which is about where a 737's gear design limit sits; touching down banked more than 32 degrees; or landing with the gear up. After that the wing keeps a tenth of its lift, the engines stop, the controls do nothing, and the airframe tumbles down and burns where it lands. Press R to start again.",
+    "crashReasons": {
+      "hard": "Touched down too hard for the gear",
+      "bank": "Banked too far at touchdown, wingtip first",
+      "gear": "Landed with the gear up"
+    },
+    "soundLabel": "Sound"
   },
   "aprilfools": {
     "date": "April 1, 2026",

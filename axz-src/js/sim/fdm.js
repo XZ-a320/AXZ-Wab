@@ -267,7 +267,11 @@ export class Aircraft {
     const hb = clamp(this.agl / cfg.b, 0, 1.2)
     const ge = 1 - 0.38 * Math.exp(-3.2 * hb)
 
-    const CL = this.liftCoef(this.alpha, flap.dCL, stallAlpha) + this.spoilers * -0.55
+    let CL = this.liftCoef(this.alpha, flap.dCL, stallAlpha) + this.spoilers * -0.55
+    /* A wreck is not an aeroplane. Once the airframe is broken it keeps only
+       the lift of a tumbling object, which is nearly none, so it falls instead
+       of gliding serenely on to its destination. */
+    if (this.crashed) CL *= 0.12
     const CD0 = 0.021 + flap.dCD + this.gearPos * 0.019 + this.spoilers * 0.055
     const kInd = 1 / (Math.PI * 0.80 * cfg.AR)
     const CD = CD0 + kInd * CL * CL * ge
@@ -293,7 +297,7 @@ export class Aircraft {
     }
 
     // Thrust along the nose, falling off with density like a real engine.
-    const thrust = this.thrustLag * cfg.maxThrust * Math.min(1, rho / 1.225 + 0.12)
+    const thrust = this.crashed ? 0 : this.thrustLag * cfg.maxThrust * Math.min(1, rho / 1.225 + 0.12)
     Fb = vadd(Fb, { x: 0, y: 0, z: -thrust })
 
     // Keep the non-gravitational force separately: a G meter reads SPECIFIC
@@ -303,6 +307,10 @@ export class Aircraft {
     let F = vadd(Faero, { x: 0, y: -cfg.mass * G, z: 0 })
 
     let M = this.aeroMoments(qbar, V, flap)
+    // Tumble: no control, and the damping that a pilot's hands supplied is gone.
+    if (this.crashed) {
+      M = { x: M.x * 0.15 + qbar * 12, y: M.y * 0.15 - qbar * 7, z: M.z * 0.15 + qbar * 9 }
+    }
 
     // Ground reactions come last so they can see the aerodynamic state.
     const gr = this.groundForces(dt)

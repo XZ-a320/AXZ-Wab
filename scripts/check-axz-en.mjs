@@ -128,6 +128,25 @@ const leaked = values({ ...en, guestbook: { ...en.guestbook, entries: [] } })
   .join('\n').match(/[，。、；？！（）《》【】]/g)
 if (leaked) fails.push(`CJK punctuation in English prose: ${[...new Set(leaked)].join(' ')}`)
 
+/* 6b. Stray HANZI in English prose. The punctuation check above missed a
+   Chinese verb typed into an English sentence, because a hanzi is not
+   punctuation. Ideographs are checked separately.
+
+   Three things are Chinese in the English catalogue ON PURPOSE and are
+   exempt: the guestbook entries, which are somebody else's words; the language
+   switcher, which has to read 中文; and the April Fools terminal commands,
+   which are the original page's own text and are preserved character for
+   character, fake shell script and all. */
+const hanziScope = {
+  ...en,
+  guestbook: { ...en.guestbook, entries: [] },
+  langName: '',
+  nav: { ...en.nav, langSwitch: '' },
+  aprilfools: { ...en.aprilfools, commands: [] },
+}
+const hanzi = values(hanziScope).join('\n').match(/[\u4e00-\u9fff]/g)
+if (hanzi) fails.push(`Chinese characters in English prose: ${[...new Set(hanzi)].join('')}`)
+
 if (fails.length) {
   console.error(`✗ ${fails.length} English catalogue failures:\n`)
   for (const f of fails) console.error('  ' + f)

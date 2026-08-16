@@ -60,7 +60,7 @@ export async function boot(cfg) {
     } else if (ev.type === 'phase') {
       pushLog(L.phases[ev.phase] || ev.phase, 'info')
     } else if (ev.type === 'crash') {
-      pushLog(L.crashed, 'warn')
+      pushLog((L.crashReasons && L.crashReasons[ev.reason]) || L.crashed, 'warn')
     } else if (ev.type === 'assist') {
       pushLog(L.assistLabel + ' ' + (ev.on ? L.on : L.off), 'info')
     } else if (ev.type === 'timescale') {
@@ -134,6 +134,13 @@ export async function boot(cfg) {
       else if (a === 'reset') sim.setScenario(sim.scenario)
       else if (a === 'camera') sim.cameraMode = (sim.cameraMode + 1) % 4
       else if (a === 'assist') { sim.ac.assist = !sim.ac.assist; handleEvent({ type: 'assist', on: sim.ac.assist }) }
+      else if (a === 'sound') {
+        const on = !sim.sound.enabled
+        sim.sound.init()
+        sim.sound.setEnabled(on)
+        btn.setAttribute('aria-pressed', String(on))
+        pushLog(L.soundLabel + ' ' + (on ? L.on : L.off), 'info')
+      }
       // Give the keys back to the simulator after a mouse press, or the next
       // key stroke goes to the button that still has focus.
       sim.canvas.focus()
@@ -148,8 +155,16 @@ export async function boot(cfg) {
 
   // Stop flying when the tab is hidden: an aeroplane that kept descending in a
   // background tab would be on the ground by the time anyone looked again.
-  const onVis = () => { if (document.hidden) sim.setPaused(true) }
+  const onVis = () => { if (document.hidden) { sim.setPaused(true); sim.sound.suspend() } else { sim.sound.resume() } }
   document.addEventListener('visibilitychange', onVis)
+
+  /* Audio is created here and nowhere else. boot() only ever runs from the
+     press on Start, which is the user gesture a browser requires before an
+     AudioContext will run at all. It begins muted; the Sound button unmutes. */
+  sim.sound.init()
+  sim.sound.setEnabled(false)
+  const sndBtn = stage.querySelector('[data-sim-action="sound"]')
+  if (sndBtn) sndBtn.setAttribute('aria-pressed', 'false')
 
   sim.start()
   return {

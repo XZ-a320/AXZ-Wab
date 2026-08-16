@@ -11,7 +11,7 @@ import {
   clamp, approach, DEG, RAD, M_TO_FT, MS_TO_KT, MS_TO_FPM,
   qrot, qmul, qnorm, qFromAxisAngle, qToEuler, qFromEuler,
   vadd, vsub, vscale, vlen, vnorm, v3,
-  m4perspective, m4view, m4model, m4identity,
+  m4perspective, m4view, m4model, m4identity, m4mul, m4invert,
 } from './math.js'
 import { Renderer, Mesh } from './gl.js'
 import {
@@ -20,7 +20,9 @@ import {
 } from './world.js'
 import { aircraftMesh, gearMesh, liveryFor, decalQuads } from './model.js'
 import { Aircraft, Wind, FLAP_STEPS } from './fdm.js'
-import { Particles, Effects, Clouds, KIND } from './particles.js'
+import { Particles, Effects, Clouds, KIND, explode, burn } from './particles.js'
+import { Post } from './post.js'
+import { Sound } from './sound.js'
 import * as TEX from './tex.js'
 import { Input } from './input.js'
 import { HUD, navInfo } from './hud.js'
@@ -78,6 +80,11 @@ export class Sim {
     this.sDot = []
     this.sParts = { 0: [], 1: [] }
     this.treeCentre = { x: 1e9, z: 1e9 }
+    this.post = new Post(this.gl)
+    this.sound = new Sound()
+    this.shake = 0
+    this.wreck = { t: 0 }
+    this.sun = vnorm({ x: 0.38, y: 0.62, z: 0.34 })
     this.buildTextures()
 
     this.buildStaticWorld()
@@ -219,6 +226,11 @@ export class Sim {
       this.input.throttle = ac.throttle
       this.mission = { active: true, phase: 'cruise', best: null }
     }
+    ac.crashed = false
+    ac.crashLatch = false
+    ac.lastTouchdownFpm = 0
+    this.shake = 0
+    this.wreck.t = 0
     // NB: no `ac.trim = 0` here. The airborne scenarios are trimmed by
     // Aircraft.place, and zeroing it afterwards handed the aeroplane a
     // nose-down pitching moment it then flew all the way into the ground.
@@ -272,11 +284,17 @@ export class Sim {
 
     if (!this.paused) {
       const ac = this.ac
-      ac.ctl.elevator = -this.input.axes.pitch   // pulling back is nose up
-      ac.ctl.aileron = this.input.axes.roll
-      ac.ctl.rudder = this.input.axes.yaw
-      ac.throttle = this.input.throttle
-      ac.brakes = this.input.brakes
+      if (ac.crashed) {
+        ac.ctl.elevator = 0; ac.ctl.aileron = 0; ac.ctl.rudder = 0
+        ac.throttle = 0
+        ac.brakes = 1
+      } else {
+        ac.ctl.elevator = -this.input.axes.pitch   // pulling back is nose up
+        ac.ctl.aileron = this.input.axes.roll
+        ac.ctl.rudder = this.input.axes.yaw
+        ac.throttle = this.input.throttle
+        ac.brakes = this.input.brakes
+      }
 
       // Time compression drops back to real time near the ground. Nobody wants
       // to flare at eight times speed, and it is also where the integrator can
@@ -314,7 +332,20 @@ export class Sim {
     }
 
     this.updateCamera(dtReal)
+    if (this.shake > 0.001) {
+      // Positional only. Shaking the ORIENTATION as well made the horizon
+      // swing and read as the aeroplane manoeuvring rather than as an impact.
+      const k = this.shake * 2.2
+      this.camPos = vadd(this.camPos, {
+        x: (Math.random() - 0.5) * k,
+        y: (Math.random() - 0.5) * k,
+        z: (Math.random() - 0.5) * k,
+      })
+      this.shake = Math.max(0, this.shake - dtReal * 1.6)
+    }
     this.render()
+
+    this.sound.update(this.ac, dtReal, CAMERAS[this.cameraMode] === 'cockpit')
 
     const euler = qToEuler(this.ac.q)
     this.hud.update(this.ac, { euler }, dtReal)
@@ -330,9 +361,9 @@ export class Sim {
 
   handleActions() {
     const I = this.input, ac = this.ac
-    if (I.hit('KeyG')) ac.toggleGear()
-    if (I.hit('KeyF')) ac.flapDown()
-    if (I.hit('KeyV')) ac.flapUp()
+    if (I.hit('KeyG')) { ac.toggleGear(); this.sound.servo(!ac.gearDown) }
+    if (I.hit('KeyF')) { ac.flapDown(); this.sound.servo(false) }
+    if (I.hit('KeyV')) { ac.flapUp(); this.sound.servo(true) }
     if (I.hit('KeyX')) ac.spoilers = ac.spoilers > 0.5 ? 0 : 1
     if (I.hit('KeyP')) ac.parkingBrake = !ac.parkingBrake
     if (I.hit('KeyN')) { ac.assist = !ac.assist; this.onEvent({ type: 'assist', on: ac.assist }) }
@@ -365,6 +396,8 @@ export class Sim {
     if (ac.justLanded) {
       const info = ac.justLanded
       ac.justLanded = null
+      ac.lastTouchdownFpm = info.fpm
+      this.sound.touchdown(info.fpm)
       const nav = navInfo(ac, this.dest)
       const onDest = nav.distM < this.dest.rwy.len * 0.75
       const band = this.bandFor(info.fpm)
@@ -392,15 +425,49 @@ export class Sim {
       this.onEvent({ type: 'phase', phase: 'final' })
     }
 
-    // Structural failure: a genuinely violent arrival is not a landing. Latched
-    // until the aeroplane is flying again, or it fires on every frame it stays
-    // tipped over and buries the log under one event.
-    if (ac.onGround && !ac.crashLatch && Math.abs(qToEuler(ac.q).bank) > 40 * DEG && ac.tas > 30) {
-      ac.crashed = true
-      ac.crashLatch = true
-      this.onEvent({ type: 'crash', reason: 'bank' })
+    /* Structural failure. Three ways to break an aeroplane, all read off the
+       physics rather than scripted: arrive faster than the gear can absorb,
+       arrive at a bank the wingtip reaches first, or arrive with the gear up.
+       1,200 ft/min is roughly twice a firm airline landing and about where a
+       737's gear design limit sits, so it is a fair line to draw. */
+    if (!ac.crashLatch && ac.onGround) {
+      const bank = Math.abs(qToEuler(ac.q).bank)
+      let reason = null
+      if (ac.lastTouchdownFpm > 1200) reason = 'hard'
+      else if (bank > 32 * DEG && ac.tas > 25) reason = 'bank'
+      else if (ac.gearPos < 0.4 && ac.tas > 30) reason = 'gear'
+      if (reason) this.crash(reason)
     }
-    if (!ac.onGround) { ac.crashLatch = false; ac.crashed = false }
+    if (!ac.onGround) { ac.crashLatch = false }
+
+    // A wreck goes on burning, and the camera keeps watching it.
+    if (ac.crashed) {
+      // The wreck burns where it actually lies: still falling, that is the
+      // airframe; once it is down, the ground under it.
+      const by = ac.onGround ? elevation(ac.pos.x, ac.pos.z) : ac.pos.y
+      burn(this.parts, ac.pos.x, by, ac.pos.z, dt, this.wreck)
+    }
+  }
+
+  /* Break the aeroplane. The airframe stops flying, the wreck sheds its speed
+     hard, the site burns, and the camera is knocked about for a second. */
+  crash(reason) {
+    const ac = this.ac
+    if (ac.crashed) return
+    ac.crashed = true
+    ac.crashLatch = true
+    const energy = clamp(0.5 + ac.tas / 90 + (ac.lastTouchdownFpm || 0) / 1400, 0.5, 2.3)
+    /* At the AEROPLANE, not at the ground under it. Exploding at terrain level
+       put the fireball two thousand feet below a mid-air break-up, which is to
+       say off screen. */
+    explode(this.parts, ac.pos.x, ac.pos.y, ac.pos.z, energy, ac.vel)
+    this.sound.explosion(energy)
+    this.shake = Math.min(1.4, 0.5 + energy * 0.55)
+    // No thrust, no controls, and a wreck slides rather than rolls.
+    ac.throttle = 0; ac.thrustLag = 0
+    this.input.throttle = 0
+    ac.brakes = 1
+    this.onEvent({ type: 'crash', reason, energy })
   }
 
   bandFor(fpm) {
@@ -508,6 +575,7 @@ export class Sim {
   resize() {
     const r = this.container.getBoundingClientRect()
     this.renderer.resize(r.width, Math.max(r.height, 240))
+    if (this.post && this.post.ok) this.post.resize(this.canvas.width, this.canvas.height)
   }
 
   render() {
@@ -525,9 +593,27 @@ export class Sim {
     const fogNear = 4200 + alt * 3
     const fogFar = 70000 + alt * 16
 
+    const usePost = this.post && this.post.ok
+    if (usePost) {
+      this.post.resize(this.canvas.width, this.canvas.height)
+      this.post.bindScene()
+    }
     R.begin(sky)
     const proj = m4perspective(this.fov || 60 * DEG, R.aspect, 3, 240000)
     const view = m4view(this.camPos, this.camQ)
+
+    /* Sky first, as a full-screen shader. It writes no depth, so everything
+       drawn afterwards sits in front of it and the clear colour underneath
+       never shows. */
+    if (usePost) {
+      this.post.drawSky(m4invert(m4mul(proj, view)), this.camPos, this.sun, {
+        zenith: hi > 0.5 ? [0.06, 0.12, 0.30] : [0.20, 0.38, 0.72],
+        horizon: [0.62, 0.72, 0.86],
+        ground: [0.30, 0.30, 0.30],
+        sunSize: 0.028,
+        haze: 1 - hi * 0.7,
+      })
+    }
     const env = {
       light: vnorm({ x: 0.42, y: 0.78, z: 0.32 }),
       ambient: 0.52,
@@ -621,6 +707,17 @@ export class Sim {
       R.sprites(this.sParts[KIND.PUFF], this.tex.puff, proj, view, env)
     }
     if (this.sParts[KIND.DOT].length) R.sprites(this.sParts[KIND.DOT], this.tex.dot, proj, view, env)
+
+    /* Tone-map and bloom. Exposure lifts a touch when something is actually
+       burning, which is what an eye does looking at a fire. */
+    if (usePost) {
+      this.post.finish(this.canvas.width, this.canvas.height, {
+        bloom: ac.crashed ? 1.0 : 0.85,
+        exposure: 1.06,
+        vignette: 0.20,
+        threshold: 0.80,
+      })
+    }
   }
 
   /** Regenerate the tree lattice only when the camera has actually moved on. */

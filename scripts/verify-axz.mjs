@@ -493,6 +493,41 @@ console.log('\nflight simulator')
 
   await page.close()
 }
+/* 2l. Audio. A page that builds an AudioContext on load is a page that can
+      make noise at somebody who only came to read. The constructor is counted
+      from before the first byte of the document: it must be zero on load, and
+      it must still be SILENT after the engine starts, because sound is opt-in
+      behind its own toggle. */
+{
+  const c2 = await browser.newContext()
+  const page = await c2.newPage()
+  await page.addInitScript(() => {
+    window.__audioBuilt = 0
+    for (const key of ['AudioContext', 'webkitAudioContext']) {
+      const Orig = window[key]
+      if (!Orig) continue
+      window[key] = function (...a) { window.__audioBuilt++; return new Orig(...a) }
+      window[key].prototype = Orig.prototype
+    }
+  })
+  await page.goto(BASE + '/axz/sim/', { waitUntil: 'networkidle' })
+  const onLoad = await page.evaluate(() => window.__audioBuilt)
+  onLoad === 0 ? ok('no audio context is created on page load') : bad(`${onLoad} audio contexts built before any gesture`)
+
+  await page.click('[data-sim-start]')
+  await page.waitForTimeout(2200)
+  const after = await page.evaluate(() => window.__audioBuilt)
+  after === 1 ? ok('the engine builds exactly one audio context, from the start gesture')
+              : bad(`${after} audio contexts after start`)
+
+  const pressed = await page.getAttribute('[data-sim-action="sound"]', 'aria-pressed')
+  pressed === 'false' ? ok('sound starts muted and is opt-in') : bad(`sound button starts aria-pressed=${pressed}`)
+  await page.click('[data-sim-action="sound"]')
+  await page.waitForTimeout(300)
+  const on = await page.getAttribute('[data-sim-action="sound"]', 'aria-pressed')
+  on === 'true' ? ok('the sound toggle reports its state') : bad(`sound toggle did not update: ${on}`)
+  await page.close(); await c2.close()
+}
 {
   const c2 = await browser.newContext({ javaScriptEnabled: false })
   const page = await c2.newPage()

@@ -274,3 +274,109 @@ export class Clouds {
     return out
   }
 }
+
+/* --- Crash ----------------------------------------------------------------
+   A crash is not a state flag with a red caption. It is: the airframe stops
+   flying, the wreck slides and stops, and the site of it burns.
+
+   The explosion is four overlapping systems, because one system of orange
+   sprites reads as confetti. A fireball that expands fast and cools from white
+   through orange to black; a smoke column that outlives it and keeps rising;
+   debris that is thrown ballistically and bounces once; and a single expanding
+   shock ring on the ground. The bright core is well above 1.0 so the bloom
+   pass in post.js has something to catch, which is what makes it look hot
+   rather than painted.                                                      */
+export function explode(P, x, y, z, energy = 1, vel = { x: 0, y: 0, z: 0 }) {
+  const E = clamp(energy, 0.35, 2.4)
+
+  // Fireball: hot, fast, short-lived.
+  for (let i = 0; i < Math.round(46 * E); i++) {
+    const a = Math.random() * Math.PI * 2
+    const el = Math.random() * 1.15
+    const sp = (7 + Math.random() * 26) * E
+    P.spawn({
+      x, y: y + 1.5, z,
+      vx: Math.cos(a) * Math.cos(el) * sp + vel.x * 0.25,
+      vy: Math.sin(el) * sp * 0.85 + 3,
+      vz: Math.sin(a) * Math.cos(el) * sp + vel.z * 0.25,
+      max: 0.55 + Math.random() * 0.9,
+      size: 1.8 + Math.random() * 3.4 * E, grow: 8.5 * E,
+      // Over-bright on purpose: this is what the bloom threshold picks up.
+      r: 1.95, g: 0.92, b: 0.26, a: 1, fade: 1.9, drag: 2.1, kind: KIND.PUFF,
+    })
+  }
+  // Cooler outer flame, a beat behind the core.
+  for (let i = 0; i < Math.round(34 * E); i++) {
+    const a = Math.random() * Math.PI * 2
+    const sp = (4 + Math.random() * 15) * E
+    P.spawn({
+      x, y: y + 2, z,
+      vx: Math.cos(a) * sp, vy: 2 + Math.random() * 9, vz: Math.sin(a) * sp,
+      max: 1.1 + Math.random() * 1.3,
+      size: 2.6 + Math.random() * 5 * E, grow: 7.5 * E,
+      r: 1.25, g: 0.36, b: 0.09, a: 0.9, fade: 1.6, drag: 1.5, kind: KIND.PUFF,
+    })
+  }
+  // Smoke column: slow, dark, and it outlasts everything else.
+  for (let i = 0; i < Math.round(40 * E); i++) {
+    const a = Math.random() * Math.PI * 2
+    const sp = (1.5 + Math.random() * 7) * E
+    P.spawn({
+      x, y: y + 2, z,
+      vx: Math.cos(a) * sp, vy: 3 + Math.random() * 11, vz: Math.sin(a) * sp,
+      max: 7 + Math.random() * 9,
+      size: 3.4 + Math.random() * 6 * E, grow: 5.5,
+      r: 0.14, g: 0.13, b: 0.12, a: 0.85, fade: 1.1, drag: 0.55, kind: KIND.PUFF,
+    })
+  }
+  // Debris: ballistic, hot, and small.
+  for (let i = 0; i < Math.round(30 * E); i++) {
+    const a = Math.random() * Math.PI * 2
+    const sp = (14 + Math.random() * 46) * E
+    const el = 0.3 + Math.random() * 1.0
+    P.spawn({
+      x, y: y + 2, z,
+      vx: Math.cos(a) * Math.cos(el) * sp + vel.x * 0.5,
+      vy: Math.sin(el) * sp,
+      vz: Math.sin(a) * Math.cos(el) * sp + vel.z * 0.5,
+      max: 1.6 + Math.random() * 2.4,
+      size: 0.9 + Math.random() * 1.6, grow: 0,
+      r: 2.2, g: 0.9, b: 0.25, a: 1, fade: 2.2, drag: 0.16, kind: KIND.DOT,
+    })
+  }
+  // One ground shock ring.
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * Math.PI * 2
+    const sp = 26 * E
+    P.spawn({
+      x, y: y + 0.8, z,
+      vx: Math.cos(a) * sp, vy: 0.6, vz: Math.sin(a) * sp,
+      max: 1.4, size: 2, grow: 8,
+      r: 0.85, g: 0.75, b: 0.60, a: 0.5, fade: 1.6, drag: 2.6, kind: KIND.PUFF,
+    })
+  }
+}
+
+/** A burning wreck: a slow trickle of fire and a smoke column that persists. */
+export function burn(P, x, y, z, dt, acc) {
+  acc.t = (acc.t || 0) + dt
+  const every = 0.07
+  let fired = false
+  while (acc.t > every) {
+    acc.t -= every
+    fired = true
+    P.spawn({
+      x: x + (Math.random() - 0.5) * 6, y: y + 1, z: z + (Math.random() - 0.5) * 6,
+      vx: (Math.random() - 0.5) * 2.4, vy: 3 + Math.random() * 4, vz: (Math.random() - 0.5) * 2.4,
+      max: 0.7 + Math.random() * 0.7, size: 2.2, grow: 5,
+      r: 2.2, g: 0.85, b: 0.22, a: 0.9, fade: 1.7, drag: 1.4, kind: KIND.PUFF,
+    })
+    P.spawn({
+      x: x + (Math.random() - 0.5) * 8, y: y + 3, z: z + (Math.random() - 0.5) * 8,
+      vx: (Math.random() - 0.5) * 2, vy: 5 + Math.random() * 6, vz: (Math.random() - 0.5) * 2,
+      max: 6 + Math.random() * 6, size: 5, grow: 7,
+      r: 0.13, g: 0.12, b: 0.11, a: 0.7, fade: 1.2, drag: 0.5, kind: KIND.PUFF,
+    })
+  }
+  return fired
+}

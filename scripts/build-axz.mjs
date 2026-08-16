@@ -111,7 +111,7 @@ writeFileSync(join(OUT, 'assets', jsName), jsBundle)
    That matters here more than usual. The parent site serves .js as immutable
    for a year, so a stable path would strand every returning visitor on the old
    build — the same trap that a `?v=` query token fell into once before.       */
-const SIM_FILES = ['math', 'gl', 'tex', 'world', 'model', 'fdm', 'particles', 'input', 'hud', 'main', 'boot']
+const SIM_FILES = ['math', 'gl', 'tex', 'post', 'sound', 'world', 'model', 'fdm', 'particles', 'input', 'hud', 'main', 'boot']
 const simSources = SIM_FILES.map(f => readFileSync(join(SRC, 'js', 'sim', `${f}.js`), 'utf8'))
 const simDir = `sim-${hash(simSources.join('\n'))}`
 mkdirSync(join(OUT, 'assets', simDir), { recursive: true })
@@ -1065,7 +1065,8 @@ function simPage(c, lang) {
     cameras: S.cameras, phases: S.phases, scenarios: S.scenarios,
     loading: S.loading, unsupported: S.unsupported, failed: S.failed,
     centreline: S.centreline, paused: S.paused, resumed: S.resumed,
-    assistLabel: S.assistLabel, timeLabel: S.timeLabel,
+    assistLabel: S.assistLabel, timeLabel: S.timeLabel, soundLabel: S.soundLabel,
+    crashReasons: S.crashReasons,
     keyboard: S.keyboard, gamepad: S.gamepad,
   }
   const bands = LG.bands.map(b => b.remark)
@@ -1130,7 +1131,7 @@ function simPage(c, lang) {
 
     <div class="sim-panel" data-sim-panel hidden>
       <div class="sim-bar">
-        ${['pause', 'reset', 'camera', 'assist'].map(a =>
+        ${['pause', 'reset', 'camera', 'assist', 'sound'].map(a =>
     `<button class="btn" type="button" data-sim-action="${a}">${esc(S.actions[a])}</button>`).join('')}
       </div>
       <h2 class="record__label">${esc(S.readoutTitle)}</h2>
@@ -1153,6 +1154,12 @@ function simPage(c, lang) {
 
   <h2>${esc(S.assistTitle)}</h2>
   <p class="prose">${P(S.assistBody)}</p>
+
+  <h2>${esc(S.crashTitle)}</h2>
+  <p class="prose">${P(S.crashBody)}</p>
+
+  <h2>${esc(S.soundTitle)}</h2>
+  <p class="prose">${P(S.soundBody)}</p>
 
   <h2>${esc(S.papiTitle)}</h2>
   <p class="prose">${P(S.papiBody)}</p>
