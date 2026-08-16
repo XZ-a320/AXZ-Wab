@@ -111,7 +111,7 @@ writeFileSync(join(OUT, 'assets', jsName), jsBundle)
    That matters here more than usual. The parent site serves .js as immutable
    for a year, so a stable path would strand every returning visitor on the old
    build — the same trap that a `?v=` query token fell into once before.       */
-const SIM_FILES = ['math', 'gl', 'world', 'model', 'fdm', 'input', 'hud', 'main', 'boot']
+const SIM_FILES = ['math', 'gl', 'tex', 'world', 'model', 'fdm', 'particles', 'input', 'hud', 'main', 'boot']
 const simSources = SIM_FILES.map(f => readFileSync(join(SRC, 'js', 'sim', `${f}.js`), 'utf8'))
 const simDir = `sim-${hash(simSources.join('\n'))}`
 mkdirSync(join(OUT, 'assets', simDir), { recursive: true })
@@ -1070,6 +1070,8 @@ function simPage(c, lang) {
   }
   const bands = LG.bands.map(b => b.remark)
 
+  const flOpts = ['AXZ001', 'AXZ002', 'AXZ003', 'AXZ004'].map(k =>
+    `<option value="${esc(k)}">${esc(S.flights[k])}</option>`).join('')
   const acOpts = c.fleet._order.filter(id => TYPES[id]).map(id =>
     `<option value="${esc(id)}">${esc(c.fleet[id].reg)} · ${esc(c.fleet[id].name)}</option>`).join('')
   const scOpts = ['takeoff', 'runway', 'approach', 'cruise'].map(k =>
@@ -1081,7 +1083,8 @@ function simPage(c, lang) {
     <td class="code">${esc(r.p)}</td>
   </tr>`).join('')
 
-  const fieldOrder = ['ias', 'alt', 'agl', 'vs', 'hdg', 'dist', 'dest', 'camera', 'time', 'assist', 'input', 'fps']
+  const fieldOrder = ['flight', 'ias', 'alt', 'agl', 'vs', 'hdg', 'wind', 'papi',
+    'dist', 'dest', 'camera', 'time', 'assist', 'input', 'fps']
   const fieldCells = fieldOrder.map(k => `<div class="sim-cell">
     <span class="sim-cell__k">${esc(S.fields[k])}</span>
     <span class="sim-cell__v code" data-sim-field="${k}">—</span>
@@ -1104,6 +1107,10 @@ function simPage(c, lang) {
        data-sim-fleet="${esc(JSON.stringify(fleet))}"
        data-sim-bands="${esc(JSON.stringify(bands))}">
     <div class="sim-controls">
+      <div class="field">
+        <label for="sim-fl">${esc(S.flightLabel)}</label>
+        <select id="sim-fl" data-sim-flight>${flOpts}</select>
+      </div>
       <div class="field">
         <label for="sim-ac">${esc(S.aircraftLabel)}</label>
         <select id="sim-ac" data-sim-aircraft>${acOpts}</select>
@@ -1146,6 +1153,15 @@ function simPage(c, lang) {
 
   <h2>${esc(S.assistTitle)}</h2>
   <p class="prose">${P(S.assistBody)}</p>
+
+  <h2>${esc(S.papiTitle)}</h2>
+  <p class="prose">${P(S.papiBody)}</p>
+
+  <h2>${esc(S.weatherTitle)}</h2>
+  <p class="prose">${P(S.weatherBody)}</p>
+
+  <h2>${esc(S.effectsTitle)}</h2>
+  <p class="prose">${P(S.effectsBody)}</p>
 
   <h2>${esc(S.scoringTitle)}</h2>
   <p class="prose">${P(S.scoringNote)}</p>

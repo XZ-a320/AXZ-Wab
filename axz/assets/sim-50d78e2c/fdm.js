@@ -67,6 +67,52 @@ export function makeConfig(spec) {
   }
 }
 
+/* --- Wind -----------------------------------------------------------------
+   A mean wind that shears with height plus band-limited turbulence. This is
+   the single change that makes an approach feel flown rather than watched: the
+   aeroplane has to be crabbed into a crosswind, a headwind changes the ground
+   speed without touching the airspeed, and gusts move the aiming point.
+
+   Turbulence is a sum of sines at incommensurate rates rather than filtered
+   noise. It is cheap, it never repeats within a session, and unlike random
+   per-frame jitter it is frame-rate independent, which matters when the same
+   model runs at 120 and 240 Hz.                                            */
+export class Wind {
+  constructor() {
+    this.dirDeg = 250          // direction the wind comes FROM
+    this.speedKt = 8
+    this.gust = 0.35           // 0..1, how lively
+    this.t = 0
+    this.cur = { x: 0, y: 0, z: 0 }
+  }
+
+  set(dirDeg, speedKt, gust = 0.35) {
+    this.dirDeg = dirDeg; this.speedKt = speedKt; this.gust = clamp(gust, 0, 1)
+  }
+
+  /** Wind vector at a height, in m/s, blowing TOWARD +x/+z. */
+  sample(altAgl, dt) {
+    this.t += dt
+    // Surface friction: the boundary layer slows and backs the wind near the
+    // ground, which is why a crosswind changes as you descend into the flare.
+    const shear = clamp(0.42 + 0.58 * Math.log10(Math.max(altAgl, 2) / 2 + 1) / Math.log10(51), 0.42, 1)
+    const base = this.speedKt * 0.514444 * shear
+    const from = this.dirDeg * DEG
+    // "From 250" means blowing toward 070.
+    let vx = -Math.sin(from) * base
+    let vz = Math.cos(from) * base
+
+    const g = this.gust * base * 0.42
+    const t = this.t
+    vx += g * (Math.sin(t * 0.83) * 0.6 + Math.sin(t * 2.17 + 1.3) * 0.3 + Math.sin(t * 5.31 + 2.6) * 0.15)
+    vz += g * (Math.cos(t * 0.71 + 0.4) * 0.6 + Math.cos(t * 1.93 + 2.1) * 0.3 + Math.cos(t * 4.77) * 0.15)
+    const vy = g * 0.45 * (Math.sin(t * 1.37 + 0.9) * 0.7 + Math.sin(t * 3.11 + 1.7) * 0.3)
+
+    this.cur.x = vx; this.cur.y = vy; this.cur.z = vz
+    return this.cur
+  }
+}
+
 export class Aircraft {
   constructor(spec, contacts, restHeight) {
     this.spec = spec
@@ -95,6 +141,8 @@ export class Aircraft {
     this.alpha = 0; this.beta = 0; this.tas = 0; this.ias = 0
     this.agl = 0; this.onGround = true; this.gLoad = 1
     this.stalling = false; this.overspeed = false
+    this.wind = { x: 0, y: 0, z: 0 }
+    this.touchdownBurst = 0
     this.touchdownFpm = 0; this.wasAirborne = false; this.justLanded = null
     this.crashed = false
   }
@@ -189,8 +237,14 @@ export class Aircraft {
     this.thrustLag = approach(this.thrustLag, demand, demand > this.thrustLag ? 0.55 : 0.9, dt)
 
     const rho = airDensity(Math.max(this.pos.y, -100))
-    const vb = qinv(this.q, this.vel)            // velocity in body axes
-    const V = vlen(this.vel)
+    /* Everything aerodynamic runs on the RELATIVE wind, not the ground track.
+       Subtracting the air mass here is what gives the model a headwind that
+       changes ground speed without touching indicated airspeed, and a
+       crosswind you have to crab into. Position still integrates on this.vel,
+       which is why the aeroplane drifts downwind if you do not. */
+    const air = vsub(this.vel, this.wind)
+    const vb = qinv(this.q, air)                 // airspeed in body axes
+    const V = vlen(air)
     const u = -vb.z                              // forward component
 
     this.alpha = V > 1 ? Math.atan2(-vb.y, Math.max(u, 0.1)) : 0
@@ -434,6 +488,7 @@ export class Aircraft {
     // Touchdown detection: the frame the WHEELS first take load after a flight.
     if (wheelContact && this.wasAirborne) {
       this.touchdownFpm = Math.max(0, -this.vel.y) * 196.850393701
+      this.touchdownBurst = this.touchdownFpm
       this.justLanded = {
         fpm: this.touchdownFpm,
         gLoad: 1 + hardest * 0.35,

@@ -102,6 +102,10 @@ export async function boot(cfg) {
     setText('hdg', String(Math.round(r.hdg) % 360).padStart(3, '0'))
     setText('dist', r.dist.toFixed(1))
     setText('dest', r.dest)
+    setText('flight', r.flight + '  ' + r.origin + '-' + r.dest)
+    setText('wind', String(Math.round(r.windDir)).padStart(3, '0') + '/' + Math.round(r.windKt) +
+      '  ' + (r.headwind >= 0 ? 'H' : 'T') + Math.abs(Math.round(r.headwind)))
+    setText('papi', r.papi || '—')
     setText('camera', L.cameras[r.camera] || r.camera)
     setText('time', r.timeScale + '×')
     setText('assist', r.assist ? L.on : L.off)
@@ -110,6 +114,11 @@ export async function boot(cfg) {
   }
 
   /* --- Controls around the canvas ---------------------------------------- */
+  const flSel = stage.querySelector('[data-sim-flight]')
+  if (flSel) flSel.addEventListener('change', () => {
+    sim.setFlight(flSel.value)
+    sim.setScenario(scSel ? scSel.value : sim.scenario)
+  })
   const acSel = stage.querySelector('[data-sim-aircraft]')
   const scSel = stage.querySelector('[data-sim-scenario]')
   if (acSel) acSel.addEventListener('change', () => {

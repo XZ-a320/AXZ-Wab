@@ -479,6 +479,12 @@ console.log('\nflight simulator')
     ? ok('the simulator is dimensioned from the fleet table (737-800 39.47 m, A321 44.51 m)')
     : bad(`fleet dimensions disagree with the published table: ${JSON.stringify(fleet['b-737x'])}`)
 
+  // All four published flights must be flyable, not just the California pair.
+  const flights = await page.$$eval('[data-sim-flight] option', os => os.map(o => o.value))
+  JSON.stringify(flights) === JSON.stringify(['AXZ001', 'AXZ002', 'AXZ003', 'AXZ004'])
+    ? ok('all four published flights are selectable, both routes')
+    : bad(`flight options are ${JSON.stringify(flights)}`)
+
   const bands = JSON.parse(await page.getAttribute('[data-sim-stage]', 'data-sim-bands'))
   const table = await page.$$eval('.lg-table tbody tr', rs => rs.map(r => r.querySelectorAll('td')[1].textContent.trim()))
   JSON.stringify(bands) === JSON.stringify(table)

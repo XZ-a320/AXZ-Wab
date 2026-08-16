@@ -590,21 +590,81 @@
     "colKey": "Keyboard",
     "colPad": "Gamepad",
     "controls": [
-      { "a": "Pitch (pull back for nose up)", "k": "S / W, or Down / Up", "p": "Left stick, vertical" },
-      { "a": "Roll", "k": "A / D, or Left / Right", "p": "Left stick, horizontal" },
-      { "a": "Rudder and nosewheel", "k": "Q / E", "p": "Right stick, or LB / RB" },
-      { "a": "Throttle", "k": "Left Shift up / Left Ctrl down", "p": "RT up / LT down" },
-      { "a": "Landing gear", "k": "G", "p": "A" },
-      { "a": "Flaps down / up", "k": "F / V", "p": "X / Y" },
-      { "a": "Spoilers", "k": "X", "p": "Right stick click" },
-      { "a": "Brakes", "k": "Space or B (hold)", "p": "B (hold)" },
-      { "a": "Parking brake", "k": "P", "p": "none" },
-      { "a": "Trim", "k": ", / .", "p": "D-pad up / down" },
-      { "a": "Change view", "k": "C", "p": "Left stick click" },
-      { "a": "Assist on or off", "k": "N", "p": "none" },
-      { "a": "Time compression", "k": "[ / ]", "p": "none" },
-      { "a": "Back to the start position", "k": "R", "p": "Back" },
-      { "a": "Pause", "k": "Esc", "p": "Start" }
+      {
+        "a": "Pitch (pull back for nose up)",
+        "k": "S / W, or Down / Up",
+        "p": "Left stick, vertical"
+      },
+      {
+        "a": "Roll",
+        "k": "A / D, or Left / Right",
+        "p": "Left stick, horizontal"
+      },
+      {
+        "a": "Rudder and nosewheel",
+        "k": "Q / E",
+        "p": "Right stick, or LB / RB"
+      },
+      {
+        "a": "Throttle",
+        "k": "Left Shift up / Left Ctrl down",
+        "p": "RT up / LT down"
+      },
+      {
+        "a": "Landing gear",
+        "k": "G",
+        "p": "A"
+      },
+      {
+        "a": "Flaps down / up",
+        "k": "F / V",
+        "p": "X / Y"
+      },
+      {
+        "a": "Spoilers",
+        "k": "X",
+        "p": "Right stick click"
+      },
+      {
+        "a": "Brakes",
+        "k": "Space or B (hold)",
+        "p": "B (hold)"
+      },
+      {
+        "a": "Parking brake",
+        "k": "P",
+        "p": "none"
+      },
+      {
+        "a": "Trim",
+        "k": ", / .",
+        "p": "D-pad up / down"
+      },
+      {
+        "a": "Change view",
+        "k": "C",
+        "p": "Left stick click"
+      },
+      {
+        "a": "Assist on or off",
+        "k": "N",
+        "p": "none"
+      },
+      {
+        "a": "Time compression",
+        "k": "[ / ]",
+        "p": "none"
+      },
+      {
+        "a": "Back to the start position",
+        "k": "R",
+        "p": "Back"
+      },
+      {
+        "a": "Pause",
+        "k": "Esc",
+        "p": "Start"
+      }
     ],
     "assistTitle": "What the assist does",
     "assistBody": "A keyboard has no analogue axis and does not spring back to centre, so a layer of assist is on by default: it damps pitch and roll, works the rudder to take out sideslip, and rolls slowly level when you let go. Press N to switch it off. With it off you get the bare aerodynamics, which flies more like the real thing and is harder.",
@@ -621,7 +681,10 @@
       "time": "Time compression",
       "assist": "Assist",
       "fps": "Frame rate",
-      "input": "Input device"
+      "input": "Input device",
+      "flight": "Flight",
+      "wind": "Wind",
+      "papi": "PAPI"
     },
     "units": {
       "kt": "kt",
@@ -681,7 +744,20 @@
     "gamepad": "Gamepad",
     "scoringTitle": "How the landing is scored",
     "scoringNote": "Touchdown vertical speed is graded against the table on the dispatch desk, using the same bands and the same wording. Landing at KSNS also reports how far off the centreline you were, in metres.",
-    "backHome": "Back to home"
+    "backHome": "Back to home",
+    "flightLabel": "Flight",
+    "flights": {
+      "AXZ001": "AXZ001 · KSFO to KSNS · outbound",
+      "AXZ002": "AXZ002 · KSNS to KSFO · return",
+      "AXZ003": "AXZ003 · ZSPD to ZSNJ · outbound",
+      "AXZ004": "AXZ004 · ZSNJ to ZSPD · return"
+    },
+    "papiTitle": "Reading the PAPI",
+    "papiBody": "The four lights to the left of the runway are the visual approach slope indicator. Four white means you are high, four red means you are low, and two of each means you are on the three-degree slope. The angles are the real ones: 2.5, 2.833, 3.167 and 3.5 degrees. The PAPI row in the flight data spells the current state out as W and R.",
+    "weatherTitle": "Wind",
+    "weatherBody": "There is a wind, and it gusts. The wind row gives the direction it blows from and its speed in knots, then H or T for the headwind or tailwind component on the destination runway. The wind slows and backs near the surface, so the crosswind in the flare is not the crosswind on final. The aerodynamics run on the relative airflow rather than the ground track: a headwind lowers your ground speed without touching your airspeed, and a crosswind will drift you off the centreline if you do not crab into it.",
+    "effectsBody": "Tyre smoke is released on the touchdown frame and scaled by the vertical speed, so how much smoke you see is how hard the arrival was about to be graded. Wingtip vapour appears only when the wing is near its lift limit, which is high load factor or high angle of attack, the same condition under which a real one condenses its vortex cores. Engine exhaust needs both thrust and dense air to show; contrails need 7,200 m. Clouds, trees and the shadow are hashed from coordinates, so the same place always has the same cloud.",
+    "effectsTitle": "Everything you can see has a reason"
   },
   "aprilfools": {
     "date": "April 1, 2026",

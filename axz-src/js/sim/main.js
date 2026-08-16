@@ -15,11 +15,13 @@ import {
 } from './math.js'
 import { Renderer, Mesh } from './gl.js'
 import {
-  AIRPORTS, elevation, terrainPatch, terrainGrid, runwayMesh, runwayLights,
-  scenery, hdgVec,
+  AIRPORTS, AP_LIST, LEGS, elevation, terrainPatch, terrainGrid, runwayMesh,
+  runwayLights, scenery, hdgVec, trees, papiUnits, papiState,
 } from './world.js'
-import { aircraftMesh, gearMesh, liveryFor } from './model.js'
-import { Aircraft, FLAP_STEPS } from './fdm.js'
+import { aircraftMesh, gearMesh, liveryFor, decalQuads } from './model.js'
+import { Aircraft, Wind, FLAP_STEPS } from './fdm.js'
+import { Particles, Effects, Clouds, KIND } from './particles.js'
+import * as TEX from './tex.js'
 import { Input } from './input.js'
 import { HUD, navInfo } from './hud.js'
 
@@ -64,13 +66,45 @@ export class Sim {
     this.camPos = v3(); this.camQ = qnorm({ x: 0, y: 0, z: 0, w: 1 })
     this.stats = { fps: 60, frames: 0, t: 0 }
 
+    this.wind = new Wind()
+    this.parts = new Particles()
+    this.fx = new Effects(this.parts)
+    this.clouds = new Clouds({ base: 2150, thickness: 780, spacing: 6600, puffs: 7, radius: 430 })
+    // Scratch lists, reused every frame. Rebuilding these as fresh arrays at
+    // sixty hertz is the kind of allocation that shows up as stutter.
+    this.sCloud = []
+    this.sTree = []
+    this.sPuff = []
+    this.sDot = []
+    this.sParts = { 0: [], 1: [] }
+    this.treeCentre = { x: 1e9, z: 1e9 }
+    this.buildTextures()
+
     this.buildStaticWorld()
+    this.setFlight(opts.flight || 'AXZ001')
     this.setAircraft(opts.aircraftId || this.fleet._order[0])
     this.setScenario(opts.scenario || 'takeoff')
 
     this.onResize = () => this.resize()
     window.addEventListener('resize', this.onResize)
     this.resize()
+  }
+
+  /* --- Textures -----------------------------------------------------------
+     All generated on a canvas at start-up; see tex.js for why nothing is
+     downloaded. Built once, before any geometry that samples them. */
+  buildTextures() {
+    const R = this.renderer
+    this.tex = {
+      puff: R.texture(TEX.puffTexture(192, { seed: 4, lobes: 11 })),
+      dot: R.texture(TEX.dotTexture(64)),
+      tree: R.texture(TEX.treeSheet(256)),
+      fuse: R.texture(TEX.fuselageDecal('AIR XIAO ZE', 'AXZ')),
+      fin: R.texture(TEX.finDecal('AXZ')),
+      block: R.texture(TEX.blockDecal()),
+      win: R.texture(TEX.windowStrip(26)),
+      shadow: R.texture(TEX.shadowTexture(128)),
+    }
   }
 
   /* --- Scene ------------------------------------------------------------- */
@@ -85,12 +119,20 @@ export class Sim {
     this.runways = []
     this.lights = []
     this.props = []
-    for (const key of ['KSFO', 'KSNS']) {
+    this.papis = {}
+    const CITY = { KSFO: [110, 5200], KSNS: [55, 2600], ZSPD: [120, 6000], ZSNJ: [70, 3400] }
+    for (const key of AP_LIST) {
       const ap = AIRPORTS[key]
       this.runways.push(new Mesh(gl, runwayMesh(ap)))
       this.lights.push(new Mesh(gl, toLine(runwayLights(ap)), gl.LINES))
-      this.props.push(new Mesh(gl, scenery(ap, key === 'KSFO' ? 110 : 55, key === 'KSFO' ? 5200 : 2600)))
+      this.props.push(new Mesh(gl, scenery(ap, CITY[key][0], CITY[key][1])))
+      this.papis[key] = papiUnits(ap)
     }
+    this.shadowQuad = new Mesh(gl, {
+      pos: [-1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, -1, 1, 0, 1, -1, 0, 1],
+      normal: [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
+      uv: [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1],
+    })
     this.identity = m4identity()
   }
 
@@ -104,6 +146,8 @@ export class Sim {
     if (this.gearMesh) this.gearMesh.dispose()
     this.acMesh = new Mesh(this.gl, aircraftMesh(spec, livery))
     this.gearMesh = new Mesh(this.gl, g.mesh)
+    if (this.decals) for (const d of this.decals) d.mesh.dispose()
+    this.decals = decalQuads(spec, spec.reg).map(d => ({ tex: d.tex, mesh: new Mesh(this.gl, d.geo) }))
     const keep = this.ac ? { pos: this.ac.pos, vel: this.ac.vel, q: this.ac.q } : null
     this.ac = new Aircraft(spec, g.contacts, g.restHeight)
     if (keep) { this.ac.pos = keep.pos; this.ac.vel = keep.vel; this.ac.q = keep.q }
@@ -114,11 +158,23 @@ export class Sim {
      Where a session starts. "Approach" exists because the interesting ninety
      seconds of a flight are the last ninety, and making someone fly 110 km to
      reach them is not respect for their time. */
+  /** Choose which of the four published flights to fly. */
+  setFlight(id) {
+    if (!LEGS[id]) return
+    this.flightId = id
+    this.leg = LEGS[id]
+    this.origin = AIRPORTS[this.leg.from]
+    this.dest = AIRPORTS[this.leg.to]
+  }
+
   setScenario(kind) {
     this.scenario = kind
     const ac = this.ac
-    const ksfo = AIRPORTS.KSFO, ksns = AIRPORTS.KSNS
-    this.dest = ksns
+    if (!this.leg) this.setFlight('AXZ001')
+    // Origin and destination now come from the FLIGHT, so the same four
+    // scenarios work on either route: the airline publishes AXZ001 to AXZ004
+    // and all four are flyable rather than only the pair near KSFO.
+    const ksfo = this.origin, ksns = this.dest
     this.mission = { active: false, phase: 'free', best: null }
 
     const onRwy = (ap, backFrac) => {
@@ -135,7 +191,6 @@ export class Sim {
       ac.parkingBrake = kind === 'runway'
       this.input.throttle = 0
       this.mission = { active: true, phase: 'takeoff', best: null }
-      this.dest = ksns
     } else if (kind === 'approach') {
       /* Six miles out on the extended centreline. Ten was the honest number
          and it is four and a half minutes of holding a trimmed aeroplane
@@ -152,18 +207,17 @@ export class Sim {
       ac.place(x, ksns.elev + 582, z, ksns.rwy.hdg, 72, { gamma: -3 * DEG, trimmed: true })
       this.input.throttle = ac.throttle
       this.mission = { active: true, phase: 'final', best: null }
-      this.dest = ksns
     } else {
       // Cruise, halfway down the route at the level the site publishes.
       const t = 0.45
       const x = ksfo.x + (ksns.x - ksfo.x) * t, z = ksfo.z + (ksns.z - ksfo.z) * t
       const brg = Math.atan2(ksns.x - ksfo.x, -(ksns.z - ksfo.z)) * RAD
       ac.setFlap(0); ac.gearDown = false; ac.gearPos = 0
-      // 1,676 m is the cruise level the site publishes for KSFO-KSNS.
-      ac.place(x, 1676, z, brg, 128, { trimmed: true })
+      // The cruise level the site publishes for THIS leg: 1,676 m on the
+      // California pair, 9,500 m on the China pair.
+      ac.place(x, this.leg.cruise, z, brg, this.leg.cruise > 5000 ? 158 : 128, { trimmed: true })
       this.input.throttle = ac.throttle
       this.mission = { active: true, phase: 'cruise', best: null }
-      this.dest = ksns
     }
     // NB: no `ac.trim = 0` here. The airborne scenarios are trimmed by
     // Aircraft.place, and zeroing it afterwards handed the aeroplane a
@@ -238,10 +292,22 @@ export class Sim {
       // shows up as the aeroplane teleporting.
       let budget = 40 + Math.ceil(this.timeScale * 30)
       while (this.acc >= step && budget-- > 0) {
+        // The air mass the wing sees, sampled at the aeroplane's own height so
+        // the crosswind changes as it descends into the flare.
+        const w = this.wind.sample(Math.max(ac.radioAlt || 0, 0), step)
+        ac.wind.x = w.x; ac.wind.y = w.y; ac.wind.z = w.z
         ac.step(step)
         this.acc -= step
       }
       if (budget <= 0) this.acc = 0
+
+      // Effects read the finished physics state, so what they show is what the
+      // model just did. Stepped on the real clock, not the compressed one:
+      // smoke at 8x would be a strobe.
+      this.fx.update(ac, Math.min(dtReal, 0.05), this.wind.cur, {
+        bodyPoint: p => vadd(ac.pos, qrot(ac.q, p)),
+      })
+      this.parts.step(Math.min(dtReal, 0.05), this.wind.cur)
 
       this.refreshNear()
       this.checkEvents(dtReal)
@@ -481,9 +547,87 @@ export class Sim {
       if (ac.gearPos > 0.02) R.draw(this.gearMesh, model)
     }
 
+    // Decals: the wordmark, the fin mark and the cabin windows, each a quad
+    // sitting a few centimetres off the skin. Type wants a texture, and one
+    // textured quad beats trying to letter an aeroplane out of triangles.
+    if (CAMERAS[this.cameraMode] !== 'cockpit' && this.decals) {
+      const model = m4model(ac.pos, ac.q, 1)
+      for (const d of this.decals) R.textured(d.mesh, model, this.tex[d.tex], proj, view, env)
+    }
+
     R.use('line', proj, view, env)
     R.draw(this.grid, this.identity)
     for (const m of this.lights) R.draw(m, this.identity)
+
+    /* --- Sprites, back to front ------------------------------------------
+       Order matters and the reasons differ. Trees are opaque cut-outs so they
+       could go anywhere, but they are drawn before the soft stuff so the soft
+       stuff can blend over them. Clouds are sorted by distance every frame
+       inside Clouds.collect. Particles go last because they are the nearest
+       and the most transparent. */
+    const cam = this.camPos
+
+    if (this.treeDirty(cam)) trees(cam.x, cam.z, 5200, this.sTree)
+    if (this.sTree.length) R.sprites(this.sTree, this.tex.tree, proj, view, env, { depthWrite: true })
+
+    this.clouds.collect(cam.x, cam.z, 38000, this.sCloud)
+    if (this.sCloud.length) R.sprites(this.sCloud, this.tex.puff, proj, view, env)
+
+    // PAPI. Evaluated against the aeroplane's own position, so the lights say
+    // what the approach angle actually is rather than what it should be.
+    this.sDot.length = 0
+    for (const key of AP_LIST) {
+      const papi = this.papis[key]
+      const st = papiState(papi, ac.pos)
+      if (!st) continue
+      papi.units.forEach((u, i) => {
+        const white = st[i]
+        this.sDot.push({
+          x: u.x, y: u.y, z: u.z, size: 3.4,
+          r: white ? 1 : 1, g: white ? 0.97 : 0.20, b: white ? 0.92 : 0.16, a: 1,
+        })
+      })
+    }
+    if (this.sDot.length) R.sprites(this.sDot, this.tex.dot, proj, view, env)
+
+    /* The aeroplane's shadow: a ground-ALIGNED quad, not a billboard. As a
+       camera-facing sprite it stood upright like a coin whenever the view was
+       low and from behind, which is precisely the view you land from. It is
+       not a shadow map and does not pretend to be; what it supplies is the one
+       depth cue that matters on short final, which is how far above the runway
+       you actually are. */
+    if (ac.radioAlt < 400) {
+      const gy = elevation(ac.pos.x, ac.pos.z)
+      const fade = clamp(1 - ac.radioAlt / 400, 0, 1)
+      const sz = ac.spec.span * (0.34 + ac.radioAlt / 1100)
+      const heading = qToEuler(ac.q).heading
+      const model = m4model({ x: ac.pos.x, y: gy + 0.9, z: ac.pos.z },
+        qFromEuler(heading, 0, 0), sz)
+      const gl = this.gl
+      gl.enable(gl.BLEND)
+      gl.depthMask(false)
+      R.textured(this.shadowQuad, model, this.tex.shadow, proj, view,
+        { ...env, ambient: clamp(0.55 + fade * 0.45, 0, 1) })
+      gl.depthMask(true)
+      gl.disable(gl.BLEND)
+    }
+
+    this.parts.collect(this.sParts)
+    if (this.sParts[KIND.PUFF].length) {
+      // Nearest last, or a near puff's transparent edge erases the one behind.
+      this.sParts[KIND.PUFF].sort((a, b) =>
+        ((b.x - cam.x) ** 2 + (b.y - cam.y) ** 2 + (b.z - cam.z) ** 2) -
+        ((a.x - cam.x) ** 2 + (a.y - cam.y) ** 2 + (a.z - cam.z) ** 2))
+      R.sprites(this.sParts[KIND.PUFF], this.tex.puff, proj, view, env)
+    }
+    if (this.sParts[KIND.DOT].length) R.sprites(this.sParts[KIND.DOT], this.tex.dot, proj, view, env)
+  }
+
+  /** Regenerate the tree lattice only when the camera has actually moved on. */
+  treeDirty(cam) {
+    if (Math.abs(cam.x - this.treeCentre.x) < 900 && Math.abs(cam.z - this.treeCentre.z) < 900) return false
+    this.treeCentre = { x: cam.x, z: cam.z }
+    return true
   }
 
   /** A snapshot for the panel beside the canvas. */
@@ -512,6 +656,22 @@ export class Sim {
       assist: ac.assist,
       pad: this.input.usingPad ? this.input.padName : '',
       camera: CAMERAS[this.cameraMode],
+      flight: this.flightId,
+      origin: this.origin.icao,
+      windDir: this.wind.dirDeg,
+      windKt: this.wind.speedKt,
+      // Headwind component on the destination runway, which is the number that
+      // actually changes the approach.
+      headwind: (() => {
+        const d = hdgVec(this.dest.rwy.hdg)
+        const from = this.wind.dirDeg * Math.PI / 180
+        const wv = { x: -Math.sin(from), z: Math.cos(from) }
+        return -(wv.x * d.x + wv.z * d.z) * this.wind.speedKt
+      })(),
+      papi: (() => {
+        const st = papiState(this.papis[this.dest.icao], this.ac.pos)
+        return st ? st.map(w => (w ? 'W' : 'R')).join('') : null
+      })(),
     }
   }
 }

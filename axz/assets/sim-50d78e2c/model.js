@@ -259,6 +259,108 @@ export function gearMesh(spec) {
   return { mesh: B.build(), contacts, legLen, restHeight: -yBot }
 }
 
+/* --- Decals ---------------------------------------------------------------
+   The airline signing its own aeroplane. Each is a flat quad standing a few
+   centimetres proud of the skin it sits on, carrying a texture generated in
+   tex.js. Both sides get one, mirrored, so the mark reads correctly from
+   either beam.
+
+   A quad rather than a UV map over the fuselage: the tube is eight-sided and
+   faceted on purpose, and wrapping type around those facets would kink every
+   letter. Standing the lettering just off the surface is what a real decal is
+   anyway.                                                                   */
+function decalQuad(a, b, c, d) {
+  const pos = [], normal = [], uv = []
+  const ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z
+  const vx = d.x - a.x, vy = d.y - a.y, vz = d.z - a.z
+  let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx
+  const l = Math.hypot(nx, ny, nz) || 1
+  nx /= l; ny /= l; nz /= l
+  const UV = [[0, 0], [1, 0], [1, 1], [0, 1]]
+  for (const [p, q, r] of [[0, 1, 2], [0, 2, 3]]) {
+    for (const i of [p, q, r]) {
+      const pt = [a, b, c, d][i]
+      pos.push(pt.x, pt.y, pt.z)
+      normal.push(nx, ny, nz)
+      uv.push(UV[i][0], UV[i][1])
+    }
+  }
+  return { pos, normal, uv }
+}
+
+const mergeGeo = list => ({
+  pos: [].concat(...list.map(g => g.pos)),
+  normal: [].concat(...list.map(g => g.normal)),
+  uv: [].concat(...list.map(g => g.uv)),
+})
+
+/**
+ * Decal geometry for a type, grouped by which texture each set needs.
+ * Returns [{ tex, geo }] for the caller to turn into meshes.
+ */
+export function decalQuads(spec, reg) {
+  const L = spec.len, r = spec.dia / 2
+  const noseZ = -L * 0.45, tailZ = L * 0.55
+  const out = []
+
+  // Wordmark, forward fuselage, both sides. Slightly proud of the skin.
+  const off = r * 1.02
+  const wz0 = noseZ + L * 0.16, wz1 = noseZ + L * 0.40
+  const wy0 = -r * 0.10, wy1 = r * 0.34
+  const fuse = []
+  fuse.push(decalQuad(
+    { x: -off, y: wy1, z: wz0 }, { x: -off, y: wy1, z: wz1 },
+    { x: -off, y: wy0, z: wz1 }, { x: -off, y: wy0, z: wz0 }))
+  fuse.push(decalQuad(
+    { x: off, y: wy1, z: wz1 }, { x: off, y: wy1, z: wz0 },
+    { x: off, y: wy0, z: wz0 }, { x: off, y: wy0, z: wz1 }))
+  out.push({ tex: 'fuse', geo: mergeGeo(fuse) })
+
+  // Cabin windows, a strip down each side, below the cheatline.
+  const gz0 = noseZ + L * 0.15, gz1 = tailZ - L * 0.30
+  const gy0 = r * 0.10, gy1 = r * 0.40
+  const win = []
+  win.push(decalQuad(
+    { x: -off, y: gy1, z: gz0 }, { x: -off, y: gy1, z: gz1 },
+    { x: -off, y: gy0, z: gz1 }, { x: -off, y: gy0, z: gz0 }))
+  win.push(decalQuad(
+    { x: off, y: gy1, z: gz1 }, { x: off, y: gy1, z: gz0 },
+    { x: off, y: gy0, z: gz0 }, { x: off, y: gy0, z: gz1 }))
+  out.push({ tex: 'win', geo: mergeGeo(win) })
+
+  // Fin mark. The fin is a flat plate at x=0, so the decal straddles it.
+  const tz = tailZ - L * 0.20
+  const finH = spec.h * 0.62, finBase = r * 0.30
+  const fy0 = finBase + finH * 0.30, fy1 = finBase + finH * 0.92
+  const fz0 = tz + L * 0.055, fz1 = tz + L * 0.155
+  const fin = []
+  fin.push(decalQuad(
+    { x: -0.06, y: fy1, z: fz0 }, { x: -0.06, y: fy1, z: fz1 },
+    { x: -0.06, y: fy0, z: fz1 }, { x: -0.06, y: fy0, z: fz0 }))
+  fin.push(decalQuad(
+    { x: 0.06, y: fy1, z: fz1 }, { x: 0.06, y: fy1, z: fz0 },
+    { x: 0.06, y: fy0, z: fz0 }, { x: 0.06, y: fy0, z: fz1 }))
+  out.push({ tex: 'fin', geo: mergeGeo(fin) })
+
+  /* B-1717 only: the collaboration paint. The site says this aeroplane
+     "swore it would never lose its paint", so it is the one airframe that
+     carries a second livery band, in blocks. */
+  if (reg === 'B-1717') {
+    const bz0 = noseZ + L * 0.42, bz1 = tailZ - L * 0.26
+    const by0 = -r * 0.52, by1 = -r * 0.06
+    const blk = []
+    blk.push(decalQuad(
+      { x: -off, y: by1, z: bz0 }, { x: -off, y: by1, z: bz1 },
+      { x: -off, y: by0, z: bz1 }, { x: -off, y: by0, z: bz0 }))
+    blk.push(decalQuad(
+      { x: off, y: by1, z: bz1 }, { x: off, y: by1, z: bz0 },
+      { x: off, y: by0, z: bz0 }, { x: off, y: by0, z: bz1 }))
+    out.push({ tex: 'block', geo: mergeGeo(blk) })
+  }
+
+  return out
+}
+
 /** Wing and fuselage outlines — the plan-view drawing, carried into 3D. */
 export function aircraftLines(spec, col) {
   const LB = makeLineBuilder()

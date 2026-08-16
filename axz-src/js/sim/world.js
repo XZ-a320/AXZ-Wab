@@ -31,6 +31,33 @@ export const AIRPORTS = {
     x: Math.sin(147.3 * DEG) * 110000, z: -Math.cos(147.3 * DEG) * 110000,
     rwy: { id: '31', hdg: 310, len: 1829, width: 46 },
   },
+  /* The China pair. The site publishes two routes and only one of them was
+     flyable, which made half the airline decorative. Same construction: the
+     bearing is computed from the two airports' real coordinates, the leg
+     length is the 280 km the routes section prints, and both fields are placed
+     far enough from KSFO that neither landscape has to know about the other. */
+  ZSPD: {
+    icao: 'ZSPD', name: 'Shanghai Pudong', elev: 4,
+    x: 620000, z: 210000,
+    rwy: { id: '35L', hdg: 350, len: 4000, width: 60 },
+  },
+  ZSNJ: {
+    icao: 'ZSNJ', name: 'Nanjing Lukou', elev: 15,
+    x: 620000 + Math.sin(283.4 * DEG) * 280000,
+    z: 210000 - Math.cos(283.4 * DEG) * 280000,
+    rwy: { id: '06', hdg: 60, len: 3600, width: 45 },
+  },
+}
+
+/** Every airport, in the order the route list uses. */
+export const AP_LIST = ['KSFO', 'KSNS', 'ZSPD', 'ZSNJ']
+
+/* The four flights the site publishes, as flyable legs. */
+export const LEGS = {
+  AXZ001: { from: 'KSFO', to: 'KSNS', cruise: 1676 },
+  AXZ002: { from: 'KSNS', to: 'KSFO', cruise: 1676 },
+  AXZ003: { from: 'ZSPD', to: 'ZSNJ', cruise: 9500 },
+  AXZ004: { from: 'ZSNJ', to: 'ZSPD', cruise: 9500 },
 }
 
 /** Unit vector along a compass heading. Heading 000 is -Z; east is +X. */
@@ -71,10 +98,15 @@ function fbm(x, z, oct = 4) {
    the shoreline is soft rather than a circle.                               */
 const BAY = { x: 11000, z: -9000, r: 15000 }        // San Francisco Bay, NE of KSFO
 const MONTEREY = { x: 34000, z: 104000, r: 21000 }  // Monterey Bay, SW of Salinas
+// The Yangtze delta half: the landmarks the routes section lists for ZSPD-ZSNJ
+// are 长江三角洲, 太湖 and 镇江, so there is an estuary east of Pudong and a
+// lake between the two fields.
+const EASTSEA = { x: 700000, z: 200000, r: 90000 }  // the sea, east of Pudong
+const TAIHU = { x: 470000, z: 150000, r: 32000 }    // Lake Tai, on the route
 
 function waterField(x, z) {
   let w = 0
-  for (const b of [BAY, MONTEREY]) {
+  for (const b of [BAY, MONTEREY, EASTSEA, TAIHU]) {
     const d = Math.hypot(x - b.x, z - b.z)
     // Wobble the radius so the coast is not a compass circle.
     const wob = (fbm(x * 0.00004, z * 0.00004, 2) - 0.5) * b.r * 0.5
@@ -127,12 +159,20 @@ export function elevation(x, z) {
   const rolling = fbm(x * 0.000045, z * 0.000045, 4)          // 0..1
   const detail = (fbm(x * 0.00035, z * 0.00035, 3) - 0.5) * 55
 
-  let h = 22 + rolling * 300 + ridge * 900 + detail * (1 - water)
+  /* The Yangtze delta is a delta: famously, almost completely flat. Damping
+     the relief toward the China pair is not a shortcut, it is the landmark the
+     site names, and a Shanghai approach over Californian foothills would be
+     the drawing disagreeing with the prose again. */
+  const delta = clamp((x - 330000) / 120000, 0, 1)
+  const relief = 1 - 0.88 * delta
+
+  let h = 22 + rolling * 300 * relief + ridge * 900 * (1 - delta) + detail * (1 - water) * relief
   // Sea bed: pull down hard inside a water body so the coast reads as a shore.
   h = h * (1 - water) - water * 24
   if (h < -24) h = -24
 
-  for (const ap of [AIRPORTS.KSFO, AIRPORTS.KSNS]) {
+  for (const key of AP_LIST) {
+    const ap = AIRPORTS[key]
     const m = airportMask(x, z, ap, ap.rwy.len * 0.62, 1700)
     if (m > 0) h = h * (1 - m) + ap.elev * m
   }
@@ -304,6 +344,51 @@ export function runwayMesh(ap) {
   return { pos, normal, color }
 }
 
+/* --- PAPI -----------------------------------------------------------------
+   Four lights beside the touchdown zone, each white above its own angle and
+   red below it, spaced so the set reads: four white = high, two and two = on
+   slope, four red = low. It is the instrument that makes a visual approach an
+   instrument task, and it is the single most useful thing that can be added to
+   a simulator's runway. The angles are the real ones for a 3-degree slope.
+
+   Returned as data rather than geometry, because the colours depend on where
+   the aeroplane is and have to be evaluated every frame.                    */
+export const PAPI_ANGLES = [2.5, 2.833, 3.167, 3.5]
+
+export function papiUnits(ap) {
+  const R = ap.rwy
+  const dir = hdgVec(R.hdg)
+  const rgt = { x: -dir.z, y: 0, z: dir.x }
+  // Abeam the aiming point, on the left of the runway, as ICAO places them.
+  const u = -R.len / 2 + 300
+  const out = []
+  for (let i = 0; i < 4; i++) {
+    const v = -R.width / 2 - 16 - i * 9
+    out.push({
+      x: ap.x + dir.x * u + rgt.x * v,
+      y: ap.elev + 1.1,
+      z: ap.z + dir.z * u + rgt.z * v,
+      angle: PAPI_ANGLES[i],
+    })
+  }
+  return { units: out, dir, threshold: { x: ap.x + dir.x * (-R.len / 2), z: ap.z + dir.z * (-R.len / 2) }, elev: ap.elev }
+}
+
+/**
+ * Which PAPI lights are white for an aeroplane at `p`.
+ * Only meaningful within the beam: roughly on the approach side, and inside
+ * about ten degrees either side of the centreline.
+ */
+export function papiState(papi, p) {
+  const dx = p.x - papi.threshold.x, dz = p.z - papi.threshold.z
+  const along = -(dx * papi.dir.x + dz * papi.dir.z)     // positive = before the threshold
+  if (along < 60 || along > 12000) return null
+  const across = Math.abs(dx * -papi.dir.z + dz * papi.dir.x)
+  if (across > along * 0.30 + 120) return null
+  const ang = Math.atan2(Math.max(p.y - papi.elev, 0), along) * 180 / Math.PI
+  return papi.units.map(u => ang >= u.angle)
+}
+
 /** Runway edge and threshold lights, drawn as lines. */
 export function runwayLights(ap) {
   const pos = [], color = []
@@ -324,6 +409,51 @@ export function runwayLights(ap) {
   // Approach lights: a lead-in bar out from the landing threshold.
   for (let u = u0 - 90; u > u0 - 900; u -= 90) { lamp(u, 0, white, 1.4); lamp(u, -6, white, 1.1); lamp(u, 6, white, 1.1) }
   return { pos, color }
+}
+
+/* --- Vegetation -----------------------------------------------------------
+   Trees are billboards on a hashed lattice, generated around the camera each
+   time it moves a cell. Nothing is stored: the same coordinates always give
+   the same tree, so a forest can be arbitrarily large and cost nothing but the
+   sprites currently on screen.
+
+   They matter more than they look: at low level over featureless terrain there
+   is no sense of height or speed at all, and a scattering of 12 m objects
+   supplies both.                                                            */
+export function trees(camX, camZ, range, out) {
+  out.length = 0
+  const S = 260                                  // lattice pitch, metres
+  const i0 = Math.floor((camX - range) / S), i1 = Math.floor((camX + range) / S)
+  const j0 = Math.floor((camZ - range) / S), j1 = Math.floor((camZ + range) / S)
+  const r2 = range * range
+  for (let i = i0; i <= i1; i++) {
+    for (let j = j0; j <= j1; j++) {
+      const keep = hash2(i * 3 + 7, j * 5 + 11)
+      if (keep > 0.55) continue
+      const x = (i + hash2(i, j)) * S
+      const z = (j + hash2(j, i)) * S
+      const dx = x - camX, dz = z - camZ
+      if (dx * dx + dz * dz > r2) continue
+      const g = elevation(x, z)
+      if (g < 4 || g > 900) continue             // no trees in the sea or on bare rock
+      // Keep the approach corridors and the runways clear.
+      let blocked = false
+      for (const key of AP_LIST) {
+        const ap = AIRPORTS[key]
+        if (Math.hypot(x - ap.x, z - ap.z) < ap.rwy.len * 0.75) { blocked = true; break }
+      }
+      if (blocked) continue
+      const h = 9 + hash2(i * 13, j * 17) * 14
+      const v = (hash2(i * 19, j * 23) * 4) | 0   // which of the four on the sheet
+      out.push({
+        x, y: g + h * 0.5, z, size: h * 0.62,
+        r: 1, g: 1, b: 1, a: 1,
+        u0: (v % 2) * 0.5, v0: (v >> 1) * 0.5,
+        u1: (v % 2) * 0.5 + 0.5, v1: (v >> 1) * 0.5 + 0.5,
+      })
+    }
+  }
+  return out
 }
 
 /* --- Scenery --------------------------------------------------------------
