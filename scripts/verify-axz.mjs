@@ -45,9 +45,15 @@ for (const path of ['/axz/', '/axz/dispatch/']) {
   }
   // The meaningful assertion is that tabbing reaches EVERY focusable element —
   // not that it reaches some arbitrary number of them.
-  const focusable = await page.evaluate(() => document.querySelectorAll(
+  /* Only the ones that are actually RENDERED. A `hidden` control is not
+     focusable and tab will not stop on it, so counting it made the assertion
+     demand a stop that must not happen — which is what it did the moment
+     `[hidden]` started winning against the button component's own `display`,
+     and the landing game's flare button stopped being on the page before the
+     game had started. */
+  const focusable = await page.evaluate(() => [...document.querySelectorAll(
     'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex="-1"])'
-  ).length)
+  )].filter(el => el.offsetParent !== null || getComputedStyle(el).position === 'fixed').length)
   stops === focusable
     ? ok(`${path} ${stops}/${focusable} focusable elements reached by keyboard${wrapped ? ', wraps cleanly' : ''}, no trap`)
     : bad(`${path} keyboard reached ${stops} of ${focusable} focusable elements`)
@@ -561,7 +567,78 @@ console.log('\nflight simulator')
      747 is what made it visible; the 737 had been quietly doing it too. */
   const roster = JSON.parse(await page.getAttribute('[data-sim-stage]', 'data-sim-fleet'))
   const types = roster._order || []
-  types.length === 8 ? ok(`${types.length} types are selectable`) : bad(`${types.length} types, expected 8`)
+  types.length === 11 ? ok(`${types.length} types are selectable`) : bad(`${types.length} types, expected 11`)
+
+  /* Nothing may be underground. This is the regression for the report that
+     "all the aircraft are stuck in the ground": the stance was a multiple of
+     the fuselage radius with no source, and the coarse far-terrain mesh was
+     drawn 1.4 m OVER the airport plateau on top of that. Both are fixed, and
+     both would fail silently, so the check is on the number itself — the
+     lowest point the aeroplane actually draws, against the ground under it. */
+  const stance = await page.evaluate(async (ids) => {
+    const s = window.__axzSimHandle.sim
+    const base = document.querySelector('[data-sim-stage]').getAttribute('data-sim-src').replace('boot.js', '')
+    const W = await import(base + 'world.js')
+    const out = []
+    for (const id of ids) {
+      s.setAircraft(id); s.setScenario('runway')
+      const ac = s.ac
+      const ground = W.elevation(ac.pos.x, ac.pos.z)
+      out.push({
+        id,
+        clear: +(ac.pos.y + ac.bodyMinY - ground).toFixed(3),
+        // The drawn aeroplane must also be as tall as the published figure,
+        // because that is where the stance comes from in the first place.
+        drawn: +(ac.restHeight + ac.bodyMaxY).toFixed(2),
+        specH: ac.spec.h,
+      })
+    }
+    return out
+  }, types)
+  const buried = stance.filter(r => r.clear <= 0)
+  buried.length === 0
+    ? ok(`every type clears the ground it is parked on (${Math.min(...stance.map(r => r.clear)).toFixed(2)} m at worst)`)
+    : bad(`underground: ${buried.map(r => `${r.id} ${r.clear} m`).join(', ')}`)
+  const wrongHeight = stance.filter(r => r.drawn < r.specH * 0.9 || r.drawn > r.specH * 1.16)
+  wrongHeight.length === 0
+    ? ok('every type stands at its published overall height')
+    : bad(`drawn height disagrees with the published figure: ${wrongHeight.map(r => `${r.id} ${r.drawn} vs ${r.specH}`).join(', ')}`)
+
+  /* And the runway has to be on screen. It was wound clockwise seen from
+     above, so back-face culling threw all four away; then the far mesh covered
+     what was left. A runway you cannot see is not a runway. */
+  const rwy = await page.evaluate(() => new Promise(res => {
+    const s = window.__axzSimHandle.sim
+    s.setAircraft('b-737x'); s.setScenario('runway'); s.cameraMode = 2
+    s.updateCamera = () => {
+      s.camPos = { x: s.ac.pos.x + 1, y: s.ac.pos.y + 240, z: s.ac.pos.z + 1 }
+      s.camQ = s.lookAt(s.camPos, s.ac.pos)
+      s.fov = 60 * Math.PI / 180
+    }
+    const gl = s.gl, cv = s.canvas
+    const orig = s.render.bind(s)
+    let n = 0
+    s.render = () => {
+      orig()
+      if (++n < 4) return
+      // Straight down on the threshold: asphalt is 0.13 linear and nothing
+      // else in this landscape is remotely that dark.
+      let dark = 0, total = 0
+      for (let i = 3; i < 22; i++) {
+        for (let j = 3; j < 14; j++) {
+          const b = new Uint8Array(4)
+          gl.readPixels(Math.round(cv.width * i / 25), Math.round(cv.height * j / 17), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, b)
+          total++
+          if ((b[0] + b[1] + b[2]) / 3 < 70) dark++
+        }
+      }
+      s.render = orig
+      res({ dark, total })
+    }
+  }))
+  rwy.dark > rwy.total * 0.25
+    ? ok(`the runway is rendered under the aeroplane (${rwy.dark}/${rwy.total} samples on asphalt)`)
+    : bad(`no runway under the aeroplane: only ${rwy.dark}/${rwy.total} dark samples`)
   const flown = await page.evaluate(async (ids) => {
     const s = window.__axzSimHandle.sim
     const out = []

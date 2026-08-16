@@ -32,6 +32,7 @@ export const BINDINGS = [
   { id: 'slower', keys: ['BracketLeft'], kind: 'press' },
   { id: 'faster', keys: ['BracketRight'], kind: 'press' },
   { id: 'reset', keys: ['KeyR'], kind: 'press' },
+  { id: 'fullscreen', keys: ['KeyZ'], kind: 'press' },
   { id: 'pause', keys: ['Escape'], kind: 'press' },
 ]
 
@@ -39,7 +40,7 @@ export const BINDINGS = [
 // Tab still moves focus and the page never becomes a keyboard trap.
 const OWNED = new Set([
   'KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE', 'KeyG', 'KeyF', 'KeyV', 'KeyX',
-  'KeyB', 'KeyP', 'KeyC', 'KeyN', 'KeyR', 'Comma', 'Period',
+  'KeyB', 'KeyP', 'KeyC', 'KeyN', 'KeyR', 'KeyZ', 'Comma', 'Period',
   'BracketLeft', 'BracketRight', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
   'ShiftLeft', 'ControlLeft', 'Space',
   // Escape was listed in BINDINGS and documented in the control table but was
@@ -62,6 +63,14 @@ export class Input {
     this.padName = ''
     this.usingPad = false
     this.enabled = false
+    /* Pitch sense. There is no standard for which way a flight stick's Y axis
+       runs: a gamepad's left stick reads negative when pushed away, and this
+       whole file is written to that convention, but a real sidestick may
+       report the opposite and the Thrustmaster Airbus units do. There is no
+       way to know from the API which kind of device is attached, so the sense
+       is a setting, pre-set from the device name and overridable by hand. */
+    this.invertPitch = false
+    this.pitchAuto = true
 
     this.onKeyDown = e => {
       if (!this.enabled) return
@@ -94,6 +103,7 @@ export class Input {
     window.addEventListener('gamepadconnected', e => {
       this.padName = e.gamepad.id
       this.usingPad = true
+      if (this.pitchAuto) this.invertPitch = Input.wantsInvertedPitch(e.gamepad.id)
     })
     window.addEventListener('gamepaddisconnected', () => {
       this.padName = ''
@@ -118,6 +128,16 @@ export class Input {
   down(code) { return this.keys.has(code) }
   hit(code) { return this.pressed.has(code) }
 
+  /**
+   * Does this device report pitch the opposite way round from a gamepad?
+   * Flight sticks generally do — a yoke or sidestick pulled back is a positive
+   * Y on the HID report, where a thumbstick pushed forward is negative — and
+   * the Thrustmaster Airbus sidestick is the one that was reported.
+   */
+  static wantsInvertedPitch(id) {
+    return /thrustmaster|tca|airbus|sidestick|joystick|flight|yoke|t\.?16000|warthog|logitech extreme|saitek/i.test(id || '')
+  }
+
   static dead(v, dz = 0.12) {
     const m = Math.abs(v)
     if (m < dz) return 0
@@ -131,6 +151,12 @@ export class Input {
     let pad = null
     for (const g of gp) if (g && g.connected && g.mapping === 'standard') { pad = g; break }
     if (!pad) for (const g of gp) if (g && g.connected) { pad = g; break }
+    /* A pad plugged in before this page loaded never fires `gamepadconnected`,
+       so the pitch sense is settled the first time one is actually seen. */
+    if (pad && pad.id !== this.padName) {
+      this.padName = pad.id
+      if (this.pitchAuto) this.invertPitch = Input.wantsInvertedPitch(pad.id)
+    }
     this.pad = pad
 
     // Keyboard targets, ramped. Two key sets per axis so WASD and the arrows
@@ -151,7 +177,7 @@ export class Input {
       const ax2 = Input.dead(a[2] || 0)
       if (ax0 || ax1 || ax2) padActive = true
       if (ax0) tRoll = ax0
-      if (ax1) tPitch = ax1
+      if (ax1) tPitch = this.invertPitch ? -ax1 : ax1
       if (ax2) tYaw = ax2
 
       // Triggers: analogue where the pad reports it, digital where it does not.

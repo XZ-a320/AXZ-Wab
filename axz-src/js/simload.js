@@ -20,12 +20,16 @@
   if (!startBtn) return
 
   var src = stage.getAttribute('data-sim-src')
-  var labels, fleet, bands
+  var labels, fleet, flaps, bands
   try {
     labels = JSON.parse(stage.getAttribute('data-sim-labels'))
     fleet = JSON.parse(stage.getAttribute('data-sim-fleet'))
+    // Four flap schedules shared by eleven types, so the table is carried once
+    // rather than copied into every row of the fleet.
+    flaps = JSON.parse(stage.getAttribute('data-sim-flaps'))
     bands = JSON.parse(stage.getAttribute('data-sim-bands'))
   } catch (e) { return }
+  var audioBase = stage.getAttribute('data-sim-audio') || ''
 
   // WebGL is checked BEFORE the download: there is no reason to pull the
   // engine down on a machine that cannot run it.
@@ -53,6 +57,8 @@
         stage: stage,
         labels: labels,
         fleet: fleet,
+        flaps: flaps,
+        audioBase: audioBase,
         bands: bands,
         aircraftId: (stage.querySelector('[data-sim-aircraft]') || {}).value,
         scenario: (stage.querySelector('[data-sim-scenario]') || {}).value,

@@ -67,7 +67,9 @@
     "routeListTitle": "All Routes",
     "routeNote": "Note: the map above shows the outbound routing",
     "originalImage": "Original",
-    "originalImageClose": "Close"
+    "originalImageClose": "Close",
+    "simCta": "Open the flight simulator",
+    "simCtaNote": "Fly these two routes in your browser"
   },
   "routes": {
     "_order": [
@@ -664,6 +666,11 @@
         "a": "Pause",
         "k": "Esc",
         "p": "Start"
+      },
+      {
+        "a": "Fullscreen",
+        "k": "Z",
+        "p": "none"
       }
     ],
     "assistTitle": "What the assist does",
@@ -684,7 +691,8 @@
       "input": "Input device",
       "flight": "Flight",
       "wind": "Wind",
-      "papi": "PAPI"
+      "papi": "PAPI",
+      "mach": "Mach number"
     },
     "units": {
       "kt": "kt",
@@ -712,7 +720,11 @@
       "pullup": "PULL UP",
       "gearWarn": "GEAR",
       "crashed": "Landed at too great a bank angle",
-      "pfdLabel": "Primary flight display: airspeed, attitude, altitude, vertical speed and heading"
+      "pfdLabel": "Primary flight display: airspeed, attitude, altitude, vertical speed and heading",
+      "n1": "N1",
+      "machLabel": "MACH",
+      "reheat": "A/B",
+      "none": "NONE"
     },
     "cameras": {
       "cockpit": "Cockpit",
@@ -760,7 +772,7 @@
     "effectsBody": "Tyre smoke is released on the touchdown frame and scaled by the vertical speed, so how much smoke you see is how hard the arrival was about to be graded. Wingtip vapour appears only when the wing is near its lift limit, which is high load factor or high angle of attack, the same condition under which a real one condenses its vortex cores. Engine exhaust needs both thrust and dense air to show; contrails need 7,200 m. Clouds, trees and the shadow are hashed from coordinates, so the same place always has the same cloud.",
     "effectsTitle": "Everything you can see has a reason",
     "soundTitle": "Sound",
-    "soundBody": "The sound is synthesised on the spot; no audio file is downloaded. The engine is two slightly detuned sawtooths over filtered noise, with pitch and level tracking N1, so it spools when the thrust spools, which a looped sample cannot do. Airflow follows indicated airspeed and gets louder with the gear, flaps or spoilers out. Wheel rumble follows ground speed. The stall warning is intermittent, the overspeed warning clacks, and the thud at touchdown is scaled by the vertical speed. Audio is only created after you press Start, so the page itself is silent.",
+    "soundBody": "The engine, the airflow, the wheels and the touchdown are synthesised on the spot, not sampled. The four kinds of engine make their noise in different places. A high-bypass turbofan is mostly the fan: a blade-passing whine over a soft exhaust, and the bigger the fan the lower the whine sits. Concorde’s Olympus has no bypass air shielding it, so the exhaust itself carries the sound, raw and wide and edged, with a low rip underneath once the reheat is lit. The F-16’s F110 sits between them, with a harder compressor tone and the same burner. The Cessna is not a turbine at all: it is a four-cylinder firing pulse at 2,400 rpm plus the slap of a two-blade propeller. Four engines are not one engine four times as loud; they are one engine plus a beat, because they never turn at exactly the same speed. All of it tracks N1, so the sound spools when the thrust spools, which a looped sample cannot do. Airflow follows indicated airspeed and gets louder with the gear, flaps or spoilers out; wheel rumble follows ground speed; the thud at touchdown is scaled by the vertical speed. The alerts are the exception: five audio files, 48 KB in total. A Boeing low-speed warning is a recorded human voice saying AIRSPEED LOW, and a synthesised imitation of one particular voice is not synthesis, it is a bad impression. Which set an aeroplane gets follows the aeroplane: the Boeings get the Boeing calls, the Airbuses and Concorde get the Airbus stall warning and its cricket, and the Gulfstream is on the same Honeywell terrain box as the Boeings so it says the same words. A Cessna’s stall warning is a pneumatic reed horn in the wing leading edge and the F-16 has a voice of its own, so those two keep the synthesised tone rather than borrowing an airliner’s throat. The audio downloads on the same press as the engine, and starts muted.",
     "crashTitle": "What happens if you crash",
     "crashBody": "There are three ways to break it, all read off the physics: touching down above 1,200 ft/min, which is about where a 737's gear design limit sits; touching down banked more than 32 degrees; or landing with the gear up. After that the wing keeps a tenth of its lift, the engines stop, the controls do nothing, and the airframe tumbles down and burns where it lands. Press R to start again.",
     "crashReasons": {
@@ -779,7 +791,7 @@
     "gyroscope": "Gyroscope",
     "gyroOn": "Gyroscope on. Hold the phone how you like, then press Recentre.",
     "gyroUnavailable": "No gyroscope available on this device. The on-screen rudder and throttle still fly it.",
-    "phoneButton": "Phone mode (fullscreen + gyroscope)",
+    "phoneButton": "Fullscreen mode (with gyroscope)",
     "touch": {
       "recentre": "Recentre",
       "exit": "Exit",
@@ -792,17 +804,51 @@
     "fleetGroup": "Air Xiao Ze fleet",
     "otherGroup": "Other types (simulator only)",
     "rosterTitle": "Aircraft you can fly",
-    "rosterNote": "The first four are Air Xiao Ze’s own aircraft. The last four are not: they are additional types the simulator offers, and they have nothing to do with this airline. Every figure is the manufacturer’s published one, and the stall and approach speeds are computed from those figures rather than typed in. The same equations fly the 250-tonne 747 and the one-tonne Cessna; the only branch is propeller against jet thrust.",
+    "rosterNote": "The first four are Air Xiao Ze’s own aircraft. The last seven are not: they are additional types the simulator offers, and they have nothing to do with this airline. Dimensions, wing area, typical operating weight and thrust are all the manufacturer’s published figures. The lift-curve slope is not typed in; it is computed from the span and the wing area through lifting-line theory, so a delta of aspect ratio 1.83 gets 2.9 per radian and an airliner wing of 10.3 gets 5.2, from one formula. Stall and approach speeds follow from that: 158 kt for Concorde, 152 for the F-16, 49 for the Cessna, each within a few knots of the published figure. The same equations fly the 250-tonne 747 and the one-tonne Cessna. The only branches are the three real differences between engines: a propeller, a turbofan, and a low-bypass or turbojet core with a burner behind it.",
     "rosterCols": {
       "type": "Type",
       "dims": "Length × span",
       "mass": "Weight",
       "power": "Thrust",
       "wing": "Wing loading / AR",
-      "vref": "Approach speed"
+      "vref": "Approach speed",
+      "twr": "Thrust / weight"
     },
     "rosterOwn": "Air Xiao Ze",
-    "rosterSim": "Simulator type"
+    "rosterSim": "Simulator type",
+    "reheatShort": "reheat",
+    "fullscreenButton": "Fullscreen",
+    "exitFullscreen": "Leave fullscreen",
+    "screenTitle": "Flying it on a computer",
+    "screenBody": "Press Z, or the Fullscreen button, and the picture fills the screen with the instruments scaled up to match. Z or Esc brings you back. In the page the simulator is about five hundred pixels tall, the flight display takes a third of that, and a runway six miles out is four pixels wide, so there is nothing to see on final. Fullscreen fixes all three. Since the readout below the canvas is out of reach in fullscreen, the flight number, registration and camera are printed in the two lower corners of the panel instead, and the height above the ground appears under the attitude ball once you are below 2,500 ft.",
+    "reheatTitle": "Reheat",
+    "reheatBody": "Concorde and the F-16 have a burner; the other nine do not. It lights past 92 per cent of lever travel, the way a real throttle goes past a detent, and the extra thrust is the manufacturer’s published wet figure rather than the dry one times a factor: the Olympus 593 gives 139.4 kN dry and 169.2 kN lit, the F110 gives 76.3 and 131. The N1 readout stops showing a percentage and shows A/B instead, and the sound gains a layer. Fuel is not modelled here, so nothing punishes you for leaving it in. A turbojet also gains thrust with speed, because the intake is doing work the compressor would otherwise have to, which is exactly why Concorde used the burner to get through the transonic and then cruised supersonically on dry power. The transonic is real: wave drag starts climbing above Mach 0.93, and if you cannot push through it you cannot push through it.",
+    "clearLog": "Clear",
+    "clearLogLabel": "Clear the flight event log",
+    "setupTitle": "Weather and time",
+    "setup": {
+      "time": "Time of day",
+      "windDir": "Wind from",
+      "windSpeed": "Wind speed",
+      "turbulence": "Turbulence"
+    },
+    "times": {
+      "dawn": "Dawn",
+      "noon": "Midday",
+      "dusk": "Dusk",
+      "night": "Night"
+    },
+    "turbLevels": {
+      "none": "None",
+      "light": "Light",
+      "moderate": "Moderate",
+      "severe": "Severe"
+    },
+    "windCalm": "Calm",
+    "weatherTitle2": "Setting the weather yourself",
+    "weatherBody2": "Under the starting position are time of day, wind direction, wind speed and turbulence. These four change real quantities inside the simulator rather than a filter over the picture. Time moves the sun, so the shadows swing round with it, night is genuinely dark, and that is the point at which the runway lights start earning their place. Wind direction and speed go straight into the aerodynamics: a headwind changes the ground speed without touching the airspeed, and a crosswind you do not correct for will carry you off the centreline. Turbulence sets the gust amplitude, and on Severe you will be correcting the whole way down final. The wind still slows near the surface, so the crosswind in the flare is always a little less than the one you had on the approach.",
+    "cockpitTitle": "The cockpit view",
+    "cockpitBody": "Press C for the cockpit view. There is now a glareshield, window posts and a panel with the flight display mounted in it rather than floating in the air. The eye height is worked out per type from the fuselage diameter and the length, so the flight deck of a 747 is a dozen metres above a Cessna and the horizon crosses the window frame differently when the two rotate. The frame is drawn rather than modelled, and it hides nothing you would have been able to see out of the real one anyway."
   },
   "aprilfools": {
     "date": "April 1, 2026",

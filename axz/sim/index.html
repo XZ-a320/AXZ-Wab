@@ -18,7 +18,7 @@
 <link rel="preload" as="font" type="font/woff2" href="/axz/fonts/axz-sans-400-zh.21d2a338.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="/axz/fonts/axz-mono-400.6fc3e157.woff2" crossorigin>
 <style>@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-400-zh.21d2a338.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-700-zh.78b96dc0.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Serif";src:url("/axz/fonts/axz-serif-400-zh.193bc21f.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-400.6fc3e157.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-600.4d4d2e8c.woff2") format("woff2");font-weight:600;font-style:normal;font-display:swap;}</style>
-<link rel="stylesheet" href="/axz/assets/axz.6ae46f8d.css">
+<link rel="stylesheet" href="/axz/assets/axz.9b47d786.css">
 </head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -99,10 +99,13 @@
   <p class="prose">在浏览器里飞小泽航空的两条航线。机型尺寸取自机队那一节的同一张表，航线、跑道朝向和巡航高度也都是本站已经写过的。气动是按系数算的：升力随迎角变，会失速，发动机推力有延迟，起落架是弹簧阻尼，落地轻重取决于你怎么拉平。</p>
 
   <div class="sim" data-sim-stage
-       data-sim-src="/axz/assets/sim-052310a9/boot.js"
-       data-sim-labels="{&quot;speed&quot;:&quot;空速&quot;,&quot;altitude&quot;:&quot;高度&quot;,&quot;heading&quot;:&quot;航向&quot;,&quot;vs&quot;:&quot;垂直速度&quot;,&quot;throttle&quot;:&quot;油门&quot;,&quot;flaps&quot;:&quot;襟翼&quot;,&quot;gear&quot;:&quot;起落架&quot;,&quot;brakes&quot;:&quot;刹车&quot;,&quot;spoilers&quot;:&quot;扰流板&quot;,&quot;up&quot;:&quot;收&quot;,&quot;down&quot;:&quot;放&quot;,&quot;on&quot;:&quot;开&quot;,&quot;off&quot;:&quot;关&quot;,&quot;park&quot;:&quot;停留&quot;,&quot;stall&quot;:&quot;失速&quot;,&quot;overspeed&quot;:&quot;超速&quot;,&quot;pullup&quot;:&quot;拉起来&quot;,&quot;gearWarn&quot;:&quot;起落架&quot;,&quot;crashed&quot;:&quot;落地姿态过大&quot;,&quot;pfdLabel&quot;:&quot;主飞行显示：空速、姿态、高度、垂直速度、航向&quot;,&quot;kt&quot;:&quot;节&quot;,&quot;ft&quot;:&quot;英尺&quot;,&quot;fpm&quot;:&quot;英尺/分钟&quot;,&quot;nm&quot;:&quot;海里&quot;,&quot;cameras&quot;:{&quot;cockpit&quot;:&quot;座舱&quot;,&quot;chase&quot;:&quot;尾随&quot;,&quot;external&quot;:&quot;外部环绕&quot;,&quot;tower&quot;:&quot;塔台&quot;},&quot;phases&quot;:{&quot;takeoff&quot;:&quot;起飞&quot;,&quot;climb&quot;:&quot;爬升&quot;,&quot;cruise&quot;:&quot;巡航&quot;,&quot;final&quot;:&quot;五边进近&quot;,&quot;landed&quot;:&quot;已落地&quot;},&quot;scenarios&quot;:{&quot;runway&quot;:&quot;停在 KSFO 跑道头（冷舱）&quot;,&quot;takeoff&quot;:&quot;KSFO 跑道对正，襟翼已放&quot;,&quot;approach&quot;:&quot;KSNS 十海里五边，三千英尺&quot;,&quot;cruise&quot;:&quot;航路中段，巡航高度&quot;},&quot;loading&quot;:&quot;正在载入模拟器…&quot;,&quot;unsupported&quot;:&quot;你的浏览器没有可用的 WebGL，模拟器跑不起来。下面的操作表和评分标准照常能看。&quot;,&quot;failed&quot;:&quot;模拟器启动失败。下面的操作表和评分标准照常能看。&quot;,&quot;centreline&quot;:&quot;偏离中线&quot;,&quot;paused&quot;:&quot;已暂停&quot;,&quot;resumed&quot;:&quot;继续&quot;,&quot;assistLabel&quot;:&quot;辅助&quot;,&quot;timeLabel&quot;:&quot;时间倍率&quot;,&quot;soundLabel&quot;:&quot;声音&quot;,&quot;crashReasons&quot;:{&quot;hard&quot;:&quot;接地太重，起落架撑不住&quot;,&quot;bank&quot;:&quot;接地坡度过大，翼尖先着地&quot;,&quot;gear&quot;:&quot;起落架没放，机腹着地&quot;},&quot;crashTips&quot;:{&quot;hard&quot;:&quot;在离地 20 英尺左右开始带杆，慢慢加力，别一下拉到底。目标是接地前把下降率收到 200 英尺/分钟以内——签派台那张表上 60 以内才算\&quot;跑道按摩师\&quot;。&quot;,&quot;bank&quot;:&quot;有侧风就用侧滑法：方向舵蹬向跑道中线，副翼压住迎风一侧的机翼，接地时机身要对正跑道、机翼要接近水平。数据栏里的风向风速能看出风从哪边来。&quot;,&quot;gear&quot;:&quot;五边上按 G 放起落架。数据栏和 PFD 上的\&quot;起落架\&quot;都会变成绿色的\&quot;放\&quot;，没变绿就是还没锁上。&quot;},&quot;tipLabel&quot;:&quot;下次试试：&quot;,&quot;restart&quot;:&quot;再来一次&quot;,&quot;gyroscope&quot;:&quot;陀螺仪&quot;,&quot;gyroOn&quot;:&quot;陀螺仪已开，把手机端平然后点\&quot;回中\&quot;&quot;,&quot;gyroUnavailable&quot;:&quot;这台设备拿不到陀螺仪，用屏幕上的方向舵和油门也能飞&quot;,&quot;recentre&quot;:&quot;回中&quot;,&quot;exit&quot;:&quot;退出&quot;,&quot;flapsDown&quot;:&quot;襟翼+&quot;,&quot;flapsUp&quot;:&quot;襟翼−&quot;,&quot;view&quot;:&quot;视角&quot;,&quot;pause&quot;:&quot;暂停&quot;,&quot;keyboard&quot;:&quot;键盘&quot;,&quot;gamepad&quot;:&quot;手柄&quot;}"
-       data-sim-fleet="{&quot;b-737x&quot;:{&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;mass&quot;:65000,&quot;wingArea&quot;:124.6,&quot;thrust&quot;:242000,&quot;vne&quot;:340,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;name&quot;:&quot;波音 737-800&quot;,&quot;reg&quot;:&quot;B-737X&quot;,&quot;axz&quot;:true},&quot;b-321x&quot;:{&quot;len&quot;:44.51,&quot;span&quot;:35.8,&quot;dia&quot;:3.95,&quot;h&quot;:11.76,&quot;engines&quot;:2,&quot;mass&quot;:71000,&quot;wingArea&quot;:122.6,&quot;thrust&quot;:293000,&quot;vne&quot;:350,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;name&quot;:&quot;空客 A321&quot;,&quot;reg&quot;:&quot;B-321X&quot;,&quot;axz&quot;:true},&quot;b-1717&quot;:{&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;mass&quot;:65000,&quot;wingArea&quot;:124.6,&quot;thrust&quot;:242000,&quot;vne&quot;:340,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;name&quot;:&quot;波音 737-800 (MC联动)&quot;,&quot;reg&quot;:&quot;B-1717&quot;,&quot;axz&quot;:true},&quot;b-0001f&quot;:{&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;mass&quot;:71000,&quot;wingArea&quot;:124.6,&quot;thrust&quot;:242000,&quot;vne&quot;:340,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;name&quot;:&quot;波音 737-800BCF&quot;,&quot;reg&quot;:&quot;B-0001F&quot;,&quot;axz&quot;:true},&quot;a320&quot;:{&quot;len&quot;:37.57,&quot;span&quot;:35.8,&quot;dia&quot;:3.95,&quot;h&quot;:11.76,&quot;engines&quot;:2,&quot;mass&quot;:62000,&quot;wingArea&quot;:122.6,&quot;thrust&quot;:240000,&quot;vne&quot;:350,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;name&quot;:&quot;Airbus A320&quot;,&quot;reg&quot;:&quot;SIM-320&quot;,&quot;axz&quot;:false},&quot;b744&quot;:{&quot;len&quot;:70.66,&quot;span&quot;:64.44,&quot;dia&quot;:6.5,&quot;h&quot;:19.41,&quot;engines&quot;:4,&quot;mass&quot;:250000,&quot;wingArea&quot;:541.2,&quot;thrust&quot;:1014000,&quot;vne&quot;:365,&quot;prop&quot;:false,&quot;upperDeck&quot;:true,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;name&quot;:&quot;Boeing 747-400&quot;,&quot;reg&quot;:&quot;SIM-744&quot;,&quot;axz&quot;:false},&quot;b789&quot;:{&quot;len&quot;:62.81,&quot;span&quot;:60.12,&quot;dia&quot;:5.77,&quot;h&quot;:17.02,&quot;engines&quot;:2,&quot;mass&quot;:180000,&quot;wingArea&quot;:377,&quot;thrust&quot;:640000,&quot;vne&quot;:360,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:true,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;dihedral&quot;:0.135,&quot;name&quot;:&quot;Boeing 787-9&quot;,&quot;reg&quot;:&quot;SIM-789&quot;,&quot;axz&quot;:false},&quot;c172&quot;:{&quot;len&quot;:8.28,&quot;span&quot;:11,&quot;dia&quot;:1.25,&quot;h&quot;:2.72,&quot;engines&quot;:1,&quot;mass&quot;:1050,&quot;wingArea&quot;:16.2,&quot;thrust&quot;:3400,&quot;vne&quot;:163,&quot;prop&quot;:true,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:true,&quot;strut&quot;:true,&quot;fixedGear&quot;:true,&quot;name&quot;:&quot;Cessna 172S&quot;,&quot;reg&quot;:&quot;SIM-172&quot;,&quot;axz&quot;:false},&quot;_order&quot;:[&quot;b-737x&quot;,&quot;b-321x&quot;,&quot;b-1717&quot;,&quot;b-0001f&quot;,&quot;a320&quot;,&quot;b744&quot;,&quot;b789&quot;,&quot;c172&quot;]}"
+       data-sim-src="/axz/assets/sim-08f82f72/boot.js"
+       data-sim-labels="{&quot;speed&quot;:&quot;空速&quot;,&quot;altitude&quot;:&quot;高度&quot;,&quot;heading&quot;:&quot;航向&quot;,&quot;vs&quot;:&quot;垂直速度&quot;,&quot;throttle&quot;:&quot;油门&quot;,&quot;flaps&quot;:&quot;襟翼&quot;,&quot;gear&quot;:&quot;起落架&quot;,&quot;brakes&quot;:&quot;刹车&quot;,&quot;spoilers&quot;:&quot;扰流板&quot;,&quot;up&quot;:&quot;收&quot;,&quot;down&quot;:&quot;放&quot;,&quot;on&quot;:&quot;开&quot;,&quot;off&quot;:&quot;关&quot;,&quot;park&quot;:&quot;停留&quot;,&quot;stall&quot;:&quot;失速&quot;,&quot;overspeed&quot;:&quot;超速&quot;,&quot;pullup&quot;:&quot;拉起来&quot;,&quot;gearWarn&quot;:&quot;起落架&quot;,&quot;crashed&quot;:&quot;落地姿态过大&quot;,&quot;pfdLabel&quot;:&quot;主飞行显示：空速、姿态、高度、垂直速度、航向&quot;,&quot;n1&quot;:&quot;N1&quot;,&quot;machLabel&quot;:&quot;马赫&quot;,&quot;reheat&quot;:&quot;加力&quot;,&quot;none&quot;:&quot;无&quot;,&quot;kt&quot;:&quot;节&quot;,&quot;ft&quot;:&quot;英尺&quot;,&quot;fpm&quot;:&quot;英尺/分钟&quot;,&quot;nm&quot;:&quot;海里&quot;,&quot;cameras&quot;:{&quot;cockpit&quot;:&quot;座舱&quot;,&quot;chase&quot;:&quot;尾随&quot;,&quot;external&quot;:&quot;外部环绕&quot;,&quot;tower&quot;:&quot;塔台&quot;},&quot;phases&quot;:{&quot;takeoff&quot;:&quot;起飞&quot;,&quot;climb&quot;:&quot;爬升&quot;,&quot;cruise&quot;:&quot;巡航&quot;,&quot;final&quot;:&quot;五边进近&quot;,&quot;landed&quot;:&quot;已落地&quot;},&quot;scenarios&quot;:{&quot;runway&quot;:&quot;停在 KSFO 跑道头（冷舱）&quot;,&quot;takeoff&quot;:&quot;KSFO 跑道对正，襟翼已放&quot;,&quot;approach&quot;:&quot;KSNS 十海里五边，三千英尺&quot;,&quot;cruise&quot;:&quot;航路中段，巡航高度&quot;},&quot;loading&quot;:&quot;正在载入模拟器…&quot;,&quot;unsupported&quot;:&quot;你的浏览器没有可用的 WebGL，模拟器跑不起来。下面的操作表和评分标准照常能看。&quot;,&quot;failed&quot;:&quot;模拟器启动失败。下面的操作表和评分标准照常能看。&quot;,&quot;centreline&quot;:&quot;偏离中线&quot;,&quot;paused&quot;:&quot;已暂停&quot;,&quot;resumed&quot;:&quot;继续&quot;,&quot;assistLabel&quot;:&quot;辅助&quot;,&quot;timeLabel&quot;:&quot;时间倍率&quot;,&quot;soundLabel&quot;:&quot;声音&quot;,&quot;crashReasons&quot;:{&quot;hard&quot;:&quot;接地太重，起落架撑不住&quot;,&quot;bank&quot;:&quot;接地坡度过大，翼尖先着地&quot;,&quot;gear&quot;:&quot;起落架没放，机腹着地&quot;},&quot;crashTips&quot;:{&quot;hard&quot;:&quot;在离地 20 英尺左右开始带杆，慢慢加力，别一下拉到底。目标是接地前把下降率收到 200 英尺/分钟以内——签派台那张表上 60 以内才算\&quot;跑道按摩师\&quot;。&quot;,&quot;bank&quot;:&quot;有侧风就用侧滑法：方向舵蹬向跑道中线，副翼压住迎风一侧的机翼，接地时机身要对正跑道、机翼要接近水平。数据栏里的风向风速能看出风从哪边来。&quot;,&quot;gear&quot;:&quot;五边上按 G 放起落架。数据栏和 PFD 上的\&quot;起落架\&quot;都会变成绿色的\&quot;放\&quot;，没变绿就是还没锁上。&quot;},&quot;tipLabel&quot;:&quot;下次试试：&quot;,&quot;restart&quot;:&quot;再来一次&quot;,&quot;gyroscope&quot;:&quot;陀螺仪&quot;,&quot;gyroOn&quot;:&quot;陀螺仪已开，把手机端平然后点\&quot;回中\&quot;&quot;,&quot;gyroUnavailable&quot;:&quot;这台设备拿不到陀螺仪，用屏幕上的方向舵和油门也能飞&quot;,&quot;recentre&quot;:&quot;回中&quot;,&quot;exit&quot;:&quot;退出&quot;,&quot;fullscreen&quot;:&quot;全屏&quot;,&quot;flapsDown&quot;:&quot;襟翼+&quot;,&quot;flapsUp&quot;:&quot;襟翼−&quot;,&quot;view&quot;:&quot;视角&quot;,&quot;pause&quot;:&quot;暂停&quot;,&quot;keyboard&quot;:&quot;键盘&quot;,&quot;gamepad&quot;:&quot;手柄&quot;}"
+       data-sim-fleet="{&quot;b-737x&quot;:{&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;mass&quot;:65000,&quot;wingArea&quot;:124.6,&quot;thrust&quot;:242000,&quot;vne&quot;:340,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;clAlpha&quot;:5.2152,&quot;cl0&quot;:0.15,&quot;cd0&quot;:0.021,&quot;oswald&quot;:0.8,&quot;stallDeg&quot;:15.5,&quot;flapSet&quot;:&quot;airliner&quot;,&quot;engine&quot;:&quot;turbofan&quot;,&quot;shape&quot;:&quot;jet&quot;,&quot;thrustAB&quot;:0,&quot;mmo&quot;:0.82,&quot;ceiling&quot;:12500,&quot;tailStrikeDeg&quot;:11,&quot;lowVis&quot;:false,&quot;cargo&quot;:false,&quot;warnPack&quot;:&quot;boeing&quot;,&quot;name&quot;:&quot;波音 737-800&quot;,&quot;reg&quot;:&quot;B-737X&quot;,&quot;axz&quot;:true},&quot;b-321x&quot;:{&quot;len&quot;:44.51,&quot;span&quot;:35.8,&quot;dia&quot;:3.95,&quot;h&quot;:11.76,&quot;engines&quot;:2,&quot;mass&quot;:71000,&quot;wingArea&quot;:122.6,&quot;thrust&quot;:293000,&quot;vne&quot;:350,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;clAlpha&quot;:5.2299,&quot;cl0&quot;:0.15,&quot;cd0&quot;:0.021,&quot;oswald&quot;:0.8,&quot;stallDeg&quot;:15.5,&quot;flapSet&quot;:&quot;airliner&quot;,&quot;engine&quot;:&quot;turbofan&quot;,&quot;shape&quot;:&quot;jet&quot;,&quot;thrustAB&quot;:0,&quot;mmo&quot;:0.82,&quot;ceiling&quot;:11900,&quot;tailStrikeDeg&quot;:9.7,&quot;lowVis&quot;:false,&quot;cargo&quot;:false,&quot;warnPack&quot;:&quot;airbus&quot;,&quot;name&quot;:&quot;空客 A321&quot;,&quot;reg&quot;:&quot;B-321X&quot;,&quot;axz&quot;:true},&quot;b-1717&quot;:{&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;mass&quot;:65000,&quot;wingArea&quot;:124.6,&quot;thrust&quot;:242000,&quot;vne&quot;:340,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;clAlpha&quot;:5.2152,&quot;cl0&quot;:0.15,&quot;cd0&quot;:0.021,&quot;oswald&quot;:0.8,&quot;stallDeg&quot;:15.5,&quot;flapSet&quot;:&quot;airliner&quot;,&quot;engine&quot;:&quot;turbofan&quot;,&quot;shape&quot;:&quot;jet&quot;,&quot;thrustAB&quot;:0,&quot;mmo&quot;:0.82,&quot;ceiling&quot;:12500,&quot;tailStrikeDeg&quot;:11,&quot;lowVis&quot;:false,&quot;cargo&quot;:false,&quot;warnPack&quot;:&quot;boeing&quot;,&quot;name&quot;:&quot;波音 737-800 (MC联动)&quot;,&quot;reg&quot;:&quot;B-1717&quot;,&quot;axz&quot;:true},&quot;b-0001f&quot;:{&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;mass&quot;:71000,&quot;wingArea&quot;:124.6,&quot;thrust&quot;:242000,&quot;vne&quot;:340,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;clAlpha&quot;:5.2152,&quot;cl0&quot;:0.15,&quot;cd0&quot;:0.021,&quot;oswald&quot;:0.8,&quot;stallDeg&quot;:15.5,&quot;flapSet&quot;:&quot;airliner&quot;,&quot;engine&quot;:&quot;turbofan&quot;,&quot;shape&quot;:&quot;jet&quot;,&quot;thrustAB&quot;:0,&quot;mmo&quot;:0.82,&quot;ceiling&quot;:12500,&quot;tailStrikeDeg&quot;:11,&quot;lowVis&quot;:false,&quot;cargo&quot;:true,&quot;warnPack&quot;:&quot;boeing&quot;,&quot;name&quot;:&quot;波音 737-800BCF&quot;,&quot;reg&quot;:&quot;B-0001F&quot;,&quot;axz&quot;:true},&quot;a320&quot;:{&quot;len&quot;:37.57,&quot;span&quot;:35.8,&quot;dia&quot;:3.95,&quot;h&quot;:11.76,&quot;engines&quot;:2,&quot;mass&quot;:62000,&quot;wingArea&quot;:122.6,&quot;thrust&quot;:240000,&quot;vne&quot;:350,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;clAlpha&quot;:5.2299,&quot;cl0&quot;:0.15,&quot;cd0&quot;:0.021,&quot;oswald&quot;:0.8,&quot;stallDeg&quot;:15.5,&quot;flapSet&quot;:&quot;airliner&quot;,&quot;engine&quot;:&quot;turbofan&quot;,&quot;shape&quot;:&quot;jet&quot;,&quot;thrustAB&quot;:0,&quot;mmo&quot;:0.82,&quot;ceiling&quot;:11900,&quot;tailStrikeDeg&quot;:13.5,&quot;lowVis&quot;:false,&quot;cargo&quot;:false,&quot;warnPack&quot;:&quot;airbus&quot;,&quot;name&quot;:&quot;Airbus A320&quot;,&quot;reg&quot;:&quot;SIM-320&quot;,&quot;axz&quot;:false},&quot;b744&quot;:{&quot;len&quot;:70.66,&quot;span&quot;:64.44,&quot;dia&quot;:6.5,&quot;h&quot;:19.41,&quot;engines&quot;:4,&quot;mass&quot;:250000,&quot;wingArea&quot;:541.2,&quot;thrust&quot;:1014000,&quot;vne&quot;:365,&quot;prop&quot;:false,&quot;upperDeck&quot;:true,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;clAlpha&quot;:4.9304,&quot;cl0&quot;:0.15,&quot;cd0&quot;:0.021,&quot;oswald&quot;:0.8,&quot;stallDeg&quot;:15.5,&quot;flapSet&quot;:&quot;airliner&quot;,&quot;engine&quot;:&quot;turbofan&quot;,&quot;shape&quot;:&quot;jet&quot;,&quot;thrustAB&quot;:0,&quot;mmo&quot;:0.92,&quot;ceiling&quot;:13700,&quot;tailStrikeDeg&quot;:12,&quot;lowVis&quot;:false,&quot;cargo&quot;:false,&quot;warnPack&quot;:&quot;boeing&quot;,&quot;name&quot;:&quot;Boeing 747-400&quot;,&quot;reg&quot;:&quot;SIM-744&quot;,&quot;axz&quot;:false},&quot;b789&quot;:{&quot;len&quot;:62.81,&quot;span&quot;:60.12,&quot;dia&quot;:5.77,&quot;h&quot;:17.02,&quot;engines&quot;:2,&quot;mass&quot;:180000,&quot;wingArea&quot;:377,&quot;thrust&quot;:640000,&quot;vne&quot;:360,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:true,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;dihedral&quot;:0.135,&quot;clAlpha&quot;:5.1519,&quot;cl0&quot;:0.15,&quot;cd0&quot;:0.021,&quot;oswald&quot;:0.8,&quot;stallDeg&quot;:15.5,&quot;flapSet&quot;:&quot;airliner&quot;,&quot;engine&quot;:&quot;turbofan&quot;,&quot;shape&quot;:&quot;jet&quot;,&quot;thrustAB&quot;:0,&quot;mmo&quot;:0.9,&quot;ceiling&quot;:13100,&quot;tailStrikeDeg&quot;:9.5,&quot;lowVis&quot;:false,&quot;cargo&quot;:false,&quot;warnPack&quot;:&quot;boeing&quot;,&quot;name&quot;:&quot;Boeing 787-9&quot;,&quot;reg&quot;:&quot;SIM-789&quot;,&quot;axz&quot;:false},&quot;c172&quot;:{&quot;len&quot;:8.28,&quot;span&quot;:11,&quot;dia&quot;:1.25,&quot;h&quot;:2.72,&quot;engines&quot;:1,&quot;mass&quot;:1050,&quot;wingArea&quot;:16.2,&quot;thrust&quot;:3400,&quot;vne&quot;:163,&quot;prop&quot;:true,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:true,&quot;strut&quot;:true,&quot;fixedGear&quot;:true,&quot;clAlpha&quot;:4.9016,&quot;cl0&quot;:0.15,&quot;cd0&quot;:0.03,&quot;oswald&quot;:0.75,&quot;stallDeg&quot;:16.5,&quot;flapSet&quot;:&quot;light&quot;,&quot;engine&quot;:&quot;piston&quot;,&quot;shape&quot;:&quot;light&quot;,&quot;thrustAB&quot;:0,&quot;mmo&quot;:0.3,&quot;ceiling&quot;:4100,&quot;tailStrikeDeg&quot;:16,&quot;lowVis&quot;:false,&quot;cargo&quot;:false,&quot;warnPack&quot;:&quot;&quot;,&quot;name&quot;:&quot;Cessna 172S&quot;,&quot;reg&quot;:&quot;SIM-172&quot;,&quot;axz&quot;:false},&quot;conc&quot;:{&quot;len&quot;:61.66,&quot;span&quot;:25.6,&quot;dia&quot;:2.88,&quot;h&quot;:12.2,&quot;engines&quot;:4,&quot;mass&quot;:111130,&quot;wingArea&quot;:358.25,&quot;thrust&quot;:139400,&quot;vne&quot;:530,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;dihedral&quot;:0,&quot;clAlpha&quot;:2.9213,&quot;cl0&quot;:0.05,&quot;cd0&quot;:0.0145,&quot;oswald&quot;:0.62,&quot;stallDeg&quot;:24,&quot;flapSet&quot;:&quot;none&quot;,&quot;engine&quot;:&quot;turbojet-reheat&quot;,&quot;shape&quot;:&quot;delta&quot;,&quot;thrustAB&quot;:169200,&quot;mmo&quot;:2.04,&quot;ceiling&quot;:18300,&quot;tailStrikeDeg&quot;:13,&quot;lowVis&quot;:false,&quot;cargo&quot;:false,&quot;warnPack&quot;:&quot;airbus&quot;,&quot;name&quot;:&quot;Aerospatiale/BAC Concorde&quot;,&quot;reg&quot;:&quot;SIM-102&quot;,&quot;axz&quot;:false},&quot;g650&quot;:{&quot;len&quot;:30.41,&quot;span&quot;:30.36,&quot;dia&quot;:2.9,&quot;h&quot;:7.82,&quot;engines&quot;:2,&quot;mass&quot;:33566,&quot;wingArea&quot;:119.2,&quot;thrust&quot;:75200,&quot;vne&quot;:340,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;dihedral&quot;:0.055,&quot;clAlpha&quot;:4.9386,&quot;cl0&quot;:0.12,&quot;cd0&quot;:0.0175,&quot;oswald&quot;:0.82,&quot;stallDeg&quot;:13.5,&quot;flapSet&quot;:&quot;bizjet&quot;,&quot;engine&quot;:&quot;turbofan-small&quot;,&quot;shape&quot;:&quot;bizjet&quot;,&quot;thrustAB&quot;:0,&quot;mmo&quot;:0.925,&quot;ceiling&quot;:15545,&quot;tailStrikeDeg&quot;:12,&quot;lowVis&quot;:false,&quot;cargo&quot;:false,&quot;warnPack&quot;:&quot;boeing&quot;,&quot;name&quot;:&quot;Gulfstream G650ER&quot;,&quot;reg&quot;:&quot;SIM-650&quot;,&quot;axz&quot;:false},&quot;f16&quot;:{&quot;len&quot;:15.06,&quot;span&quot;:9.96,&quot;dia&quot;:1.6,&quot;h&quot;:4.88,&quot;engines&quot;:1,&quot;mass&quot;:12000,&quot;wingArea&quot;:27.87,&quot;thrust&quot;:76300,&quot;vne&quot;:695,&quot;prop&quot;:false,&quot;upperDeck&quot;:false,&quot;rakedTips&quot;:false,&quot;highWing&quot;:false,&quot;strut&quot;:false,&quot;fixedGear&quot;:false,&quot;dihedral&quot;:0,&quot;clAlpha&quot;:3.9481,&quot;cl0&quot;:0.05,&quot;cd0&quot;:0.0195,&quot;oswald&quot;:0.72,&quot;stallDeg&quot;:21,&quot;flapSet&quot;:&quot;fighter&quot;,&quot;engine&quot;:&quot;turbofan-ab&quot;,&quot;shape&quot;:&quot;fighter&quot;,&quot;thrustAB&quot;:131000,&quot;mmo&quot;:2.05,&quot;ceiling&quot;:15240,&quot;tailStrikeDeg&quot;:15,&quot;lowVis&quot;:true,&quot;cargo&quot;:false,&quot;warnPack&quot;:&quot;&quot;,&quot;name&quot;:&quot;Lockheed Martin F-16C&quot;,&quot;reg&quot;:&quot;SIM-F16&quot;,&quot;axz&quot;:false},&quot;_order&quot;:[&quot;b-737x&quot;,&quot;b-321x&quot;,&quot;b-1717&quot;,&quot;b-0001f&quot;,&quot;a320&quot;,&quot;b744&quot;,&quot;b789&quot;,&quot;c172&quot;,&quot;conc&quot;,&quot;g650&quot;,&quot;f16&quot;]}"
+       data-sim-flaps="{&quot;airliner&quot;:[{&quot;deg&quot;:0,&quot;dCL&quot;:0,&quot;dCD&quot;:0,&quot;dStall&quot;:0,&quot;vfe&quot;:9999},{&quot;deg&quot;:5,&quot;dCL&quot;:0.28,&quot;dCD&quot;:0.0055,&quot;dStall&quot;:0.7,&quot;vfe&quot;:250},{&quot;deg&quot;:15,&quot;dCL&quot;:0.62,&quot;dCD&quot;:0.017,&quot;dStall&quot;:1.2,&quot;vfe&quot;:210},{&quot;deg&quot;:30,&quot;dCL&quot;:1.05,&quot;dCD&quot;:0.048,&quot;dStall&quot;:1.6,&quot;vfe&quot;:175},{&quot;deg&quot;:40,&quot;dCL&quot;:1.28,&quot;dCD&quot;:0.085,&quot;dStall&quot;:1.4,&quot;vfe&quot;:162}],&quot;bizjet&quot;:[{&quot;deg&quot;:0,&quot;dCL&quot;:0,&quot;dCD&quot;:0,&quot;dStall&quot;:0,&quot;vfe&quot;:9999},{&quot;deg&quot;:10,&quot;dCL&quot;:0.2,&quot;dCD&quot;:0.006,&quot;dStall&quot;:0.4,&quot;vfe&quot;:250},{&quot;deg&quot;:20,&quot;dCL&quot;:0.38,&quot;dCD&quot;:0.019,&quot;dStall&quot;:0.7,&quot;vfe&quot;:210},{&quot;deg&quot;:39,&quot;dCL&quot;:0.55,&quot;dCD&quot;:0.052,&quot;dStall&quot;:0.9,&quot;vfe&quot;:180}],&quot;fighter&quot;:[{&quot;deg&quot;:0,&quot;dCL&quot;:0,&quot;dCD&quot;:0,&quot;dStall&quot;:0,&quot;vfe&quot;:9999},{&quot;deg&quot;:20,&quot;dCL&quot;:0.3,&quot;dCD&quot;:0.023,&quot;dStall&quot;:1.5,&quot;vfe&quot;:300}],&quot;light&quot;:[{&quot;deg&quot;:0,&quot;dCL&quot;:0,&quot;dCD&quot;:0,&quot;dStall&quot;:0,&quot;vfe&quot;:9999},{&quot;deg&quot;:10,&quot;dCL&quot;:0.42,&quot;dCD&quot;:0.009,&quot;dStall&quot;:0.8,&quot;vfe&quot;:110},{&quot;deg&quot;:20,&quot;dCL&quot;:0.78,&quot;dCD&quot;:0.026,&quot;dStall&quot;:1.3,&quot;vfe&quot;:95},{&quot;deg&quot;:30,&quot;dCL&quot;:1.05,&quot;dCD&quot;:0.056,&quot;dStall&quot;:1.6,&quot;vfe&quot;:85}],&quot;none&quot;:[{&quot;deg&quot;:0,&quot;dCL&quot;:0,&quot;dCD&quot;:0,&quot;dStall&quot;:0,&quot;vfe&quot;:9999}]}"
+       data-sim-audio="/axz/assets/audio-3b5333b0/"
        data-sim-bands="[&quot;跑道按摩师&quot;,&quot;落地风格稳健&quot;,&quot;跑道震动器&quot;,&quot;重着陆&quot;]">
+    <div class="sim-setup">
     <div class="sim-controls">
       <div class="field">
         <label for="sim-fl">航班</label>
@@ -110,21 +113,44 @@
       </div>
       <div class="field">
         <label for="sim-ac">执飞飞机</label>
-        <select id="sim-ac" data-sim-aircraft><optgroup label="小泽航空机队"><option value="b-737x">B-737X · 波音 737-800</option><option value="b-321x">B-321X · 空客 A321</option><option value="b-1717">B-1717 · 波音 737-800 (MC联动)</option><option value="b-0001f">B-0001F · 波音 737-800BCF</option></optgroup><optgroup label="其他机型（模拟器专用）"><option value="a320">SIM-320 · Airbus A320</option><option value="b744">SIM-744 · Boeing 747-400</option><option value="b789">SIM-789 · Boeing 787-9</option><option value="c172">SIM-172 · Cessna 172S</option></optgroup></select>
+        <select id="sim-ac" data-sim-aircraft><optgroup label="小泽航空机队"><option value="b-737x">B-737X · 波音 737-800</option><option value="b-321x">B-321X · 空客 A321</option><option value="b-1717">B-1717 · 波音 737-800 (MC联动)</option><option value="b-0001f">B-0001F · 波音 737-800BCF</option></optgroup><optgroup label="其他机型（模拟器专用）"><option value="a320">SIM-320 · Airbus A320</option><option value="b744">SIM-744 · Boeing 747-400</option><option value="b789">SIM-789 · Boeing 787-9</option><option value="c172">SIM-172 · Cessna 172S</option><option value="conc">SIM-102 · Aerospatiale/BAC Concorde</option><option value="g650">SIM-650 · Gulfstream G650ER</option><option value="f16">SIM-F16 · Lockheed Martin F-16C</option></optgroup></select>
       </div>
       <div class="field">
         <label for="sim-sc">开始位置</label>
         <select id="sim-sc" data-sim-scenario><option value="takeoff" selected>KSFO 跑道对正，襟翼已放</option><option value="runway">停在 KSFO 跑道头（冷舱）</option><option value="approach">KSNS 十海里五边，三千英尺</option><option value="cruise">航路中段，巡航高度</option></select>
       </div>
     </div>
+    
+    <div class="sim-controls sim-controls--wx">
+      <div class="field">
+        <label for="sim-tod">时间</label>
+        <select id="sim-tod" data-sim-time><option value="dawn">清晨</option><option value="noon" selected>正午</option><option value="dusk">黄昏</option><option value="night">夜间</option></select>
+      </div>
+      <div class="field">
+        <label for="sim-wd">风向</label>
+        <select id="sim-wd" data-sim-winddir><option value="0">000°</option><option value="45">045°</option><option value="90">090°</option><option value="135">135°</option><option value="180">180°</option><option value="225">225°</option><option value="250" selected>250°</option><option value="270">270°</option><option value="315">315°</option></select>
+      </div>
+      <div class="field">
+        <label for="sim-ws">风速</label>
+        <select id="sim-ws" data-sim-windspeed><option value="0">静风</option><option value="5">5 kt</option><option value="8" selected>8 kt</option><option value="15">15 kt</option><option value="25">25 kt</option><option value="35">35 kt</option></select>
+      </div>
+      <div class="field">
+        <label for="sim-tb">乱流</label>
+        <select id="sim-tb" data-sim-turb><option value="0">无</option><option value="0.35" selected>轻</option><option value="0.7">中</option><option value="1">强</option></select>
+      </div>
+    </div>
+    </div>
     <p class="btn-row">
       <button class="btn btn--go" type="button" data-sim-start><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg>启动模拟器</button>
-      <button class="btn" type="button" data-sim-phone hidden aria-pressed="false">手机模式（全屏 + 陀螺仪）</button>
+      <button class="btn" type="button" data-sim-fullscreen hidden aria-pressed="false">全屏</button>
+      <button class="btn" type="button" data-sim-phone hidden aria-pressed="false">全屏模式（启动陀螺仪操作）</button>
     </p>
     <p class="status" role="status" data-sim-status></p>
     <p class="record__meta">点了才开始下载模拟器，大约 40 KB。不点的话这一页什么都不会多加载。</p>
 
-    <div class="sim-stage" data-sim-mount></div>
+    <div class="sim-stage" data-sim-mount>
+      <button class="sim-fs-hint" type="button" data-sim-fsexit>退出全屏</button>
+    </div>
     <div class="sim-crash" data-sim-crash hidden role="alert"></div>
 
     <div class="sim-panel" data-sim-panel hidden>
@@ -138,6 +164,9 @@
   </div><div class="sim-cell">
     <span class="sim-cell__k">指示空速</span>
     <span class="sim-cell__v code" data-sim-field="ias">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">马赫数</span>
+    <span class="sim-cell__v code" data-sim-field="mach">—</span>
   </div><div class="sim-cell">
     <span class="sim-cell__k">气压高度</span>
     <span class="sim-cell__v code" data-sim-field="alt">—</span>
@@ -178,7 +207,11 @@
     <span class="sim-cell__k">帧率</span>
     <span class="sim-cell__v code" data-sim-field="fps">—</span>
   </div></div>
-      <h2 class="record__label">飞行事件</h2>
+      <div class="sim-loghead">
+        <h2 class="record__label">飞行事件</h2>
+        <button class="btn btn--sm" type="button" data-sim-clearlog
+          aria-label="清空飞行事件">清空</button>
+      </div>
       <ul class="sim-log" data-sim-log aria-live="polite"></ul>
     </div>
   </div>
@@ -251,6 +284,10 @@
     <th scope="row">暂停</th>
     <td class="code">Esc</td>
     <td class="code">Start</td>
+  </tr><tr>
+    <th scope="row">全屏</th>
+    <td class="code">Z</td>
+    <td class="code">无</td>
   </tr></tbody>
   </table>
 
@@ -258,7 +295,7 @@
   <p class="prose">键盘没有摇杆那样的模拟量，也不会自己回中，所以默认开着一层辅助：给俯仰和横滚加阻尼，自动配平方向舵消侧滑，松杆时慢慢改平。按 N 可以关掉，关掉之后就是纯气动，飞起来更像真的，也更难。</p>
 
   <h2>可选机型</h2>
-  <p class="prose">上面四架是小泽航空自己的飞机，下面四架不是——那是模拟器里另外提供的机型，跟这家航司没有关系。每一项都是厂家公布的数据：尺寸、机翼面积、典型运行重量、推力。失速速度和进近速度是拿这些数直接算出来的，不是填进去的。同一套方程既飞 250 吨的 747 也飞 1 吨的塞斯纳，唯一的分支是螺旋桨和喷气推力的区别。</p>
+  <p class="prose">上面四架是小泽航空自己的飞机，下面七架不是——那是模拟器里另外提供的机型，跟这家航司没有关系。尺寸、机翼面积、典型运行重量、推力全是厂家公布的数据。升力线斜率不是填进去的，是拿翼展和机翼面积按升力线理论算出来的：展弦比 1.83 的三角翼得到 2.9，展弦比 10.3 的客机机翼得到 5.2，同一条式子。失速速度和进近速度接着从那里算出来，协和 158 节、F-16 152 节、塞斯纳 49 节，都跟厂家和飞行手册上的数字差几节以内。同一套方程既飞 250 吨的 747 也飞 1 吨的塞斯纳，分支只有发动机那三种真实的区别：螺旋桨、涡扇、带加力燃烧室的低涵道比和涡喷。</p>
   <table class="bd sim-roster">
     <thead><tr>
       <th scope="col">机型</th>
@@ -266,6 +303,7 @@
       <th scope="col">重量</th>
       <th scope="col">推力</th>
       <th scope="col">翼载 / 展弦比</th>
+      <th scope="col">推重比</th>
       <th scope="col">着陆参考速度</th>
     </tr></thead>
     <tbody><tr>
@@ -275,6 +313,7 @@
       <td class="code">65 t</td>
       <td class="code">242 kN ×2</td>
       <td class="code">522 kg/m² · 10.3</td>
+      <td class="code">0.76</td>
       <td class="code">139 kt</td>
     </tr><tr>
       <th scope="row"><span class="code">B-321X</span> 空客 A321
@@ -283,7 +322,8 @@
       <td class="code">71 t</td>
       <td class="code">293 kN ×2</td>
       <td class="code">579 kg/m² · 10.5</td>
-      <td class="code">147 kt</td>
+      <td class="code">0.84</td>
+      <td class="code">146 kt</td>
     </tr><tr>
       <th scope="row"><span class="code">B-1717</span> 波音 737-800 (MC联动)
         <span class="ros-tag is-own">小泽航空</span></th>
@@ -291,6 +331,7 @@
       <td class="code">65 t</td>
       <td class="code">242 kN ×2</td>
       <td class="code">522 kg/m² · 10.3</td>
+      <td class="code">0.76</td>
       <td class="code">139 kt</td>
     </tr><tr>
       <th scope="row"><span class="code">B-0001F</span> 波音 737-800BCF
@@ -299,6 +340,7 @@
       <td class="code">71 t</td>
       <td class="code">242 kN ×2</td>
       <td class="code">570 kg/m² · 10.3</td>
+      <td class="code">0.70</td>
       <td class="code">145 kt</td>
     </tr><tr>
       <th scope="row"><span class="code">SIM-320</span> Airbus A320
@@ -307,6 +349,7 @@
       <td class="code">62 t</td>
       <td class="code">240 kN ×2</td>
       <td class="code">506 kg/m² · 10.5</td>
+      <td class="code">0.79</td>
       <td class="code">137 kt</td>
     </tr><tr>
       <th scope="row"><span class="code">SIM-744</span> Boeing 747-400
@@ -315,7 +358,8 @@
       <td class="code">250 t</td>
       <td class="code">1014 kN ×4</td>
       <td class="code">462 kg/m² · 7.7</td>
-      <td class="code">131 kt</td>
+      <td class="code">1.65</td>
+      <td class="code">133 kt</td>
     </tr><tr>
       <th scope="row"><span class="code">SIM-789</span> Boeing 787-9
         <span class="ros-tag">模拟器机型</span></th>
@@ -323,7 +367,8 @@
       <td class="code">180 t</td>
       <td class="code">640 kN ×2</td>
       <td class="code">477 kg/m² · 9.6</td>
-      <td class="code">133 kt</td>
+      <td class="code">0.73</td>
+      <td class="code">134 kt</td>
     </tr><tr>
       <th scope="row"><span class="code">SIM-172</span> Cessna 172S
         <span class="ros-tag">模拟器机型</span></th>
@@ -331,18 +376,58 @@
       <td class="code">1.05 t</td>
       <td class="code">3.4 kN ×1</td>
       <td class="code">65 kg/m² · 7.5</td>
-      <td class="code">48 kt</td>
+      <td class="code">0.33</td>
+      <td class="code">49 kt</td>
+    </tr><tr>
+      <th scope="row"><span class="code">SIM-102</span> Aerospatiale/BAC Concorde
+        <span class="ros-tag">模拟器机型</span></th>
+      <td class="code">61.7 × 25.6 m</td>
+      <td class="code">111 t</td>
+      <td class="code">139 kN ×4 (169 加力)</td>
+      <td class="code">310 kg/m² · 1.8</td>
+      <td class="code">0.62</td>
+      <td class="code">158 kt</td>
+    </tr><tr>
+      <th scope="row"><span class="code">SIM-650</span> Gulfstream G650ER
+        <span class="ros-tag">模拟器机型</span></th>
+      <td class="code">30.4 × 30.4 m</td>
+      <td class="code">34 t</td>
+      <td class="code">75 kN ×2</td>
+      <td class="code">282 kg/m² · 7.7</td>
+      <td class="code">0.46</td>
+      <td class="code">123 kt</td>
+    </tr><tr>
+      <th scope="row"><span class="code">SIM-F16</span> Lockheed Martin F-16C
+        <span class="ros-tag">模拟器机型</span></th>
+      <td class="code">15.1 × 10.0 m</td>
+      <td class="code">12 t</td>
+      <td class="code">76 kN ×1 (131 加力)</td>
+      <td class="code">431 kg/m² · 3.6</td>
+      <td class="code">1.11</td>
+      <td class="code">152 kt</td>
     </tr></tbody>
   </table>
 
+  <h2>在电脑上怎么飞</h2>
+  <p class="prose">点&quot;全屏&quot;或者按 Z，画面占满整个屏幕，仪表跟着放大；退出按 Z 或者 Esc。窗口里的模拟器只有五百多像素高，主飞行显示要占掉其中三分之一，六海里外的跑道宽四个像素，五边上什么都看不清——全屏之后这三件事都不再是问题。全屏时页面下面那份数据栏够不着了，所以航班号、机号和视角直接印在仪表的两个下角上，离地高度在两千五百英尺以下会在姿态仪下面单独显示一格。</p>
+
+  <h2>座舱视角</h2>
+  <p class="prose">按 C 切到座舱视角，现在有遮光板、窗框立柱和一整块仪表台，主飞行显示装在仪表台上而不是浮在半空。视线高度按机型算：座椅位置取自机身直径和长度，所以 747 的座舱比塞斯纳高十几米，起飞抬轮的时候地平线在窗框里怎么走，两架飞机是不一样的。窗框是画上去的，不挡操作——它挡住的那一块本来也是你在真飞机里看不见的地方。</p>
+
+  <h2>自己设天气</h2>
+  <p class="prose">开始位置那一排下面是时间、风向、风速和乱流。这四个开关改的是模拟器里真的量，不是滤镜：时间改的是太阳的方向和高度角，所以影子跟着转，夜间是真的暗，跑道灯这时候才显出用处；风向和风速直接进气动，顶风只改地速不改空速，侧风不修正就会把飞机吹离中线；乱流改的是阵风幅度，调到&quot;强&quot;以后五边上要一直修。风还是会在近地面减速，所以拉平那一下的侧风永远比五边上小一点。</p>
+
   <h2>手机上怎么飞</h2>
   <p class="prose">点&quot;手机模式&quot;会进全屏并锁横屏，然后用陀螺仪飞：手机前后倾是俯仰，左右转是横滚。中性位置就是你点开的那一刻的姿势，怎么拿都行，不舒服了随时点&quot;回中&quot;重设。油门是左边那条竖着的滑条，方向舵是底下那条横的（松手回中），右边是起落架、襟翼、扰流板、刹车和视角。iOS 上第一次会问一次动作权限，不给也能飞，只是没有陀螺仪。</p>
+
+  <h2>加力燃烧室</h2>
+  <p class="prose">协和和 F-16 有加力燃烧室，其他九架没有。油门推过 92% 就点着，像真的推杆越过卡位一样，多出来的推力是厂家公布的湿推力，不是拿干推力乘一个系数：奥林巴斯 593 是 139.4 千牛干、169.2 千牛湿，F110 是 76.3 和 131。N1 那一格会从百分数变成&quot;加力&quot;，声音多一层，油耗这个模拟器不算所以不罚你。涡喷的推力还会随速度涨，因为进气道在替压气机做功——这就是协和用加力冲过跨音速、然后收掉加力用干推力巡航的原因。跨音速那道坎是真的：马赫 0.93 往上波阻开始爬，推不过去就是推不过去。</p>
 
   <h2>摔了会怎么样</h2>
   <p class="prose">有三种摔法，都是从物理量判出来的：接地垂直速度超过 1200 英尺/分钟（大约是 737 起落架设计极限）、接地时坡度超过 32 度、或者收着起落架落地。摔了之后机翼只剩十分之一的升力，发动机停车，操纵不再起作用，机体会翻滚着掉下去，落点起火冒烟。按 R 重来。</p>
 
   <h2>声音</h2>
-  <p class="prose">声音是现场合成的，没有下载任何音频文件。发动机是两个略微失谐的锯齿波加一层过滤噪声，音高和音量跟着 N1 走——推力有延迟，声音就跟着延迟，这是采样循环做不到的。气流声跟指示空速走，起落架、襟翼和扰流板放出来会更响。地面滚动声跟地速走。失速有断续告警音，超速有嗒嗒声，接地的闷响按垂直速度定轻重。全部在按下&quot;启动模拟器&quot;之后才建立音频，页面本身不会出声。</p>
+  <p class="prose">发动机、气流、轮子和接地的声音全是现场合成的，没有采样。四种发动机响的地方根本不一样：大涵道比涡扇的主角是风扇，叶片通过频率的哨音压在一层柔和的排气噪声上，风扇越大哨音越低；协和的奥林巴斯没有涵道气流挡在外面，主角就是排气本身，粗、宽、带毛边，点了加力再垫一层撕裂般的低频；F-16 的 F110 在两者中间，压气机的哨音更硬，加力也有；塞斯纳根本不是涡轮机，是每分钟两千四百转的四缸点火脉冲加两片桨叶的拍打。四台发动机不是一台的四倍响，是一台加一层拍频，因为它们永远不会转得一模一样。全部跟着 N1 走：推力有延迟，声音就跟着延迟，这是采样循环做不到的。气流声跟指示空速走，起落架、襟翼和扰流板放出来会更响；地面滚动声跟地速走；接地的闷响按垂直速度定轻重。只有告警是音频文件，一共五个，48 KB。道理很简单：波音的低速告警是一个人念出来的&quot;AIRSPEED LOW&quot;，合成一个特定的人声不叫合成，叫模仿得不像。哪架飞机用哪一套是按飞机来的：波音机型是波音的话音，空客和协和是空客那套失速告警和蟋蟀声，湾流跟波音共用同一台霍尼韦尔近地警告，所以说同样的话；塞斯纳的失速警告本来就是机翼前缘的一个气动簧片喇叭，F-16 有自己的声音，这两架继续用合成音，不去借客机的嗓子。音频和引擎一样，都是按下&quot;启动模拟器&quot;之后才下载，而且默认静音。</p>
 
   <h2>PAPI 怎么看</h2>
   <p class="prose">跑道左边那四盏灯是目视进近坡度指示。高了是四白，低了是四红，两白两红就是在三度下滑道上。灯的角度用的是真值：2.5、2.833、3.167、3.5 度。数据栏里的 PAPI 那一行把当前状态写成 W 和 R，方便对照。</p>
@@ -386,6 +471,6 @@
     <p class="foot__credit">机型俯视图：Julien.scavini，取自维基共享资源，CC BY-SA 3.0，本站做了裁切与重新上色。 <a href="https://commons.wikimedia.org/wiki/File:Boeing_737-800_v1.0.png" rel="license noopener noreferrer" target="_blank">在新窗口打开</a></p>
   </div>
 </footer>
-<script src="/axz/assets/axz.b114e738.js" defer></script>
+<script src="/axz/assets/axz.8d2d9e75.js" defer></script>
 </body>
 </html>

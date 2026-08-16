@@ -7,11 +7,14 @@
    serves /(.*)\.(css|js) as immutable for a year, and a query token under a
    year-long immutable header is what broke that site's production once.
    ========================================================================== */
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync, rmSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync, rmSync, existsSync, statSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
-import { airframe, sideview, TYPES, scaleBase, SIM_TYPES, AXZ_ORDER, SIM_ONLY } from './airframe.mjs'
+import {
+  airframe, sideview, TYPES, scaleBase,
+  SIM_TYPES, AXZ_ORDER, SIM_ONLY, FLAP_SETS, liftSlope, speedsFor,
+} from './airframe.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -118,6 +121,33 @@ mkdirSync(join(OUT, 'assets', simDir), { recursive: true })
 SIM_FILES.forEach((f, i) => writeFileSync(join(OUT, 'assets', simDir, `${f}.js`), simSources[i]))
 const SIM_ENTRY = `${BASE}/assets/${simDir}/boot.js`
 const simBytes = simSources.reduce((n, s) => n + Buffer.byteLength(s), 0)
+
+/* --- Warning audio --------------------------------------------------------
+   The five alerts the airline's owner supplied, cut to one repeat cycle each
+   and re-encoded: 46 MB of screen recordings in, 48 KB of mono AAC out. These
+   are the ONLY audio files on the site. The engine, the airflow, the wheels
+   and the touchdown are still synthesised, because those are continuous
+   functions of the flight state and a sample cannot follow them — but a
+   recorded human voice saying PULL UP is a recording, and pretending to
+   synthesise one would be worse than fetching it.
+
+   Same directory-hash trick as the engine, for the same immutable-caching
+   reason, and nothing here is fetched until the simulator starts. */
+const audioSrc = join(SRC, 'audio')
+const audioFiles = existsSync(audioSrc)
+  ? readdirSync(audioSrc).filter(f => f.endsWith('.m4a')).sort() : []
+let AUDIO_BASE = ''
+let audioBytes = 0
+if (audioFiles.length) {
+  const stamp = audioFiles.map(f => f + ':' + statSync(join(audioSrc, f)).size).join('|')
+  const audioDir = `audio-${hash(stamp)}`
+  mkdirSync(join(OUT, 'assets', audioDir), { recursive: true })
+  for (const f of audioFiles) {
+    copyFileSync(join(audioSrc, f), join(OUT, 'assets', audioDir, f))
+    audioBytes += statSync(join(audioSrc, f)).size
+  }
+  AUDIO_BASE = `${BASE}/assets/${audioDir}/`
+}
 
 // Fonts, already subset by subset-axz-fonts.mjs
 const fontDir = join(SRC, 'fonts-out')
@@ -686,6 +716,15 @@ function home(c, lang) {
     <p class="masthead__tagline" lang="en" aria-hidden="true">FLY<br>ON<br>TIME</p>
     <p class="masthead__remark">${P(c.meta.disclaimer)}</p>
     <p class="masthead__sub">${P(nameLine(c, ' · '))} · ${esc(c.meta.code)}</p>
+    ${/* The way in. The simulator was reachable only from the navigation, which
+          is where a reader looks for another PAGE, not for the thing the whole
+          site is about. It is a link rather than a button because it goes
+          somewhere, and it carries its own one-line explanation so the press is
+          an informed one. */''}
+    <p class="masthead__cta">
+      <a class="btn btn--go" href="${urlFor('sim', lang)}">${icon('i-fleet')}${esc(c.home.simCta)}</a>
+      <span class="masthead__ctanote">${esc(c.home.simCtaNote)}</span>
+    </p>
     ${mastheadShip()}
   </div>
 </section>
@@ -1066,6 +1105,16 @@ function simPage(c, lang) {
       prop: !!t.prop, upperDeck: !!t.upperDeck, rakedTips: !!t.rakedTips,
       highWing: !!t.highWing, strut: !!t.strut, fixedGear: !!t.fixedGear,
       dihedral: t.dihedral,
+      /* Aerodynamics travel WITH the type rather than being written a second
+         time inside the engine. The lift-curve slope in particular is derived
+         here, from the published span and wing area, so the roster table and
+         the aeroplane can never quote different physics. */
+      clAlpha: Math.round(liftSlope(t.span, t.wingArea) * 1e4) / 1e4,
+      cl0: t.cl0, cd0: t.cd0, oswald: t.oswald, stallDeg: t.stallDeg,
+      flapSet: t.flapSet, engine: t.engine, shape: t.shape,
+      thrustAB: t.thrustAB || 0, mmo: t.mmo, ceiling: t.ceiling,
+      tailStrikeDeg: t.tailStrikeDeg, lowVis: !!t.lowVis, cargo: !!t.cargo,
+      warnPack: t.warnPack || '',
       name: t.axz ? c.fleet[id].name : t.name,
       reg: t.axz ? c.fleet[id].reg : t.reg,
       axz: !!t.axz,
@@ -1084,6 +1133,7 @@ function simPage(c, lang) {
     tipLabel: S.tipLabel, restart: S.restart,
     gyroscope: S.gyroscope, gyroOn: S.gyroOn, gyroUnavailable: S.gyroUnavailable,
     recentre: S.touch.recentre, exit: S.touch.exit,
+    fullscreen: S.fullscreenButton,
     flapsDown: S.touch.flapsDown, flapsUp: S.touch.flapsUp, view: S.touch.view,
     pause: S.actions.pause,
     keyboard: S.keyboard, gamepad: S.gamepad,
@@ -1106,6 +1156,19 @@ function simPage(c, lang) {
   const scOpts = ['takeoff', 'runway', 'approach', 'cruise'].map(k =>
     `<option value="${esc(k)}"${k === 'takeoff' ? ' selected' : ''}>${esc(S.scenarios[k])}</option>`).join('')
 
+  /* Conditions. Midday and a 250/8 breeze are what the engine used to hold as
+     constants, so those are the defaults and nothing changes for a reader who
+     never touches them. */
+  const todOpts = ['dawn', 'noon', 'dusk', 'night'].map(k =>
+    `<option value="${esc(k)}"${k === 'noon' ? ' selected' : ''}>${esc(S.times[k])}</option>`).join('')
+  // Eight points, named the way a METAR names them: the direction it comes FROM.
+  const wdOpts = [0, 45, 90, 135, 180, 225, 250, 270, 315].map(d =>
+    `<option value="${d}"${d === 250 ? ' selected' : ''}>${String(d).padStart(3, '0')}°</option>`).join('')
+  const wsOpts = [0, 5, 8, 15, 25, 35].map(v =>
+    `<option value="${v}"${v === 8 ? ' selected' : ''}>${v === 0 ? esc(S.windCalm) : v + ' kt'}</option>`).join('')
+  const tbOpts = [['none', 0], ['light', 0.35], ['moderate', 0.7], ['severe', 1]].map(([k, v]) =>
+    `<option value="${v}"${k === 'light' ? ' selected' : ''}>${esc(S.turbLevels[k])}</option>`).join('')
+
   const ctlRows = S.controls.map(r => `<tr>
     <th scope="row">${P(r.a)}</th>
     <td class="code">${esc(r.k)}</td>
@@ -1115,29 +1178,37 @@ function simPage(c, lang) {
   /* Roster table. Every number is DERIVED from SIM_TYPES rather than written
      out, so the page and the aeroplane can never disagree: wing loading and
      aspect ratio are arithmetic on the published figures, and the approach
-     speed comes out of the same stall equation the flight model uses. */
+     speed comes out of `speedsFor`, which is the same function the flight
+     model's own stall equation is written from. Thrust-to-weight is printed
+     because it is the number that says what an aeroplane FEELS like, and it
+     is the one place a fighter and a freighter are obviously not the same
+     machine. */
   const G = 9.80665
   const rosterRows = [...AXZ_ORDER, ...SIM_ONLY].map(id => {
     const t = SIM_TYPES[id]
     const AR = (t.span * t.span) / t.wingArea
     const wl = t.mass / t.wingArea
-    const stallA = (t.prop ? 16.5 : 15.5) * Math.PI / 180
-    const CLmax = 0.15 + 1.05 + 5.2 * (stallA + 1.6 * Math.PI / 180)
-    const vs = Math.sqrt((2 * t.mass * G) / (1.225 * t.wingArea * CLmax)) * 1.943844
+    const nEng = t.engines || 1
+    const maxT = (t.thrustAB || t.thrust) * nEng
+    const twr = maxT / (t.mass * G)
     const nm = t.axz ? c.fleet[id].name : t.name
     const reg = t.axz ? c.fleet[id].reg : t.reg
+    const power = t.prop
+      ? `${(t.thrust / 1000).toFixed(1)} kN ×1`
+      : `${Math.round(t.thrust / 1000)} kN ×${nEng}${t.thrustAB ? ` (${Math.round(t.thrustAB / 1000)} ${esc(S.reheatShort)})` : ''}`
     return `<tr>
       <th scope="row"><span class="code">${esc(reg)}</span> ${P(nm)}
         <span class="ros-tag${t.axz ? ' is-own' : ''}">${esc(t.axz ? S.rosterOwn : S.rosterSim)}</span></th>
       <td class="code">${t.len.toFixed(1)} × ${t.span.toFixed(1)} m</td>
       <td class="code">${(t.mass / 1000).toFixed(t.mass < 5000 ? 2 : 0)} t</td>
-      <td class="code">${t.prop ? (t.thrust / 1000).toFixed(1) : Math.round(t.thrust / 1000)} kN${t.prop ? ' ×1' : ' ×' + t.engines}</td>
+      <td class="code">${power}</td>
       <td class="code">${Math.round(wl)} kg/m² · ${AR.toFixed(1)}</td>
-      <td class="code">${Math.round(vs * 1.3)} kt</td>
+      <td class="code">${twr.toFixed(2)}</td>
+      <td class="code">${Math.round(speedsFor(t).vrefKt)} kt</td>
     </tr>`
   }).join('')
 
-  const fieldOrder = ['flight', 'ias', 'alt', 'agl', 'vs', 'hdg', 'wind', 'papi',
+  const fieldOrder = ['flight', 'ias', 'mach', 'alt', 'agl', 'vs', 'hdg', 'wind', 'papi',
     'dist', 'dest', 'camera', 'time', 'assist', 'input', 'fps']
   const fieldCells = fieldOrder.map(k => `<div class="sim-cell">
     <span class="sim-cell__k">${esc(S.fields[k])}</span>
@@ -1159,7 +1230,10 @@ function simPage(c, lang) {
        data-sim-src="${esc(SIM_ENTRY)}"
        data-sim-labels="${esc(JSON.stringify(labels))}"
        data-sim-fleet="${esc(JSON.stringify(fleet))}"
+       data-sim-flaps="${esc(JSON.stringify(FLAP_SETS))}"
+       data-sim-audio="${esc(AUDIO_BASE)}"
        data-sim-bands="${esc(JSON.stringify(bands))}">
+    <div class="sim-setup">
     <div class="sim-controls">
       <div class="field">
         <label for="sim-fl">${esc(S.flightLabel)}</label>
@@ -1174,14 +1248,39 @@ function simPage(c, lang) {
         <select id="sim-sc" data-sim-scenario>${scOpts}</select>
       </div>
     </div>
+    ${/* Conditions. Every one of these was already a quantity the engine used —
+          a sun vector, a wind direction, a wind speed, a gust amplitude — and
+          all four were constants nobody could reach. */''}
+    <div class="sim-controls sim-controls--wx">
+      <div class="field">
+        <label for="sim-tod">${esc(S.setup.time)}</label>
+        <select id="sim-tod" data-sim-time>${todOpts}</select>
+      </div>
+      <div class="field">
+        <label for="sim-wd">${esc(S.setup.windDir)}</label>
+        <select id="sim-wd" data-sim-winddir>${wdOpts}</select>
+      </div>
+      <div class="field">
+        <label for="sim-ws">${esc(S.setup.windSpeed)}</label>
+        <select id="sim-ws" data-sim-windspeed>${wsOpts}</select>
+      </div>
+      <div class="field">
+        <label for="sim-tb">${esc(S.setup.turbulence)}</label>
+        <select id="sim-tb" data-sim-turb>${tbOpts}</select>
+      </div>
+    </div>
+    </div>
     <p class="btn-row">
       <button class="btn btn--go" type="button" data-sim-start>${icon('i-fleet')}${esc(S.startButton)}</button>
+      <button class="btn" type="button" data-sim-fullscreen hidden aria-pressed="false">${esc(S.fullscreenButton)}</button>
       <button class="btn" type="button" data-sim-phone hidden aria-pressed="false">${esc(S.phoneButton)}</button>
     </p>
     <p class="status" role="status" data-sim-status></p>
     <p class="record__meta">${esc(S.startNote)}</p>
 
-    <div class="sim-stage" data-sim-mount></div>
+    <div class="sim-stage" data-sim-mount>
+      <button class="sim-fs-hint" type="button" data-sim-fsexit>${esc(S.exitFullscreen)}</button>
+    </div>
     <div class="sim-crash" data-sim-crash hidden role="alert"></div>
 
     <div class="sim-panel" data-sim-panel hidden>
@@ -1191,7 +1290,11 @@ function simPage(c, lang) {
       </div>
       <h2 class="record__label">${esc(S.readoutTitle)}</h2>
       <div class="sim-grid">${fieldCells}</div>
-      <h2 class="record__label">${esc(S.logTitle)}</h2>
+      <div class="sim-loghead">
+        <h2 class="record__label">${esc(S.logTitle)}</h2>
+        <button class="btn btn--sm" type="button" data-sim-clearlog
+          aria-label="${esc(S.clearLogLabel)}">${esc(S.clearLog)}</button>
+      </div>
       <ul class="sim-log" data-sim-log aria-live="polite"></ul>
     </div>
   </div>
@@ -1219,13 +1322,26 @@ function simPage(c, lang) {
       <th scope="col">${esc(S.rosterCols.mass)}</th>
       <th scope="col">${esc(S.rosterCols.power)}</th>
       <th scope="col">${esc(S.rosterCols.wing)}</th>
+      <th scope="col">${esc(S.rosterCols.twr)}</th>
       <th scope="col">${esc(S.rosterCols.vref)}</th>
     </tr></thead>
     <tbody>${rosterRows}</tbody>
   </table>
 
+  <h2>${esc(S.screenTitle)}</h2>
+  <p class="prose">${P(S.screenBody)}</p>
+
+  <h2>${esc(S.cockpitTitle)}</h2>
+  <p class="prose">${P(S.cockpitBody)}</p>
+
+  <h2>${esc(S.weatherTitle2)}</h2>
+  <p class="prose">${P(S.weatherBody2)}</p>
+
   <h2>${esc(S.phoneTitle)}</h2>
   <p class="prose">${P(S.phoneBody)}</p>
+
+  <h2>${esc(S.reheatTitle)}</h2>
+  <p class="prose">${P(S.reheatBody)}</p>
 
   <h2>${esc(S.crashTitle)}</h2>
   <p class="prose">${P(S.crashBody)}</p>

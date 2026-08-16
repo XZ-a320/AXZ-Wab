@@ -18,8 +18,8 @@ import {
   AIRPORTS, AP_LIST, LEGS, elevation, terrainPatch, terrainGrid, runwayMesh,
   runwayLights, scenery, hdgVec, trees, papiUnits, papiState,
 } from './world.js'
-import { aircraftMesh, gearMesh, liveryFor, decalQuads } from './model.js'
-import { Aircraft, Wind, FLAP_STEPS } from './fdm.js'
+import { aircraftMesh, gearMesh, liveryFor, decalQuads, stanceHeight } from './model.js'
+import { Aircraft, Wind, setFlapSets } from './fdm.js'
 import { Particles, Effects, Clouds, KIND, explode, burn } from './particles.js'
 import { Post } from './post.js'
 import { ShadowMap } from './shadow.js'
@@ -41,6 +41,9 @@ export class Sim {
     this.fleet = opts.fleet
     this.bands = opts.bands || []
     this.onEvent = opts.onEvent || (() => {})
+    // The flap schedules travel with the page, so they have to be installed
+    // before the first Aircraft is constructed.
+    setFlapSets(opts.flaps)
 
     this.canvas = document.createElement('canvas')
     this.canvas.className = 'sim-canvas'
@@ -56,7 +59,7 @@ export class Sim {
     this.hudRoot = document.createElement('div')
     this.hudRoot.className = 'sim-hud'
     this.container.appendChild(this.hudRoot)
-    this.hud = new HUD(this.hudRoot, this.L)
+    this.hud = new HUD(this.hudRoot, this.L, this.container)
 
     this.input = new Input(this.canvas, this.container)
     this.gyro = new Gyro()
@@ -85,10 +88,11 @@ export class Sim {
     this.post = new Post(this.gl)
     this.shadows = new ShadowMap(this.gl, 2048)
     this.shadowsFar = new ShadowMap(this.gl, 2048)
-    this.sound = new Sound()
+    this.sound = new Sound(opts.audioBase)
     this.shake = 0
     this.wreck = { t: 0 }
     this.sun = vnorm({ x: 0.38, y: 0.62, z: 0.34 })
+    this.setTimeOfDay('noon')
     this.buildTextures()
 
     this.buildStaticWorld()
@@ -96,9 +100,49 @@ export class Sim {
     this.setAircraft(opts.aircraftId || this.fleet._order[0])
     this.setScenario(opts.scenario || 'takeoff')
 
+    /* Fullscreen. The outer stage is what carries the state attribute, because
+       the CSS that lays the panel out has to reach both the canvas and the
+       instrument overlay, and because a browser that refuses the Fullscreen
+       API still gets a viewport-filling overlay out of the same attribute. */
+    this.stageEl = this.container.closest('[data-sim-stage]') || this.container
+    this.fullscreen = false
+    this.onFullscreenChange = () => {
+      const on = !!(document.fullscreenElement || document.webkitFullscreenElement)
+      if (!on && this.fullscreen) this.setFullscreen(false)
+    }
+    document.addEventListener('fullscreenchange', this.onFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', this.onFullscreenChange)
+
     this.onResize = () => this.resize()
     window.addEventListener('resize', this.onResize)
     this.resize()
+  }
+
+  /**
+   * Fill the screen with the aeroplane. On a desktop the simulator otherwise
+   * lives in a 560 px window inside a scrolling article, which is a keyhole to
+   * fly a visual approach through: the PFD alone takes a third of it and the
+   * runway is four pixels wide at six miles.
+   */
+  async setFullscreen(on) {
+    const el = this.container
+    if (!on) {
+      this.fullscreen = false
+      this.stageEl.removeAttribute('data-fs')
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen()
+      } catch (e) { /* already out */ }
+      this.resize(); this.canvas.focus()
+      return false
+    }
+    this.fullscreen = true
+    this.stageEl.setAttribute('data-fs', 'true')
+    try {
+      if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' })
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
+    } catch (e) { /* refused; the fixed overlay still fills the viewport */ }
+    this.resize(); this.canvas.focus()
+    return true
   }
 
   /* --- Textures -----------------------------------------------------------
@@ -128,13 +172,15 @@ export class Sim {
 
 
     this.runways = []
+    this.marks = []
     this.lights = []
     this.props = []
     this.papis = {}
     const CITY = { KSFO: [110, 5200], KSNS: [55, 2600], ZSPD: [120, 6000], ZSNJ: [70, 3400] }
     for (const key of AP_LIST) {
       const ap = AIRPORTS[key]
-      this.runways.push(new Mesh(gl, runwayMesh(ap)))
+      this.runways.push(new Mesh(gl, runwayMesh(ap, false)))
+      this.marks.push(new Mesh(gl, runwayMesh(ap, true)))
       this.lights.push(new Mesh(gl, toLine(runwayLights(ap)), gl.LINES))
       this.props.push(new Mesh(gl, scenery(ap, CITY[key][0], CITY[key][1])))
       this.papis[key] = papiUnits(ap)
@@ -152,23 +198,70 @@ export class Sim {
     if (!spec) return
     this.aircraftId = id
     const livery = liveryFor(spec.reg)
-    const g = gearMesh(spec)
+    const geo = aircraftMesh(spec, livery)
+    /* The stance comes from the published overall height, and then the mesh
+       gets a veto: if anything it actually drew hangs lower than that stance
+       allows, the legs grow until it clears. That second clause is the reason
+       no aeroplane in this roster can be buried by a future edit to its
+       shape — including the three that were added after it was written. */
+    const clear = Math.max(0.22, spec.dia * 0.07)
+    const stance = Math.max(stanceHeight(spec), -geo.minY + clear)
+    const g = gearMesh(spec, stance)
     if (this.acMesh) this.acMesh.dispose()
     if (this.gearMesh) this.gearMesh.dispose()
-    this.acMesh = new Mesh(this.gl, aircraftMesh(spec, livery))
+    this.acMesh = new Mesh(this.gl, geo)
     this.gearMesh = new Mesh(this.gl, g.mesh)
     if (this.decals) for (const d of this.decals) d.mesh.dispose()
     this.decals = decalQuads(spec, spec.reg).map(d => ({ tex: d.tex, mesh: new Mesh(this.gl, d.geo) }))
     const keep = this.ac ? { pos: this.ac.pos, vel: this.ac.vel, q: this.ac.q } : null
     this.ac = new Aircraft(spec, g.contacts, g.restHeight)
+    // What the aeroplane draws below its own centre of gravity, so the ground
+    // clearance is checkable from outside rather than taken on trust.
+    this.ac.bodyMinY = geo.minY
+    this.ac.bodyMaxY = geo.maxY
     if (keep) { this.ac.pos = keep.pos; this.ac.vel = keep.vel; this.ac.q = keep.q }
     this.ac.assist = this.opts.assist !== false
+    this.sound.setEngine(spec)
   }
 
   /* --- Scenarios ----------------------------------------------------------
      Where a session starts. "Approach" exists because the interesting ninety
      seconds of a flight are the last ninety, and making someone fly 110 km to
      reach them is not respect for their time. */
+  /* --- Conditions ---------------------------------------------------------
+     Time of day moves the SUN, and everything else follows from that on its
+     own: the shadow cascade already aims along the light vector, the terrain
+     shader already takes a hemisphere ambient, and the sky shader already
+     takes a zenith and a horizon. So this sets four numbers and the whole
+     scene relights itself, rather than tinting the picture at the end. */
+  setTimeOfDay(key) {
+    const P = {
+      // direction TO the sun, ambient level, zenith, horizon, ground bounce
+      dawn: { dir: { x: -0.86, y: 0.16, z: 0.48 }, amb: 0.30, warm: [1.18, 0.86, 0.62], sky: 0.52 },
+      noon: { dir: { x: 0.38, y: 0.62, z: 0.34 }, amb: 0.34, warm: [1.06, 1.00, 0.92], sky: 1.00 },
+      dusk: { dir: { x: 0.88, y: 0.13, z: -0.44 }, amb: 0.27, warm: [1.22, 0.74, 0.48], sky: 0.44 },
+      // Below the horizon. A crescent of scattered light is left in the sky so
+      // the world is dark rather than a black screen, which is when the runway
+      // lighting finally becomes the thing you are flying on.
+      night: { dir: { x: 0.20, y: -0.28, z: 0.30 }, amb: 0.10, warm: [0.42, 0.48, 0.62], sky: 0.10 },
+    }
+    const p = P[key] || P.noon
+    this.timeOfDay = P[key] ? key : 'noon'
+    this.sun = vnorm(p.dir)
+    this.light = p
+    // The grid carries its colour in its vertex buffer, so changing the hour
+    // has to rebuild it rather than merely change a uniform.
+    if (this.grid && this.ac) this.refreshNear(true)
+  }
+
+  /** Wind, as the METAR reads it: the direction it comes FROM, and its speed. */
+  setWeather({ dirDeg, speedKt, gust } = {}) {
+    this.wind.set(
+      dirDeg != null ? dirDeg : this.wind.dirDeg,
+      speedKt != null ? speedKt : this.wind.speedKt,
+      gust != null ? gust : this.wind.gust)
+  }
+
   /** Choose which of the four published flights to fly. */
   setFlight(id) {
     if (!LEGS[id]) return
@@ -260,7 +353,15 @@ export class Sim {
     if (!force && cx === this.nearCentre.x && cz === this.nearCentre.z) return
     this.nearCentre = { x: cx, z: cz }
     this.near.upload(terrainPatch(cx, cz, NEAR_SIZE, NEAR_RES))
-    this.grid.upload(toLine(terrainGrid(cx, cz, NEAR_SIZE, 24, [0.55, 0.54, 0.50])))
+    this.grid.upload(toLine(terrainGrid(cx, cz, NEAR_SIZE, 24, this.gridColour())))
+  }
+
+  /* Lines are not lit, so the ground grid keeps whatever colour it was built
+     with. At full brightness after dark that turned the landscape into a
+     glowing wireframe — the one thing in the scene that ignored nightfall. */
+  gridColour() {
+    const k = 0.20 + 0.80 * (this.light ? this.light.sky : 1)
+    return [0.55 * k, 0.54 * k, 0.50 * k]
   }
 
   /* --- Loop --------------------------------------------------------------- */
@@ -291,6 +392,8 @@ export class Sim {
     this.stop()
     this.input.destroy()
     window.removeEventListener('resize', this.onResize)
+    document.removeEventListener('fullscreenchange', this.onFullscreenChange)
+    document.removeEventListener('webkitfullscreenchange', this.onFullscreenChange)
   }
 
   tick(dtReal) {
@@ -371,6 +474,17 @@ export class Sim {
 
     const euler = qToEuler(this.ac.q)
     this.hud.update(this.ac, { euler }, dtReal)
+    // Identity only changes on a press, so it is written on change rather than
+    // sixty times a second at a string nobody watches move.
+    const idKey = this.flightId + this.aircraftId + this.cameraMode
+    if (idKey !== this.hudIdKey) {
+      this.hudIdKey = idKey
+      this.hud.setIdentity(this.flightId, this.ac.spec.reg,
+        this.L.cameras[CAMERAS[this.cameraMode]] || CAMERAS[this.cameraMode])
+      // The cockpit shell is CSS on the stage, so the stage has to know which
+      // seat the camera is in.
+      this.stageEl.setAttribute('data-view', CAMERAS[this.cameraMode])
+    }
 
     this.stats.frames++
     this.stats.t += dtReal
@@ -395,7 +509,15 @@ export class Sim {
     if (I.hit('BracketRight')) this.setTimeScale(this.timeScale * 2)
     if (I.hit('BracketLeft')) this.setTimeScale(this.timeScale / 2)
     if (I.hit('KeyR')) this.setScenario(this.scenario)
-    if (I.hit('Escape')) this.setPaused(!this.paused)
+    if (I.hit('KeyZ')) this.setFullscreen(!this.fullscreen)
+    /* Escape leaves fullscreen rather than pausing when there is a fullscreen
+       to leave, because the browser is going to take us out of it anyway and
+       coming back to a paused aeroplane reads as the key having done two
+       unrelated things. */
+    if (I.hit('Escape')) {
+      if (this.fullscreen) this.setFullscreen(false)
+      else this.setPaused(!this.paused)
+    }
   }
 
   setTimeScale(v) {
@@ -611,8 +733,12 @@ export class Sim {
     // Sky darkens and haze thins with height — cheap, and it sells altitude
     // better than any amount of extra geometry would.
     const hi = clamp(alt / 9000, 0, 1)
+    // `day` is how much daylight there is at all, from the time of day. It
+    // multiplies the sky and the haze so dusk is dim and night is dark, rather
+    // than midday with a colour cast over it.
+    const day = this.light.sky
     const sky = [
-      0.55 - 0.42 * hi, 0.68 - 0.44 * hi, 0.82 - 0.37 * hi,
+      (0.55 - 0.42 * hi) * day, (0.68 - 0.44 * hi) * day, (0.82 - 0.37 * hi) * day,
     ]
     // Haze, not soup. At 900 m / 26 km the terrain was washed to sky colour
     // within a mile of the aeroplane and the whole world looked like an empty
@@ -634,20 +760,23 @@ export class Sim {
        never shows. */
     if (usePost) {
       this.post.drawSky(m4invert(m4mul(proj, view)), this.camPos, this.sun, {
-        zenith: hi > 0.5 ? [0.06, 0.12, 0.30] : [0.20, 0.38, 0.72],
-        horizon: [0.62, 0.72, 0.86],
-        ground: [0.30, 0.30, 0.30],
+        zenith: (hi > 0.5 ? [0.06, 0.12, 0.30] : [0.20, 0.38, 0.72]).map(v => v * day),
+        // At dawn and dusk the horizon takes the sun's own colour, which is
+        // most of what makes those two read as times rather than as filters.
+        horizon: [0.62, 0.72, 0.86].map((v, i) => v * day * (0.55 + 0.45 * this.light.warm[i])),
+        ground: [0.30 * day, 0.30 * day, 0.30 * day],
         sunSize: 0.028,
-        haze: 1 - hi * 0.7,
+        haze: (1 - hi * 0.7) * day,
       })
     }
     const env = {
       light: this.sun,
       // Warmer and stronger than the ambient, so the lit faces read as sunlit
-      // rather than merely brighter.
-      sun: [1.06, 1.00, 0.92],
-      skyTint: [0.42 - 0.28 * hi, 0.58 - 0.34 * hi, 0.86 - 0.30 * hi],
-      ambient: 0.34,
+      // rather than merely brighter. The tint and the level both come from the
+      // time of day.
+      sun: this.light.warm,
+      skyTint: [(0.42 - 0.28 * hi) * day, (0.58 - 0.34 * hi) * day, (0.86 - 0.30 * hi) * day],
+      ambient: this.light.amb,
       camPos: this.camPos,
       fog: sky, fogNear, fogFar,
     }
@@ -695,9 +824,41 @@ export class Sim {
     env.shadowFar = this.shadowsFar
 
     R.use('solid', proj, view, env)
+
+    /* THE FAR MESH GOES FIRST AND THEN ITS DEPTH IS THROWN AWAY.
+       This is the bug that made every aeroplane look like it was parked in a
+       field with its wheels buried. The far patch is 2 km per cell, and an
+       airport plateau is 2.2 km across, so the coarse mesh cannot resolve it:
+       its triangles ramp away from the handful of vertices that land inside
+       the flat zone, and over KSFO its surface interpolates to 5.48 m against
+       a true field elevation of 4.00. That 1.4 m sheet was drawn over the
+       runway at 4.06, over the edge lights, over the PAPI, over the
+       aeroplane's ground shadow, and over the bottom metre and a half of the
+       aeroplane itself. On the Cessna, whose fuselage top sits at 5.3 m, it
+       swallowed everything but the wing.
+       Inside its own footprint the NEAR mesh is the authority, and everything
+       else in the scene lives inside that footprint. So the horizon is painted
+       first, its depth is discarded, and the near mesh and everything on it
+       are drawn into a clean buffer. Distant hills still stand above the near
+       mesh's horizon, which is the only place they were ever wanted. */
     R.draw(this.far, this.identity)
+    R.gl.clear(R.gl.DEPTH_BUFFER_BIT)
     R.draw(this.near, this.identity)
+
+    /* The runway is a decal on the ground, not a slab above it, and six
+       centimetres of physical lift is not a depth margin at ten kilometres —
+       which is exactly the range at which a runway matters. A polygon offset
+       biases in DEPTH-SLOPE units, so it holds at every distance: the asphalt
+       wins against the terrain, and the paint wins against the asphalt. */
+    const gl2 = this.gl
+    gl2.enable(gl2.POLYGON_OFFSET_FILL)
+    gl2.polygonOffset(-1.2, -2)
     for (const m of this.runways) R.draw(m, this.identity)
+    gl2.polygonOffset(-2.6, -6)
+    for (const m of this.marks) R.draw(m, this.identity)
+    gl2.polygonOffset(0, 0)
+    gl2.disable(gl2.POLYGON_OFFSET_FILL)
+
     for (const m of this.props) R.draw(m, this.identity)
 
     // The aeroplane is not drawn in cockpit view — you are sitting in it.
@@ -810,6 +971,7 @@ export class Sim {
     const nav = navInfo(ac, this.dest)
     return {
       ias: ac.ias * MS_TO_KT,
+      mach: ac.mach || 0,
       alt: ac.pos.y * M_TO_FT,
       agl: (ac.radioAlt != null ? ac.radioAlt : ac.agl) * M_TO_FT,
       vs: ac.vel.y * MS_TO_FPM,

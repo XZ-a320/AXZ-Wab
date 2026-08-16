@@ -144,7 +144,18 @@ function makeTarget(gl, w, h, depth) {
   if (depth) {
     rb = gl.createRenderbuffer()
     gl.bindRenderbuffer(gl.RENDERBUFFER, rb)
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h)
+    /* 24 bits where the context has them, which is every WebGL2 context. At 16
+       the depth range this scene needs — a 3 m near plane and a 240 km far
+       plane — resolves to about a third of a metre at 260 m and two metres at
+       ten kilometres, and the runway sits six centimetres above the terrain.
+       The strip therefore lost the depth test to the ground it is painted on:
+       at every airport the aeroplane appeared to be parked in a field, and on
+       final there was nothing to aim at. */
+    const fmt = gl.DEPTH_COMPONENT24 || gl.DEPTH_COMPONENT16
+    gl.renderbufferStorage(gl.RENDERBUFFER, fmt, w, h)
+    if (gl.getError && gl.getError() !== gl.NO_ERROR) {
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h)
+    }
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rb)
   }
   const okay = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE

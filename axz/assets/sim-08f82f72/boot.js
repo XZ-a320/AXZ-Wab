@@ -40,6 +40,8 @@ export async function boot(cfg) {
       container: mount,
       labels: L,
       fleet: cfg.fleet,
+      flaps: cfg.flaps,
+      audioBase: cfg.audioBase,
       bands: cfg.bands,
       aircraftId: cfg.aircraftId,
       scenario: cfg.scenario,
@@ -144,6 +146,7 @@ export async function boot(cfg) {
     acc = 0
     const r = sim.readout()
     setText('ias', Math.round(r.ias))
+    setText('mach', r.mach.toFixed(2))
     setText('alt', Math.round(r.alt).toLocaleString('en-US'))
     setText('agl', Math.round(r.agl).toLocaleString('en-US'))
     setText('vs', (r.vs >= 0 ? '+' : '') + Math.round(r.vs))
@@ -174,6 +177,36 @@ export async function boot(cfg) {
     sim.setScenario(scSel ? scSel.value : sim.scenario)
   })
   if (scSel) scSel.addEventListener('change', () => sim.setScenario(scSel.value))
+
+  /* --- Conditions ---------------------------------------------------------
+     Time of day relights the scene; the three wind controls go straight into
+     the model the aerodynamics already reads every step. None of them restart
+     the flight, because changing the weather in the air is a legitimate thing
+     to want and losing your approach to do it is not. */
+  const todSel = stage.querySelector('[data-sim-time]')
+  if (todSel) todSel.addEventListener('change', () => {
+    sim.setTimeOfDay(todSel.value)
+    sim.canvas.focus()
+  })
+  const wdSel = stage.querySelector('[data-sim-winddir]')
+  const wsSel = stage.querySelector('[data-sim-windspeed]')
+  const tbSel = stage.querySelector('[data-sim-turb]')
+  const applyWeather = () => {
+    sim.setWeather({
+      dirDeg: wdSel ? Number(wdSel.value) : undefined,
+      speedKt: wsSel ? Number(wsSel.value) : undefined,
+      gust: tbSel ? Number(tbSel.value) : undefined,
+    })
+    sim.canvas.focus()
+  }
+  for (const s of [wdSel, wsSel, tbSel]) if (s) s.addEventListener('change', applyWeather)
+
+  /* The log fills up over a session and had no way to be emptied. */
+  const clearBtn = stage.querySelector('[data-sim-clearlog]')
+  if (clearBtn) clearBtn.addEventListener('click', () => {
+    if (log) log.innerHTML = ''
+    sim.canvas.focus()
+  })
 
   for (const btn of stage.querySelectorAll('[data-sim-action]')) {
     btn.addEventListener('click', () => {
@@ -211,8 +244,35 @@ export async function boot(cfg) {
      AudioContext will run at all. It begins muted; the Sound button unmutes. */
   sim.sound.init()
   sim.sound.setEnabled(false)
+  // The five alert clips, 48 KB in total, fetched from the same press that
+  // downloaded the engine and never before it.
+  sim.sound.loadClips()
   const sndBtn = stage.querySelector('[data-sim-action="sound"]')
   if (sndBtn) sndBtn.setAttribute('aria-pressed', 'false')
+
+  /* --- Fullscreen ---------------------------------------------------------
+     Two affordances for one state, because they are needed at different
+     moments: a button under the canvas to get in, and a button in the corner
+     of the filled screen to get out, since the first one is no longer on the
+     page once the canvas is the page. Both stay in step with the Z key. */
+  const fsBtn = stage.querySelector('[data-sim-fullscreen]')
+  const fsExit = stage.querySelector('[data-sim-fsexit]')
+  const syncFs = () => {
+    if (fsBtn) {
+      fsBtn.setAttribute('aria-pressed', String(sim.fullscreen))
+      fsBtn.textContent = sim.fullscreen ? L.exit : L.fullscreen
+    }
+  }
+  if (fsBtn) {
+    fsBtn.hidden = false
+    fsBtn.addEventListener('click', async () => { await sim.setFullscreen(!sim.fullscreen); syncFs() })
+  }
+  if (fsExit) fsExit.addEventListener('click', async () => { await sim.setFullscreen(false); syncFs() })
+  // The Z key and the browser's own exit both change the state behind the
+  // button's back, so the label is reconciled rather than assumed.
+  const fsWatch = setInterval(() => {
+    if (fsBtn && (fsBtn.getAttribute('aria-pressed') === 'true') !== sim.fullscreen) syncFs()
+  }, 400)
 
   /* --- Phone mode ---------------------------------------------------------
      Offered whenever the device looks like a phone. It has to be a press, not
@@ -220,7 +280,12 @@ export async function boot(cfg) {
      require a user gesture, and all three are refused without one. */
   const phoneBtn = stage.querySelector('[data-sim-phone]')
   if (phoneBtn) {
-    if (isPhone() || sim.gyro.available) phoneBtn.hidden = false
+    /* Only on a phone. `gyro.available` is true in any browser that has the
+       DeviceOrientation interface at all, which is every desktop Chrome, so
+       this used to offer the gyroscope to people sitting at a monitor — and
+       now that there is a plain Fullscreen button beside it, it offered them
+       two buttons that both said fullscreen. */
+    if (isPhone()) phoneBtn.hidden = false
     phoneBtn.addEventListener('click', async () => {
       if (!sim.mobile) sim.mobile = new MobileControls(stage, sim, L)
       if (sim.mobile.active) { sim.mobile.exit(); phoneBtn.setAttribute('aria-pressed', 'false'); return }
@@ -238,6 +303,7 @@ export async function boot(cfg) {
     sim,
     destroy() {
       document.removeEventListener('visibilitychange', onVis)
+      clearInterval(fsWatch)
       sim.destroy()
     },
   }

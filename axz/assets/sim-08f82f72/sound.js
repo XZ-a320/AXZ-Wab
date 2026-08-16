@@ -34,12 +34,163 @@ function noiseBuffer(ctx, seconds = 2) {
   return buf
 }
 
+/* --- Engine voices --------------------------------------------------------
+   Four families, because the roster now holds four genuinely different kinds
+   of engine and the difference is audible from a mile away. What separates
+   them is not a pitch offset, it is which layer carries the sound:
+
+   - a high-bypass fan is mostly the FAN: a bright blade-passing whine over a
+     soft exhaust, and the bigger the fan the lower the whine sits, which is
+     why a 2.8 m GEnx hums where a 1.3 m business-jet fan sings.
+   - a reheated turbojet is mostly EXHAUST: no bypass air to shield it, so it
+     is raw broadband roar with a hard edge, and lighting the reheat adds a
+     low ripping rumble underneath.
+   - a low-bypass military fan sits between them, with a hard compressor whine
+     and the same burner rumble on top.
+   - a piston is not a turbine at all. It is a firing pulse train in the low
+     hundreds of hertz plus the propeller's own blade slap, and rendering it
+     through the turbofan voice was the reason the Cessna sounded like a
+     narrowbody with the volume down.
+
+   `bpf` is the blade-passing band at idle and at full power, in hertz.       */
+const VOICES = {
+  turbofan: {
+    bpf: [620, 2370], whine: 0.075, whine2: 0.028,
+    exhaust: [320, 4120], exhaustG: [0.22, 0.94], rumble: [0.35, 1.20],
+    hiss: 0.0, burner: 0, tone: 'sine',
+  },
+  // A smaller fan turns faster: the same blade count, a higher passing tone.
+  'turbofan-small': {
+    bpf: [900, 3450], whine: 0.085, whine2: 0.034,
+    exhaust: [380, 4600], exhaustG: [0.18, 0.82], rumble: [0.24, 0.86],
+    hiss: 0.05, burner: 0, tone: 'sine',
+  },
+  // Low bypass. Harder compressor tone, more exhaust, and a burner.
+  'turbofan-ab': {
+    bpf: [420, 1560], whine: 0.11, whine2: 0.055,
+    exhaust: [300, 6200], exhaustG: [0.30, 1.15], rumble: [0.30, 1.05],
+    hiss: 0.10, burner: 1, tone: 'sawtooth',
+  },
+  // No bypass at all. The exhaust IS the aeroplane.
+  'turbojet-reheat': {
+    bpf: [360, 1180], whine: 0.09, whine2: 0.048,
+    exhaust: [280, 7000], exhaustG: [0.34, 1.28], rumble: [0.40, 1.30],
+    hiss: 0.14, burner: 1, tone: 'sawtooth',
+  },
+  piston: {
+    // 2,400 rpm on a four-cylinder is two firing events a revolution: 80 Hz,
+    // and the two-blade propeller passes at the same rate.
+    bpf: [42, 96], whine: 0.0, whine2: 0.0,
+    exhaust: [220, 900], exhaustG: [0.16, 0.44], rumble: [0.20, 0.52],
+    hiss: 0.0, burner: 0, tone: 'sawtooth', firing: true,
+  },
+}
+
+/* --- Warning packs --------------------------------------------------------
+   The alerts are the one part of this that is NOT synthesised, and the reason
+   is simple: a Boeing low-speed alert is a recorded human voice saying
+   AIRSPEED LOW, and a synthesised approximation of a specific recorded voice
+   is not an approximation of anything. So these five are audio files, cut to
+   one repeat cycle each and looped.
+
+   Which pack an aeroplane gets is a real property of the aeroplane. A Boeing
+   flight deck says AIRSPEED LOW; an Airbus gives you the stall warning and the
+   cricket. The Gulfstream is on the same Honeywell terrain box as the Boeings
+   and says the same words. A Cessna's stall warning is a pneumatic reed horn
+   in the wing leading edge and a fighter has its own voice, so neither gets
+   an airliner's alerts: they keep the synthesised tone.                     */
+const WARN_PACKS = {
+  boeing: { stall: 'warn-boeing-airspeed', pullup: 'warn-boeing-pullup', master: 'warn-boeing-master' },
+  airbus: { stall: 'warn-airbus-stall', pullup: 'warn-boeing-pullup', master: 'warn-airbus-master' },
+}
+
 export class Sound {
-  constructor() {
+  constructor(audioBase) {
     this.ready = false
     this.enabled = false
     this.ctx = null
     this.master = null
+    this.voice = VOICES.turbofan
+    this.audioBase = audioBase || ''
+    this.clips = {}          // name -> decoded AudioBuffer
+    this.pack = null         // the current type's alert set, or null for synth
+    this.playing = {}        // name -> live looping source
+  }
+
+  /**
+   * Fetch and decode the alert clips. Called once, from the same press that
+   * starts the simulator, so a reader who never presses it downloads none of
+   * this — the same contract the engine itself is under.
+   */
+  async loadClips() {
+    if (!this.ctx || !this.audioBase || this.clipsLoading) return
+    this.clipsLoading = true
+    const names = new Set()
+    for (const p of Object.values(WARN_PACKS)) for (const n of Object.values(p)) names.add(n)
+    await Promise.all([...names].map(async name => {
+      try {
+        const res = await fetch(this.audioBase + name + '.m4a')
+        if (!res.ok) return
+        this.clips[name] = await this.ctx.decodeAudioData(await res.arrayBuffer())
+      } catch (e) { /* a missing alert falls back to the synthesised tone */ }
+    }))
+  }
+
+  /** Start a looping alert, or do nothing if it is already running. */
+  loopClip(name, gain = 0.9) {
+    if (!this.ready || !this.enabled || this.playing[name]) return false
+    const buf = this.clips[name]
+    if (!buf) return false
+    const src = this.ctx.createBufferSource()
+    src.buffer = buf
+    src.loop = true
+    const g = this.ctx.createGain()
+    g.gain.value = gain
+    src.connect(g); g.connect(this.master)
+    src.start()
+    this.playing[name] = { src, g }
+    return true
+  }
+
+  /** Stop a looping alert, with a short release so it does not click off. */
+  stopClip(name) {
+    const p = this.playing[name]
+    if (!p) return
+    delete this.playing[name]
+    const t = this.ctx.currentTime
+    try {
+      p.g.gain.setTargetAtTime(0, t, 0.03)
+      p.src.stop(t + 0.2)
+    } catch (e) { /* already stopped */ }
+  }
+
+  stopAllClips() { for (const n of Object.keys(this.playing)) this.stopClip(n) }
+
+  /**
+   * Point the engine voice at a type. Safe before `init`, because the aircraft
+   * is chosen while the simulator is still being constructed and the audio
+   * context does not exist until somebody presses Sound.
+   */
+  setEngine(spec) {
+    this.voice = VOICES[spec && spec.engine] || (spec && spec.prop ? VOICES.piston : VOICES.turbofan)
+    this.engines = (spec && spec.engines) || 2
+    // Swapping type mid-alert would leave the old aeroplane's voice shouting.
+    this.stopAllClips()
+    this.pack = WARN_PACKS[spec && spec.warnPack] || null
+    if (this.ready) this.applyVoice()
+  }
+
+  /** Re-point the oscillators that only change when the type does. */
+  applyVoice() {
+    const v = this.voice
+    if (!this.eng) return
+    this.eng.whine.type = v.tone
+    this.eng.whine2.type = v.tone
+    /* Four engines are not one engine four times as loud. What four sound like
+       is one engine plus a beat, because they never run at exactly the same
+       speed — so the second whine is detuned by a few hertz on a quad and left
+       alone on a twin. */
+    this.eng.detune = this.engines >= 4 ? 5.5 : this.engines === 1 ? 0 : 2.2
   }
 
   /**
@@ -72,6 +223,7 @@ export class Sound {
       this.buildAir()
       this.buildWarnings()
       this.ready = true
+      this.applyVoice()
       return true
     } catch (e) {
       this.ready = false
@@ -144,6 +296,22 @@ export class Sound {
     this.eng.whine = whine; this.eng.whineG = whineG
     this.eng.whine2 = whine2; this.eng.whine2G = whine2G
 
+    /* --- Reheat. A lit burner is not "the engine, louder". It is a separate
+       noise source with its own character: a wide band with the bottom left in
+       and a resonant peak that opens as the nozzle does, which is the ripping
+       sound rather than the roar. Silent on every type without one, which is
+       eight of the eleven. */
+    const ab = ctx.createBufferSource()
+    ab.buffer = this.noise; ab.loop = true
+    const abBP = ctx.createBiquadFilter()
+    abBP.type = 'bandpass'; abBP.frequency.value = 220; abBP.Q.value = 0.45
+    const abLow = ctx.createBiquadFilter()
+    abLow.type = 'lowshelf'; abLow.frequency.value = 140; abLow.gain.value = 9
+    const abG = ctx.createGain(); abG.gain.value = 0
+    ab.connect(abBP); abBP.connect(abLow); abLow.connect(abG); abG.connect(g)
+    ab.start()
+    this.eng.abBP = abBP; this.eng.abG = abG
+
     /* --- Breathing. A slow, shallow wobble on the exhaust level. Steady noise
        at a fixed gain sounds synthetic within about two seconds; real engine
        noise never sits perfectly still. */
@@ -152,6 +320,7 @@ export class Sound {
     const lfoG = ctx.createGain(); lfoG.gain.value = 0.055
     lfo.connect(lfoG); lfoG.connect(jetG.gain)
     lfo.start()
+    this.eng.detune = 2.2
   }
 
   /** Airflow over the hull, plus the rumble of wheels on concrete. */
@@ -196,6 +365,7 @@ export class Sound {
   setEnabled(on) {
     this.enabled = on
     if (!this.ready) return
+    if (!on) this.stopAllClips()
     if (on && this.ctx.state === 'suspended') this.ctx.resume()
     const t = this.ctx.currentTime
     this.master.gain.cancelScheduledValues(t)
@@ -318,22 +488,32 @@ export class Sound {
     const tc = 0.09
 
     // Engine. N1 is the spooled state, so the sound lags the lever exactly as
-    // the thrust does.
+    // the thrust does, and the voice is whichever family this type flies.
+    const v = this.voice
     const n1 = clamp(ac.thrustLag, 0, 1)
+    const ab = ac.abFrac || 0
     const inside = cameraInside ? 1 : 0
     // Exhaust opens upward with thrust; that sweep IS the sound of spooling.
-    this.eng.jetLP.frequency.setTargetAtTime(320 + n1 * 3800, t, tc)
-    this.eng.jetG.gain.setTargetAtTime(0.22 + n1 * 0.72, t, tc)
-    this.eng.rumG.gain.setTargetAtTime(0.35 + n1 * 0.85, t, tc)
-    // Blade passing. Rises about an octave and a half across the range, and is
-    // deliberately quiet: it identifies the sound rather than carrying it.
-    const bpf = 620 + n1 * 1750
+    this.eng.jetLP.frequency.setTargetAtTime(v.exhaust[0] + n1 * (v.exhaust[1] - v.exhaust[0]), t, tc)
+    this.eng.jetG.gain.setTargetAtTime(v.exhaustG[0] + n1 * (v.exhaustG[1] - v.exhaustG[0]) + v.hiss * n1, t, tc)
+    this.eng.rumG.gain.setTargetAtTime(v.rumble[0] + n1 * (v.rumble[1] - v.rumble[0]), t, tc)
+    /* Blade passing, or on a piston the firing rate. Both are "how fast is the
+       thing turning", and both are the layer an ear identifies the machine by,
+       which is why they share a slot rather than being two code paths. */
+    const bpf = v.bpf[0] + n1 * (v.bpf[1] - v.bpf[0])
     this.eng.whine.frequency.setTargetAtTime(bpf, t, tc)
-    this.eng.whine2.frequency.setTargetAtTime(bpf * 2, t, tc)
+    this.eng.whine2.frequency.setTargetAtTime(bpf * 2 + this.eng.detune, t, tc)
     // Muffled from inside the flight deck, which is where the whine mostly goes.
-    this.eng.whineG.gain.setTargetAtTime(n1 * 0.075 * (inside ? 0.35 : 1), t, tc)
-    this.eng.whine2G.gain.setTargetAtTime(n1 * n1 * 0.028 * (inside ? 0.25 : 1), t, tc)
-    const engVol = (0.12 + n1 * 0.55) * (inside ? 0.6 : 1)
+    this.eng.whineG.gain.setTargetAtTime(n1 * v.whine * (inside ? 0.35 : 1), t, tc)
+    this.eng.whine2G.gain.setTargetAtTime(n1 * n1 * v.whine2 * (inside ? 0.25 : 1), t, tc)
+    // Reheat: a wide, low rip that opens as the nozzle does.
+    if (v.burner) {
+      this.eng.abG.gain.setTargetAtTime(ab * 0.62 * (inside ? 0.55 : 1), t, 0.05)
+      this.eng.abBP.frequency.setTargetAtTime(180 + ab * 520, t, 0.06)
+    } else if (this.eng.abG.gain.value > 0.0001) {
+      this.eng.abG.gain.setTargetAtTime(0, t, 0.05)
+    }
+    const engVol = (0.12 + n1 * 0.55 + ab * 0.30) * (inside ? 0.6 : 1)
     this.eng.out.gain.setTargetAtTime(ac.crashed ? 0 : engVol, t, 0.15)
 
     // Airflow rises with indicated airspeed and with anything hanging out in it.
@@ -349,22 +529,42 @@ export class Sound {
     this.roll.out.gain.setTargetAtTime(rollVol, t, 0.07)
     this.roll.filter.frequency.setTargetAtTime(90 + gs * 2.4, t, tc)
 
-    // Stall warning: an intermittent tone, not a siren.
-    if (ac.stalling && !ac.crashed) {
-      this.warnPhase += dt
-      const on = (this.warnPhase % 0.44) < 0.22
-      this.warn.out.gain.setTargetAtTime(on ? 0.5 : 0, t, 0.01)
-    } else {
-      this.warnPhase = 0
-      this.warn.out.gain.setTargetAtTime(0, t, 0.03)
-    }
+    /* --- Alerts -------------------------------------------------------------
+       Three conditions, each with a recorded call on the types that have one
+       and a synthesised tone on the types that do not. The pull-up call takes
+       priority over the low-speed call, because terrain does. */
+    const alive = !ac.crashed
+    const stall = alive && ac.stalling
+    const pull = alive && !ac.onGround && ac.radioAlt < 150 && ac.vel.y < -8 && ac.gearPos < 0.5
+    const over = alive && ac.overspeed
 
-    // Overspeed clacker, the one warning that really does clack.
-    if (ac.overspeed && !ac.crashed) {
-      this.clackPhase += dt
-      if (this.clackPhase > 0.14) {
-        this.clackPhase = 0
-        this.blip(1500 + Math.random() * 200, 0.035, 'square', 0.10)
+    if (this.pack) {
+      // Recorded: loop while the condition holds, stop the moment it clears.
+      if (pull) this.loopClip(this.pack.pullup, 1.0)
+      else this.stopClip(this.pack.pullup)
+      if (stall && !pull) this.loopClip(this.pack.stall, 0.95)
+      else this.stopClip(this.pack.stall)
+      if (over) this.loopClip(this.pack.master, 0.8)
+      else this.stopClip(this.pack.master)
+      this.warn.out.gain.setTargetAtTime(0, t, 0.03)
+      if (!alive) this.stopAllClips()
+    } else {
+      // Synthesised: an intermittent tone, not a siren.
+      if (stall) {
+        this.warnPhase += dt
+        const on = (this.warnPhase % 0.44) < 0.22
+        this.warn.out.gain.setTargetAtTime(on ? 0.5 : 0, t, 0.01)
+      } else {
+        this.warnPhase = 0
+        this.warn.out.gain.setTargetAtTime(0, t, 0.03)
+      }
+      // Overspeed clacker, the one warning that really does clack.
+      if (over) {
+        this.clackPhase += dt
+        if (this.clackPhase > 0.14) {
+          this.clackPhase = 0
+          this.blip(1500 + Math.random() * 200, 0.035, 'square', 0.10)
+        }
       }
     }
   }

@@ -292,7 +292,16 @@ export function terrainGrid(cx, cz, size, res, col) {
    Built in the runway's own frame then rotated into place, which keeps the
    marking maths readable: +u runs down the centreline toward the far end,
    +v is to the right of it.                                                 */
-export function runwayMesh(ap) {
+/**
+ * The strip, or its markings, depending on `marks`.
+ *
+ * Two meshes rather than one because they are two decals on the same plane and
+ * each has to win a different depth fight: the asphalt against the terrain, and
+ * the paint against the asphalt. Both are drawn with a polygon offset, which
+ * scales with distance the way a fixed few centimetres of lift does not — a
+ * runway seen from six miles out is the whole reason there is a runway.
+ */
+export function runwayMesh(ap, marks = false) {
   const pos = [], normal = [], color = []
   const R = ap.rwy
   const dir = hdgVec(R.hdg)
@@ -308,16 +317,30 @@ export function runwayMesh(ap) {
     y: yy,
     z: ap.z + dir.z * u + rgt.z * v,
   })
+  /* Wound counter-clockwise SEEN FROM ABOVE, which is the reverse of the order
+     the corners are written in. This is the same trap the terrain builder
+     documents, and the runway fell into it: every triangle of the strip, its
+     centreline, its piano keys, its aiming points and its shoulders was
+     back-facing, so `cullFace(BACK)` threw all four runways away and the
+     aeroplane appeared to be parked in a field at every airport on the map. */
   const quad = (a, b, c, d, col) => {
-    for (const [p, q, r] of [[a, b, c], [a, c, d]]) {
+    for (const [p, q, r] of [[a, c, b], [a, d, c]]) {
       for (const pt of [p, q, r]) { pos.push(pt.x, pt.y, pt.z); normal.push(0, 1, 0); color.push(col[0], col[1], col[2]) }
     }
   }
 
   const u0 = -R.len / 2, u1 = R.len / 2
-  quad(at(u0, -half), at(u1, -half), at(u1, half), at(u0, half), asphalt)
 
-  // Paint sits a hair above the asphalt for the same z-fighting reason.
+  if (!marks) {
+    quad(at(u0, -half), at(u1, -half), at(u1, half), at(u0, half), asphalt)
+    // Shoulders, so the strip reads as a made surface rather than a floating slab.
+    const shoulder = [0.20, 0.21, 0.18]
+    quad(at(u0, -half - 26), at(u1, -half - 26), at(u1, -half), at(u0, -half), shoulder)
+    quad(at(u0, half), at(u1, half), at(u1, half + 26), at(u0, half + 26), shoulder)
+    return { pos, normal, color }
+  }
+
+  // Paint sits a hair above the asphalt and is drawn at a deeper offset again.
   const py = y + 0.03
   const stripe = (ua, ub, va, vb, col = paint) =>
     quad(at(ua, va, py), at(ub, va, py), at(ub, vb, py), at(ua, vb, py), col)
@@ -335,11 +358,6 @@ export function runwayMesh(ap) {
     stripe(base + sign * 300, base + sign * 345, -9, -4)
     stripe(base + sign * 300, base + sign * 345, 4, 9)
   }
-
-  // Shoulders, so the strip reads as a made surface rather than a floating slab.
-  const shoulder = [0.20, 0.21, 0.18]
-  quad(at(u0, -half - 26), at(u1, -half - 26), at(u1, -half), at(u0, -half), shoulder)
-  quad(at(u0, half), at(u1, half), at(u1, half + 26), at(u0, half + 26), shoulder)
 
   return { pos, normal, color }
 }
@@ -466,7 +484,11 @@ export function scenery(ap, count = 90, spread = 4200) {
     const x0 = cx - w / 2, x1 = cx + w / 2, z0 = cz - d / 2, z1 = cz + d / 2, y0 = cy, y1 = cy + h
     const V = (x, y, z) => ({ x, y, z })
     const faces = [
-      [V(x0, y1, z0), V(x1, y1, z0), V(x1, y1, z1), V(x0, y1, z1), 1.0],   // roof
+      // The roof, wound the same way round as the four walls. Written the
+      // other way it was back-facing AND its computed normal pointed at the
+      // ground, so every roof in every skyline was culled — and the ones that
+      // survived at a grazing angle were shaded as though lit from below.
+      [V(x0, y1, z1), V(x1, y1, z1), V(x1, y1, z0), V(x0, y1, z0), 1.0],   // roof
       [V(x0, y0, z1), V(x1, y0, z1), V(x1, y1, z1), V(x0, y1, z1), 0.78],
       [V(x1, y0, z0), V(x0, y0, z0), V(x0, y1, z0), V(x1, y1, z0), 0.62],
       [V(x1, y0, z1), V(x1, y0, z0), V(x1, y1, z0), V(x1, y1, z1), 0.70],

@@ -96,6 +96,20 @@
   color: var(--ink-3);
   margin-block-start: var(--s-4);
 }
+/* The way into the simulator, in the hero rather than buried in the nav. */
+.masthead__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  margin-block-start: var(--s-3);
+}
+.masthead__ctanote {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .1em;
+  color: var(--ink-3);
+}
 
 /* --- Sector heading ------------------------------------------------------- */
 .sector { padding-block: var(--s-8); }

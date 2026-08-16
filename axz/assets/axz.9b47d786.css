@@ -150,6 +150,13 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* `hidden` has to beat any component that sets its own display. The browser's
+   own `[hidden] { display: none }` is a plain type-less rule, so `.btn`'s
+   `display: inline-flex` outranked it, and every button the simulator ships
+   hidden — fullscreen, phone mode — was on the page before the engine that
+   drives them had been downloaded. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -657,6 +664,20 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   text-transform: uppercase;
   color: var(--ink-3);
   margin-block-start: var(--s-4);
+}
+/* The way into the simulator, in the hero rather than buried in the nav. */
+.masthead__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  margin-block-start: var(--s-3);
+}
+.masthead__ctanote {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .1em;
+  color: var(--ink-3);
 }
 
 /* --- Sector heading ------------------------------------------------------- */
@@ -1454,11 +1475,43 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
    stage is ordinary page furniture in the site's own components, because the
    control table and the scoring bands are content, not chrome.              */
 .sim { margin-block: var(--s-4) var(--s-6); }
+/* The three selectors are one instrument, not three unrelated fields: a boxed
+   group with hairlines between them, so the flight, the aeroplane and the
+   starting position read as a single setup rather than as page furniture. */
+/* One box holding both rows. Two separately bordered boxes left a dead strip
+   between the flight setup and the weather that read as a rendering fault. */
+.sim-setup {
+  border: 1px solid var(--rule-struct);
+  background: var(--paper-2);
+  margin-block-end: var(--s-3);
+}
 .sim-controls {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  gap: var(--s-3);
-  margin-block-end: var(--s-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  gap: 0;
+}
+/* The conditions are four short selects, so they pack four-up where the three
+   long ones above them pack three. */
+.sim-controls--wx {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  border-block-start: 1px solid var(--rule-struct);
+}
+.sim-controls .field {
+  padding: var(--s-2) var(--s-25);
+  border-inline-start: 1px solid var(--rule-hair);
+  /* The shared `.field` carries a bottom margin for stacked forms. Inside a
+     grid a margin becomes part of the track, so each row of the setup box grew
+     a dead 24 px strip under the selects that read as a broken layout. */
+  margin-block-end: 0;
+}
+.sim-controls .field:first-child { border-inline-start: 0; }
+.sim-controls label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .12em;
+  color: var(--ink-3);
+  margin-block-end: 4px;
 }
 .sim select {
   width: 100%;
@@ -1467,8 +1520,12 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   font: inherit;
   font-size: var(--fs-sm);
   color: var(--ink);
-  background: var(--paper-2);
+  background: var(--paper);
   border: 1px solid var(--rule-struct);
+}
+@media (max-width: 720px) {
+  .sim-controls .field { border-inline-start: 0; border-block-start: 1px solid var(--rule-hair); }
+  .sim-controls .field:first-child { border-block-start: 0; }
 }
 .btn--go { border-inline-start: 3px solid var(--remark); }
 
@@ -1485,13 +1542,27 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .sim-canvas { display: block; width: 100%; height: 100%; }
 .sim-canvas:focus-visible { outline: 3px solid var(--focus-outer); outline-offset: -3px; }
 
+/* The instrument overlay. A scrim under it, because the panel is read against
+   whatever the scene happens to be doing: 11 px captions over a bright cumulus
+   were guesswork, and no amount of colour choice fixes text with no ground
+   behind it. The gradient is the ground. */
 .sim-hud {
   position: absolute;
   inset-inline: 0;
   inset-block-end: 0;
+  z-index: 2;                /* over the cockpit shell it is mounted in */
   pointer-events: none;      /* the panel is a readout, not a control surface */
+  background: linear-gradient(to bottom, rgba(6, 8, 11, 0) 0%, rgba(6, 8, 11, .42) 62%, rgba(6, 8, 11, .58) 100%);
 }
-.sim-pfd { width: 100%; height: auto; max-height: 240px; display: block; }
+.sim-pfd {
+  width: 100%;
+  height: auto;
+  /* Capped against the STAGE, not at a fixed pixel height. At a flat 240 px the
+     panel ate 43% of a 560 px canvas and the approach was flown through the
+     gap above it. */
+  max-height: min(38vh, 250px);
+  display: block;
+}
 
 /* Instrument colours are their own scale, not the page tokens: a PFD is read
    against a dark cockpit and has to stay legible over sky AND terrain. */
@@ -1507,13 +1578,78 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .sim-box { fill: rgba(11, 13, 16, .72); stroke: #6d7681; stroke-width: 1; }
 .sim-readout { fill: #0b0d10; stroke: #e6e2d6; stroke-width: 1.4; }
 .sim-value { fill: #fbf9f4; font-family: var(--font-mono); font-size: 21px; font-weight: 600; }
-.sim-small, .sim-mode-l { fill: #b9c0c8; font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; }
-.sim-mode-v { fill: #fbf9f4; font-family: var(--font-mono); font-size: 15px; }
-.sim-mode-v.is-on { fill: #6ee08a; }
+.sim-small { fill: #b9c0c8; font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; }
+
+/* The configuration rail. One chip per system, boxed so a caption never has to
+   survive on its own over a cloud. */
+.sim-chip { fill: rgba(11, 13, 16, .74); stroke: #5b6570; stroke-width: 1; }
+.sim-chip-l {
+  fill: #a8b1bb;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.sim-chip-v {
+  fill: #fbf9f4;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.sim-chip-v.is-on { fill: #6ee08a; }
+.sim-chip-v.is-warn { fill: #ffc24a; }
+.sim-chip-v.is-hot { fill: #ff8a4a; }
+
 .sim-vs-rail { stroke: #6d7681; stroke-width: 1.4; }
 .sim-vs-needle { stroke: #ffd15c; stroke-width: 3; }
 .sim-cue { fill: #d94436; }
-.sim-warn { fill: transparent; font-family: var(--font-mono); font-size: 22px; letter-spacing: .18em; }
+
+.sim-ra-box { fill: rgba(11, 13, 16, .8); stroke: #6d7681; stroke-width: 1; }
+.sim-ra {
+  fill: #6ee08a;
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .06em;
+}
+.sim-id {
+  fill: #cfd5dc;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: .1em;
+}
+
+/* --- Cockpit shell --------------------------------------------------------
+   Only in the first-person view, and behind the instruments. `inset: 0` rather
+   than the HUD's bottom-anchored box, because a windscreen frame has to reach
+   the top of the picture. */
+.sim-cockpit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  pointer-events: none;
+  /* Structure, so it sits over the scene and under the instruments. It is
+     appended after the panel in the DOM and would otherwise paint over it. */
+  z-index: 1;
+}
+.sim[data-view="cockpit"] .sim-cockpit { display: block; }
+/* In the cockpit the instruments are mounted IN the glareshield, so the scrim
+   behind them would be a second, wrong shadow across it. */
+.sim[data-view="cockpit"] .sim-hud { background: none; }
+/* The instrument band is exactly the 40% of the stage that the shell drawing
+   reserves for the glareshield, so the two meet on the same line at every
+   window size. A max-height in pixels cannot do that. */
+.sim[data-view="cockpit"] .sim-hud { height: 40%; }
+.sim[data-view="cockpit"] .sim-pfd { height: 100%; max-height: none; }
+.sim-ck-panel { fill: #15181c; }
+.sim-ck-lip { fill: none; stroke: #454d57; stroke-width: 5; }
+.sim-ck-post { fill: #1b1f24; }
+.sim-ck-coam { fill: #14171b; }
+
+.sim-warn-box { fill: rgba(11, 13, 16, .86); stroke: #ff5b4a; stroke-width: 1.4; }
+.sim-warn { fill: transparent; font-family: var(--font-mono); font-size: 21px; letter-spacing: .16em; }
 .sim-warn.is-on { fill: #ff5b4a; }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1522,23 +1658,54 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 @keyframes sim-warn { 50% { opacity: .35; } }
 
 .sim-panel { margin-block-start: var(--s-3); }
-.sim-bar { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-block-end: var(--s-3); }
+/* A toolbar, not a row of loose buttons: one rule under it, tight spacing, and
+   the buttons sharing a baseline with the heading that follows. */
+.sim-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  padding-block-end: var(--s-2);
+  margin-block-end: var(--s-3);
+  border-block-end: 1px solid var(--rule-struct);
+}
 .sim-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
-  gap: var(--s-1) var(--s-3);
+  gap: 0;
   border-block-start: 1px solid var(--rule-struct);
-  padding-block-start: var(--s-2);
+  border-inline-start: 1px solid var(--rule-hair);
 }
-.sim-cell { display: flex; justify-content: space-between; gap: var(--s-2); align-items: baseline; padding-block: 3px; }
+.sim-cell {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-2);
+  align-items: baseline;
+  padding: var(--s-1) var(--s-2);
+  border-inline-end: 1px solid var(--rule-hair);
+  border-block-end: 1px solid var(--rule-hair);
+}
 .sim-cell__k {
   font-family: var(--font-mono);
   font-size: var(--fs-mono-xs);
   letter-spacing: .1em;
   color: var(--ink-3);
+  white-space: nowrap;
 }
 .sim-cell__v { font-size: var(--fs-sm); font-variant-numeric: tabular-nums slashed-zero; }
 
+/* The log heading and its clear control share a baseline. */
+.sim-loghead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+.btn--sm {
+  min-height: auto;
+  padding: 4px var(--s-15);
+  font-size: var(--fs-mono-xs);
+  letter-spacing: .1em;
+}
 .sim-log { margin-block: var(--s-2); border-block-start: 1px solid var(--rule-struct); }
 .sim-log__row {
   padding-block: var(--s-1);
@@ -1554,8 +1721,48 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 @media (max-width: 720px) {
   .sim[data-running="true"] .sim-stage { height: min(52vh, 380px); }
-  .sim-pfd { max-height: 190px; }
+  .sim-pfd { max-height: 180px; }
 }
+
+/* --- Fullscreen -----------------------------------------------------------
+   A flight simulator inside a 560 px window in a scrolling article is a
+   keyhole: the instrument panel takes a third of it and a runway at six miles
+   is four pixels wide. The attribute rather than `:fullscreen` alone, for two
+   reasons — the page's own rule is more specific than a bare pseudo-class, and
+   a browser that refuses the Fullscreen API still gets a viewport-filling
+   overlay out of exactly the same CSS. */
+.sim[data-fs="true"] .sim-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  width: 100vw;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  background: #06080b;
+}
+.sim[data-fs="true"] .sim-pfd { max-height: min(30vh, 340px); }
+/* Nothing below the canvas is reachable while the canvas is the whole screen,
+   so the page's own copy of the readout is not competing for attention. */
+.sim[data-fs="true"] .sim-panel,
+.sim[data-fs="true"] .sim-controls { display: none; }
+.sim-stage:fullscreen { width: 100vw; height: 100vh; }
+.sim-fs-hint {
+  position: absolute;
+  inset-block-start: 12px;
+  inset-inline-end: 14px;
+  z-index: 62;
+  padding: 6px 10px;
+  border: 1px solid rgba(233, 229, 220, .45);
+  background: rgba(11, 13, 16, .62);
+  color: #e9e5dc;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+}
+.sim-fs-hint:focus-visible { outline: 3px solid var(--focus-outer); outline-offset: 2px; }
+.sim:not([data-fs="true"]) .sim-fs-hint { display: none; }
 
 /* --- Crash panel ----------------------------------------------------------
    Sits under the stage rather than over it: covering the wreck with a modal
@@ -1684,11 +1891,16 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .sim-touch__btn[data-on] { background: rgba(217, 68, 54, .68); }
 
+/* Stacked, not in a row. Across the top these four ran into the width the
+   instrument panel needs and sat under the thumb that reaches for the gear
+   buttons; down the right edge they are out of the way of both. */
 .sim-touch__bar {
   position: absolute;
   inset-block-start: 10px;
   inset-inline-end: 12px;
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 6px;
 }
 .sim-touch__barbtn {

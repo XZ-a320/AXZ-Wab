@@ -25,6 +25,8 @@ import {
 import { elevation } from './world.js'
 
 const G = 9.80665
+/** Lever position where the burner lights, on the types that have one. */
+const AB_GATE = 0.92
 
 /** ISA density. Thrust and every dynamic pressure in here run through it. */
 export function airDensity(altM) {
@@ -35,15 +37,36 @@ export function airDensity(altM) {
   return 0.3639 * Math.exp(-(altM - 11000) / 6341.6)
 }
 
-/** Flap schedule: detent -> extra lift, extra drag, and the stall angle it buys. */
-const FLAPS = [
-  { deg: 0, dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
-  { deg: 5, dCL: 0.28, dCD: 0.0055, dStall: 0.7, vfe: 250 },
-  { deg: 15, dCL: 0.62, dCD: 0.0170, dStall: 1.2, vfe: 210 },
-  { deg: 30, dCL: 1.05, dCD: 0.0480, dStall: 1.6, vfe: 175 },
-  { deg: 40, dCL: 1.28, dCD: 0.0850, dStall: 1.4, vfe: 162 },
-]
-export const FLAP_STEPS = FLAPS.length
+/* --- Flap schedules -------------------------------------------------------
+   Detent -> extra lift, extra drag, the stall angle it buys, and the speed it
+   may be extended at. The build hands the whole set of tables down from
+   `scripts/airframe.mjs`, so the page's roster arithmetic and this model read
+   the same numbers. The default below is the airliner schedule, kept here so
+   the engine still runs if the attribute is ever missing. */
+const DEFAULT_FLAPS = {
+  airliner: [
+    { deg: 0, dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
+    { deg: 5, dCL: 0.28, dCD: 0.0055, dStall: 0.7, vfe: 250 },
+    { deg: 15, dCL: 0.62, dCD: 0.0170, dStall: 1.2, vfe: 210 },
+    { deg: 30, dCL: 1.05, dCD: 0.0480, dStall: 1.6, vfe: 175 },
+    { deg: 40, dCL: 1.28, dCD: 0.0850, dStall: 1.4, vfe: 162 },
+  ],
+}
+let FLAP_SETS = DEFAULT_FLAPS
+
+/** Install the schedules the page shipped. Called once, before any Aircraft. */
+export function setFlapSets(sets) {
+  if (sets && sets.airliner) FLAP_SETS = sets
+}
+export const flapsFor = spec => FLAP_SETS[spec && spec.flapSet] || FLAP_SETS.airliner
+/** How many detents THIS type has. Concorde has one; an airliner has five. */
+export const flapSteps = spec => flapsFor(spec).length
+
+/** The speed of sound at an altitude, ISA. Mach matters once a type can reach it. */
+export function speedOfSound(altM) {
+  const T = altM < 11000 ? 288.15 - 0.0065 * altM : 216.65
+  return Math.sqrt(1.4 * 287.053 * T)
+}
 
 /** Everything the model needs about a type, derived from the fleet table. */
 export function makeConfig(spec) {
@@ -54,28 +77,70 @@ export function makeConfig(spec) {
      estimated from geometry.
 
      The test of whether this is a flight model or a lookup table is whether
-     the same equations fly the Cessna and the 747 without special cases.
-     They do; the only branch below is prop versus jet, and that is a real
-     difference in how thrust behaves, not a fudge. */
+     the same equations fly the Cessna and the 747 without special cases. They
+     do. What arrives per type is not a special case but a coefficient: the
+     lift-curve slope, which the build derives from the published span and wing
+     area through lifting-line theory, the parasite drag, the span efficiency
+     and the angle the wing lets go at. Those four numbers are the difference
+     between a slender delta, a fighter and an airliner, and they are all the
+     difference there is. */
   const b = spec.span
   const S = spec.wingArea || (b * b) / 10.3
   const AR = (b * b) / S
   const c = S / b
   const mass = spec.mass || 1650 * spec.len
+  const dry = spec.thrust || 242000 * (spec.len / 39.47)
+  /* Gear stiffness is sized from the STANCE, not from a constant. At a fixed
+     `mass * 13` the static squat came out at 25 cm for everything, which is
+     seven per cent of a 737's leg and a quarter of a Cessna's — and a quarter
+     of the leg is how the light single ended up with its propeller under the
+     runway. Sizing the spring so the squat is a fixed fraction of the leg
+     keeps a big aeroplane feeling like one and stops a small one sitting on
+     its belly. The damping then follows at the same ratio the 737 was tuned
+     with, which is 0.40 of critical. */
+  const stance = spec.restHeight || 3.4
+  const squat = clamp(stance * 0.062, 0.03, 0.30)
+  const gearK = (mass * G / 3) / squat
+  const engine = spec.engine || (spec.prop ? 'piston' : 'turbofan')
+  // Spool rates, per second, toward the lever. Up is slower than down on every
+  // gas turbine; a piston has effectively neither.
+  const SPOOL = {
+    turbofan: [0.55, 0.9],
+    'turbofan-small': [0.85, 1.2],
+    'turbofan-ab': [1.5, 1.9],
+    'turbojet-reheat': [1.1, 1.5],
+    piston: [4.0, 4.5],
+  }
+  const [spoolUp, spoolDown] = SPOOL[engine] || SPOOL.turbofan
   return {
     name: spec.name, S, b, c, mass, AR,
-    maxThrust: spec.thrust || 242000 * (spec.len / 39.47),
+    maxThrust: dry,
+    /* Reheat is a second published figure, not a multiplier. The Olympus 593
+       gives 139.4 kN dry and 169.2 kN lit; the F110 gives 76.3 and 131. */
+    abThrust: spec.thrustAB || 0,
+    engine, spoolUp, spoolDown,
+    // A fighter's gear is up in five seconds; an airliner's takes ten.
+    gearRate: spec.len < 20 ? 0.5 : spec.len > 55 ? 0.20 : 0.28,
     prop: !!spec.prop,
     // Radii of gyration as fractions of the airframe, which is the standard
     // way to estimate these when you do not have the real inertia tensor.
     Ix: mass * Math.pow(spec.len * 0.21, 2),
     Iy: mass * Math.pow(((spec.len + b) / 2) * 0.25, 2),
     Iz: mass * Math.pow(b * 0.17, 2),
-    gearK: mass * 13,
-    gearC: mass * 2.9,
+    gearK,
+    gearC: 2 * 0.402 * Math.sqrt(gearK * mass),
     vne: spec.vne || 340,
-    // A light aeroplane's wing stalls a shade later than a swept jet's.
-    stallAlpha: (spec.prop ? 16.5 : 15.5) * DEG,
+    mmo: spec.mmo || 0.86,
+    ceiling: spec.ceiling || (spec.prop ? 4100 : 12000),
+    cl0: spec.cl0 != null ? spec.cl0 : 0.15,
+    cd0: spec.cd0 != null ? spec.cd0 : 0.021,
+    oswald: spec.oswald || 0.80,
+    clAlpha: spec.clAlpha || 5.2,
+    stallAlpha: (spec.stallDeg != null ? spec.stallDeg : (spec.prop ? 16.5 : 15.5)) * DEG,
+    /* A short wing rolls faster than a long one for the same aileron, and a
+       fighter's roll rate is most of what makes it feel like a fighter. Scaled
+       against the 737's span so the airliners keep exactly what they had. */
+    rollPower: 0.115 * Math.pow(35.79 / b, 0.55),
   }
 }
 
@@ -128,9 +193,13 @@ export class Wind {
 export class Aircraft {
   constructor(spec, contacts, restHeight) {
     this.spec = spec
-    this.cfg = makeConfig(spec)
+    // The stance has to be known before the gear spring is sized, so it goes
+    // in rather than being read back off the finished object.
+    this.cfg = makeConfig({ ...spec, restHeight })
+    this.flaps = flapsFor(spec)
     this.contacts = contacts
     this.restHeight = restHeight
+    this.reheat = 0               // 0..1, how far into the burner the lever is
 
     this.pos = { x: 0, y: 0, z: 0 }
     this.vel = { x: 0, y: 0, z: 0 }
@@ -150,7 +219,7 @@ export class Aircraft {
     this.assist = true
 
     // Readouts the HUD and the mission logic use.
-    this.alpha = 0; this.beta = 0; this.tas = 0; this.ias = 0
+    this.alpha = 0; this.beta = 0; this.tas = 0; this.ias = 0; this.mach = 0
     this.agl = 0; this.onGround = true; this.gLoad = 1
     this.stalling = false; this.overspeed = false
     this.wind = { x: 0, y: 0, z: 0 }
@@ -171,19 +240,72 @@ export class Aircraft {
    * here instead, already trimmed.
    */
   trimFor(speedMs, gamma = 0) {
-    const flap = FLAPS[this.flap]
+    const cfg = this.cfg
+    const flap = this.flaps[this.flap]
     const rho = airDensity(Math.max(this.pos.y, 0))
     const qbar = 0.5 * rho * speedMs * speedMs
-    const W = this.cfg.mass * G
-    const CLreq = (W * Math.cos(gamma)) / (qbar * this.cfg.S)
-    const alpha = (CLreq - 0.15 - flap.dCL) / 5.2
+    const W = cfg.mass * G
+    const CLreq = (W * Math.cos(gamma)) / (qbar * cfg.S)
+    // The type's own lift-curve slope, or a delta trims itself to an alpha a
+    // swept wing would need and arrives on the slope nose-down.
+    const alpha = (CLreq - cfg.cl0 - flap.dCL) / cfg.clAlpha
     const trim = clamp((1.25 * alpha - 0.045) / 0.88, -0.6, 0.6)
-    const kInd = 1 / (Math.PI * 0.80 * this.cfg.AR)
-    const CD = 0.021 + flap.dCD + this.gearPos * 0.019 + kInd * CLreq * CLreq
-    const D = qbar * this.cfg.S * CD
-    const throttle = clamp((D + W * Math.sin(gamma)) /
-      (this.cfg.maxThrust * Math.min(1, rho / 1.225 + 0.12)), 0, 1)
+    const kInd = 1 / (Math.PI * cfg.oswald * cfg.AR)
+    const CD = cfg.cd0 + flap.dCD + this.gearPos * 0.019 + kInd * CLreq * CLreq
+    const D = qbar * cfg.S * CD
+    // Trim on DRY power. Nothing cruises in reheat, and a lever position solved
+    // against the wet figure would have put the burner in every cruise start.
+    const gate = this.hasReheat ? AB_GATE : 1
+    const dry = this.thrustAvailable(rho, speedMs, gate)
+    const throttle = clamp(gate * (D + W * Math.sin(gamma)) / Math.max(dry, 1), 0, gate)
     return { alpha, pitch: alpha + gamma, trim, throttle }
+  }
+
+  /**
+   * Thrust at this density and speed for a given lever position, in newtons.
+   *
+   * Four engines behave in three ways and the difference is not cosmetic. A
+   * high-bypass fan is roughly constant with speed and falls with density. A
+   * reheated turbojet gains with speed, because the intake is compressing the
+   * air for it — which is exactly why Concorde could cruise supersonically on
+   * dry power after using the burner only to get through the transonic. A
+   * propeller converts roughly constant POWER, so its thrust is largest
+   * standing still and falls away as the aeroplane accelerates.
+   */
+  thrustAvailable(rho, V, lever) {
+    const cfg = this.cfg
+    const dens = Math.min(1, rho / 1.225 + (cfg.prop ? 0.0 : 0.12))
+    if (cfg.prop) {
+      const vRef = Math.max(V, 12)
+      return clamp(lever, 0, 1) * cfg.maxThrust * dens * clamp(24 / vRef, 0.22, 1)
+    }
+    const L = clamp(lever, 0, 1)
+    let T
+    if (!this.hasReheat) {
+      T = L * cfg.maxThrust
+    } else if (L <= AB_GATE) {
+      // The dry range occupies the lever up to the detent, so full military
+      // power is the published dry figure and not some fraction of it.
+      T = (L / AB_GATE) * cfg.maxThrust
+    } else {
+      T = cfg.maxThrust + (cfg.abThrust - cfg.maxThrust) * ((L - AB_GATE) / (1 - AB_GATE))
+    }
+    // Ram rise. An intake compressing Mach 2 air is doing work the compressor
+    // would otherwise have to, which is why a turbojet gains thrust with speed
+    // where a big fan does not.
+    const mach = V / speedOfSound(Math.max(this.pos.y, 0))
+    const ram = cfg.engine === 'turbojet-reheat' ? 1 + 0.62 * clamp(mach, 0, 2.1)
+      : cfg.engine === 'turbofan-ab' ? 1 + 0.30 * clamp(mach, 0, 1.8)
+        : 1
+    return T * dens * ram
+  }
+
+  /** Does this type have a burner at all? */
+  get hasReheat() { return this.cfg.abThrust > this.cfg.maxThrust }
+  /** How far into the burner the engines are, 0..1. Zero on a type without one. */
+  get abFrac() {
+    if (!this.hasReheat) return 0
+    return clamp((this.thrustLag - AB_GATE) / (1 - AB_GATE), 0, 1)
   }
 
   /** Put the aeroplane somewhere at a given speed, heading and flight path. */
@@ -235,13 +357,14 @@ export class Aircraft {
 
   /* --- Aerodynamics ------------------------------------------------------ */
   liftCoef(alpha, dCL, stallAlpha) {
-    const linear = 0.15 + dCL + 5.2 * alpha
+    const cl0 = this.cfg.cl0, a = this.cfg.clAlpha
+    const linear = cl0 + dCL + a * alpha
     const mag = Math.abs(alpha)
     if (mag <= stallAlpha) return linear
     // Past the break the wing does not simply stop lifting: it sheds toward a
     // flat-plate value. Without this the aeroplane falls like a brick instead
     // of mushing, and the stall stops being recoverable.
-    const peak = 0.15 + dCL + 5.2 * stallAlpha
+    const peak = cl0 + dCL + a * stallAlpha
     const fade = Math.exp(-(mag - stallAlpha) * 8)
     const plate = 1.05 * Math.sin(2 * alpha)
     return Math.sign(alpha) * peak * fade + plate * (1 - fade)
@@ -249,13 +372,19 @@ export class Aircraft {
 
   step(dt) {
     const cfg = this.cfg
-    const flap = FLAPS[this.flap]
+    const flap = this.flaps[this.flap]
 
-    // Gear travel, and thrust spool. A jet does not answer the lever at once,
-    // and on short final that lag is most of the difficulty.
-    this.gearPos = approach(this.gearPos, this.gearDown ? 1 : 0, 0.28, dt)
+    /* Gear travel, and thrust spool. A jet does not answer the lever at once,
+       and on short final that lag is most of the difficulty — but how long it
+       takes is a property of the engine, not of jets in general. A 2.8 m fan
+       has an enormous rotating inertia and takes the famous eight seconds from
+       idle to go-around thrust; a fighter's low-bypass core is spinning small
+       parts and answers in about two; a piston answers as fast as the throttle
+       plate moves. */
+    this.gearPos = approach(this.gearPos, this.gearDown ? 1 : 0, cfg.gearRate, dt)
     const demand = clamp(this.throttle, 0, 1)
-    this.thrustLag = approach(this.thrustLag, demand, demand > this.thrustLag ? 0.55 : 0.9, dt)
+    this.thrustLag = approach(this.thrustLag, demand,
+      demand > this.thrustLag ? cfg.spoolUp : cfg.spoolDown, dt)
 
     const rho = airDensity(Math.max(this.pos.y, -100))
     /* Everything aerodynamic runs on the RELATIVE wind, not the ground track.
@@ -293,13 +422,26 @@ export class Aircraft {
        the lift of a tumbling object, which is nearly none, so it falls instead
        of gliding serenely on to its destination. */
     if (this.crashed) CL *= 0.12
-    const CD0 = 0.021 + flap.dCD + this.gearPos * 0.019 + this.spoilers * 0.055
-    const kInd = 1 / (Math.PI * 0.80 * cfg.AR)
-    const CD = CD0 + kInd * CL * CL * ge
+    const CD0 = cfg.cd0 + flap.dCD + this.gearPos * 0.019 + this.spoilers * 0.055
+    const kInd = 1 / (Math.PI * cfg.oswald * cfg.AR)
+    /* Wave drag. Below the drag-divergence Mach number there is none; through
+       the transonic it climbs steeply and then settles. Without it a supersonic
+       aeroplane simply accelerates for ever, and the one thing that makes
+       Concorde and the fighter interesting — that the sound barrier is a wall
+       you have to push through, and that reheat is what pushes you through it —
+       does not exist. */
+    const mach = V / speedOfSound(Math.max(this.pos.y, 0))
+    const mdd = cfg.mmo > 1.2 ? 0.93 : 0.72
+    const wave = mach > mdd
+      ? 0.028 * Math.pow(clamp((mach - mdd) / 0.16, 0, 1), 2.2) *
+        (1 + 0.9 / Math.max(mach, 1)) : 0
+    const CD = CD0 + wave + kInd * CL * CL * ge
     const CY = -0.90 * this.beta
 
+    this.mach = mach
     this.stalling = Math.abs(this.alpha) > stallAlpha && V > 12
-    this.overspeed = this.ias * 1.943844 > cfg.vne || (this.flap > 0 && this.ias * 1.943844 > flap.vfe)
+    this.overspeed = this.ias * 1.943844 > cfg.vne || mach > cfg.mmo ||
+      (this.flap > 0 && this.ias * 1.943844 > flap.vfe)
 
     const L = qbar * cfg.S * CL
     const D = qbar * cfg.S * CD
@@ -317,21 +459,9 @@ export class Aircraft {
       Fb = vadd(Fb, vscale(side, Yf))
     }
 
-    // Thrust along the nose, falling off with density like a real engine.
-    /* Thrust. A jet's is roughly constant with speed and falls with density.
-       A propeller converts roughly constant POWER, so its thrust falls off as
-       speed rises and is largest standing still — which is why a light single
-       accelerates hard off the mark and then stops gaining. */
-    let thrust = 0
-    if (!this.crashed) {
-      const dens = Math.min(1, rho / 1.225 + (cfg.prop ? 0.0 : 0.12))
-      if (cfg.prop) {
-        const vRef = Math.max(V, 12)
-        thrust = this.thrustLag * cfg.maxThrust * dens * clamp(24 / vRef, 0.22, 1)
-      } else {
-        thrust = this.thrustLag * cfg.maxThrust * dens
-      }
-    }
+    // Thrust along the nose. `thrustAvailable` owns the three engine
+    // behaviours; here it is only asked for the number at the spooled lever.
+    const thrust = this.crashed ? 0 : this.thrustAvailable(rho, V, this.thrustLag)
     Fb = vadd(Fb, { x: 0, y: 0, z: -thrust })
 
     // Keep the non-gravitational force separately: a G meter reads SPECIFIC
@@ -401,7 +531,9 @@ export class Aircraft {
     // rotated at fifteen degrees a second; 0.88 rotates at about four, which is
     // what the real one does.
     let Cm = 0.045 - 1.25 * this.alpha + 0.88 * elev - 30 * (qRate * cfg.c / (2 * Vs))
-    let Cl = 0.115 * this.ctl.aileron - 0.105 * this.beta - 0.48 * (pRate * cfg.b / (2 * Vs))
+    // Roll authority scales with the span, so the fighter rolls like a fighter
+    // and the 747 still rolls like a 747.
+    let Cl = cfg.rollPower * this.ctl.aileron - 0.105 * this.beta - 0.48 * (pRate * cfg.b / (2 * Vs))
     let Cn = 0.128 * this.beta + 0.085 * this.ctl.rudder - 0.16 * (rRate * cfg.b / (2 * Vs))
       - 0.022 * this.ctl.aileron        // adverse yaw
 
@@ -564,11 +696,11 @@ export class Aircraft {
   rotWorld() { return qrot(this.q, this.omega) }
 
   /* --- Cockpit switches --------------------------------------------------- */
-  setFlap(i) { this.flap = clamp(i | 0, 0, FLAPS.length - 1) }
+  setFlap(i) { this.flap = clamp(i | 0, 0, this.flaps.length - 1) }
   flapUp() { this.setFlap(this.flap - 1) }
   flapDown() { this.setFlap(this.flap + 1) }
-  get flapDeg() { return FLAPS[this.flap].deg }
-  get flapVfe() { return FLAPS[this.flap].vfe }
+  get flapDeg() { return this.flaps[this.flap].deg }
+  get flapVfe() { return this.flaps[this.flap].vfe }
   toggleGear() { if (!this.onGround || this.gearPos < 1) this.gearDown = !this.gearDown; else this.gearDown = !this.gearDown }
   /**
    * Reference approach speed for the CURRENT configuration, in m/s.
@@ -578,14 +710,15 @@ export class Aircraft {
    */
   vrefMs() { return (this.stallSpeedKt() * 1.3) / 1.943844 }
 
-  /** Practical ceiling. A normally-aspirated single does not go to FL310. */
-  ceilingM() { return this.cfg.prop ? 4100 : 12000 }
+  /** Published service ceiling. A normally-aspirated single does not go to FL310. */
+  ceilingM() { return this.cfg.ceiling }
 
   /** Stall speed right now, in knots — what the HUD's low-speed cue is drawn from. */
   stallSpeedKt() {
-    const flap = FLAPS[this.flap]
-    const CLmax = 0.15 + flap.dCL + 5.2 * (this.cfg.stallAlpha + flap.dStall * DEG)
-    const v = Math.sqrt((2 * this.cfg.mass * G) / (1.225 * this.cfg.S * Math.max(CLmax, 0.3)))
+    const cfg = this.cfg
+    const flap = this.flaps[this.flap]
+    const CLmax = cfg.cl0 + flap.dCL + cfg.clAlpha * (cfg.stallAlpha + flap.dStall * DEG)
+    const v = Math.sqrt((2 * cfg.mass * G) / (1.225 * cfg.S * Math.max(CLmax, 0.3)))
     return v * 1.943844
   }
 }

@@ -6,6 +6,13 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* `hidden` has to beat any component that sets its own display. The browser's
+   own `[hidden] { display: none }` is a plain type-less rule, so `.btn`'s
+   `display: inline-flex` outranked it, and every button the simulator ships
+   hidden — fullscreen, phone mode — was on the page before the engine that
+   drives them had been downloaded. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
