@@ -604,6 +604,64 @@ console.log('\nflight simulator')
     ? ok('every type stands at its published overall height')
     : bad(`drawn height disagrees with the published figure: ${wrongHeight.map(r => `${r.id} ${r.drawn} vs ${r.specH}`).join(', ')}`)
 
+  /* Systems and failures. Each of these is a thing that has to remain true
+     for a failure to mean anything, and every one of them was silently
+     inoperative at some point: the fixed-gear flag was in the table and never
+     read, and the limit load factor set the manoeuvring speed but was never
+     stored where the airframe could see it. */
+  const sysres = await page.evaluate(() => {
+    const s = window.__axzSimHandle.sim
+    const r = {}
+    s.setAircraft('c172'); s.setScenario('cruise')
+    r.cessnaFixed = s.ac.hasRetractableGear === false && s.ac.toggleGear() === false
+    s.setAircraft('b-737x'); s.setScenario('cruise')
+    r.jetRetracts = s.ac.toggleGear() === true
+
+    // One of four out: three quarters of the thrust, and a yaw to hold off.
+    s.setAircraft('b744'); s.setScenario('cruise')
+    let ac = s.ac; ac.assist = false
+    const t0 = ac.engineFraction
+    ac.hurt('eng0', 1, 'wear')
+    r.engineOut = Math.abs(ac.engineFraction - 0.75) < 0.01
+    let yaw = 0
+    for (let i = 0; i < 240 * 10; i++) { ac.throttle = 1; ac.step(1 / 240); yaw = Math.max(yaw, Math.abs(ac.omega.y)) }
+    r.asymmetricYaw = yaw * 57.3 > 0.5
+
+    // No hydraulics, no gear and no flaps.
+    s.setAircraft('b-737x'); s.setScenario('approach')
+    ac = s.ac
+    ac.hurt('hyd', 1, 'wear')
+    r.hydLocksGear = ac.toggleGear() === false && ac.setFlap(0) === false
+
+    // A blocked pitot freezes the gauge and leaves the aerodynamics alone.
+    s.setAircraft('a320'); s.setScenario('cruise')
+    ac = s.ac
+    for (let i = 0; i < 60; i++) ac.step(1 / 240)
+    ac.hurt('pitot', 1, 'wear')
+    ac.throttle = 0
+    for (let i = 0; i < 240 * 40; i++) ac.step(1 / 240)
+    r.pitotFreezes = Math.abs(ac.ias - ac.iasTrue) > 4
+
+    // Past the ultimate load factor the airframe comes apart.
+    s.setAircraft('b-737x'); s.setScenario('cruise')
+    ac = s.ac
+    ac.gLoad = ac.cfg.nLimit * 1.6
+    ac.updateSystems(1 / 240)
+    r.overstressBreaks = !!ac.structural
+
+    // And nothing fails by itself when the rate is zero.
+    s.setScenario('cruise')
+    ac = s.ac; ac.failureRate = 0
+    let n = 0
+    for (let i = 0; i < 240 * 3600; i++) { ac.updateSystems(1 / 240); if (ac.newFailure) { n++; ac.newFailure = null } }
+    r.zeroRateIsQuiet = n === 0
+    return r
+  })
+  const sysBad = Object.keys(sysres).filter(k => !sysres[k])
+  sysBad.length === 0
+    ? ok('systems: fixed gear stays down, an engine out yaws, hydraulics lock the gear, a blocked pitot freezes the gauge, overstress breaks the airframe, and nothing fails at rate zero')
+    : bad(`system behaviours not holding: ${sysBad.join(', ')}`)
+
   /* Cold and dark starts on the APRON. An aeroplane with its engines off and
      the park brake set is not somewhere a runway is ever occupied from, and
      starting there skipped the taxi that is the whole reason to choose it. */

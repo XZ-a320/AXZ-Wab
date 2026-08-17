@@ -86,6 +86,10 @@ export async function boot(cfg) {
       pushLog(L.assistLabel + ' ' + (ev.on ? L.on : L.off), 'info')
     } else if (ev.type === 'timescale') {
       pushLog(L.timeLabel + ' ' + ev.value + '×', 'info')
+    } else if (ev.type === 'failure') {
+      const name = (L.sysNames && L.sysNames[ev.what]) || ev.what
+      const why = (L.failWhy && L.failWhy[ev.why]) || ''
+      pushLog((ev.n ? name + ' ' + ev.n : name) + (why ? ' ' + why : ''), 'warn')
     } else if (ev.type === 'mach') {
       pushLog(ev.up ? L.machUp : L.machDown, 'good')
     } else if (ev.type === 'paused') {
@@ -184,6 +188,15 @@ export async function boot(cfg) {
     for (const opt of scSel.options) {
       opt.textContent = scenarioText(opt.value, r.origin, r.dest)
     }
+  }
+
+  const frSel = stage.querySelector('[data-sim-failrate]')
+  if (frSel) {
+    const applyRate = () => { sim.ac.failureRate = parseFloat(frSel.value) || 0 }
+    frSel.addEventListener('change', () => { applyRate(); sim.canvas.focus() })
+    // Survives a change of aeroplane, which builds a fresh Aircraft.
+    sim.onAircraft = applyRate
+    applyRate()
   }
 
   const flSel = stage.querySelector('[data-sim-flight]')

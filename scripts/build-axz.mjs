@@ -1146,6 +1146,7 @@ function simPage(c, lang) {
     flapsDown: S.touch.flapsDown, flapsUp: S.touch.flapsUp, view: S.touch.view,
     pause: S.actions.pause,
     machUp: S.machUp, machDown: S.machDown,
+    sysNames: S.sysNames, failWhy: S.failWhy,
     keyboard: S.keyboard, gamepad: S.gamepad,
   }
   const bands = LG.bands.map(b => b.remark)
@@ -1185,6 +1186,12 @@ function simPage(c, lang) {
     `<option value="${d}"${d === 250 ? ' selected' : ''}>${String(d).padStart(3, '0')}°</option>`).join('')
   const wsOpts = [0, 5, 8, 15, 25, 35].map(v =>
     `<option value="${v}"${v === 0 ? ' selected' : ''}>${v === 0 ? esc(S.windCalm) : v + ' kt'}</option>`).join('')
+  /* Failures per flight HOUR. None is the default, because the simulator has
+     always been one where the only way to break an aeroplane is to fly it
+     badly, and that should stay true unless somebody asks for otherwise. High
+     is about one an hour, which is far worse than any real aeroplane. */
+  const frOpts = [['none', 0], ['low', 0.12], ['med', 0.4], ['high', 1.1]].map(([k, v]) =>
+    `<option value="${v}"${k === 'none' ? ' selected' : ''}>${esc(S.failLevels[k])}</option>`).join('')
   const tbOpts = [['none', 0], ['light', 0.35], ['moderate', 0.7], ['severe', 1]].map(([k, v]) =>
     `<option value="${v}"${k === 'none' ? ' selected' : ''}>${esc(S.turbLevels[k])}</option>`).join('')
 
@@ -1287,6 +1294,10 @@ function simPage(c, lang) {
         <label for="sim-tb">${esc(S.setup.turbulence)}</label>
         <select id="sim-tb" data-sim-turb>${tbOpts}</select>
       </div>
+      <div class="field">
+        <label for="sim-fr">${esc(S.setup.failure)}</label>
+        <select id="sim-fr" data-sim-failrate>${frOpts}</select>
+      </div>
     </div>
     </div>
     <p class="btn-row">
@@ -1387,6 +1398,9 @@ function simPage(c, lang) {
 
   <h2>${esc(S.calloutTitle)}</h2>
   <p class="prose">${P(S.calloutBody)}</p>
+
+  <h2>${esc(S.failTitle)}</h2>
+  <p class="prose">${P(S.failBody)}</p>
 
   <h2>${esc(S.papiTitle)}</h2>
   <p class="prose">${P(S.papiBody)}</p>

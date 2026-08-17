@@ -225,6 +225,8 @@ export class Sim {
     if (keep) { this.ac.pos = keep.pos; this.ac.vel = keep.vel; this.ac.q = keep.q }
     this.ac.assist = this.opts.assist !== false
     this.sound.setEngine(spec)
+    // The chosen failure rate belongs to the session, not to the airframe.
+    if (this.onAircraft) this.onAircraft()
   }
 
   /* --- Scenarios ----------------------------------------------------------
@@ -512,6 +514,12 @@ export class Sim {
 
     const euler = qToEuler(this.ac.q)
     this.hud.update(this.ac, { euler }, dtReal)
+    // The failure list, in the order things went.
+    const L = this.L
+    this.hud.setFailures(this.ac.failures.map(f => {
+      const name = (L.sysNames && L.sysNames[f.what]) || f.what
+      return f.n ? name + ' ' + f.n : name
+    }))
     // Identity only changes on a press, so it is written on change rather than
     // sixty times a second at a string nobody watches move.
     const idKey = this.flightId + this.aircraftId + this.cameraMode
@@ -535,7 +543,7 @@ export class Sim {
 
   handleActions() {
     const I = this.input, ac = this.ac
-    if (I.hit('KeyG')) { ac.toggleGear(); this.sound.servo(!ac.gearDown) }
+    if (I.hit('KeyG') && ac.toggleGear()) this.sound.servo(!ac.gearDown)
     if (I.hit('KeyF')) { ac.flapDown(); this.sound.servo(false) }
     if (I.hit('KeyV')) { ac.flapUp(); this.sound.servo(true) }
     if (I.hit('KeyX')) ac.spoilers = ac.spoilers > 0.5 ? 0 : 1
@@ -618,6 +626,24 @@ export class Sim {
        it entirely at 300 knots. */
     if (!ac.crashed && ac.impact) this.crash(ac.impact)
 
+    /* Failures, surfaced the frame they happen. A system that goes without
+       telling you is not a simulation of anything: what makes an engine
+       failure an event is the moment you find out. */
+    if (ac.newFailure) {
+      const f = ac.newFailure
+      ac.newFailure = null
+      this.onEvent({ type: 'failure', what: f.what, why: f.why, n: f.n })
+      this.sound.master && this.sound.alertOnce()
+      this.shake = Math.max(this.shake, 0.16)
+    }
+    /* Past the ULTIMATE load factor the airframe comes apart in the air. It is
+       the only way to break an aeroplane that does not involve the ground. */
+    if (ac.structural && !ac.crashed) {
+      const st = ac.structural
+      ac.structural = null
+      this.crash('structure', st.detail)
+    }
+
     if (!ac.crashLatch && ac.onGround) {
       const bank = Math.abs(qToEuler(ac.q).bank)
       let reason = null
@@ -639,7 +665,7 @@ export class Sim {
 
   /* Break the aeroplane. The airframe stops flying, the wreck sheds its speed
      hard, the site burns, and the camera is knocked about for a second. */
-  crash(reason) {
+  crash(reason, extra) {
     const ac = this.ac
     if (ac.crashed) return
     ac.crashed = true
@@ -659,7 +685,8 @@ export class Sim {
     const bankDeg = Math.abs(qToEuler(ac.q).bank) * RAD
     const detail = reason === 'hard' ? Math.round(ac.lastTouchdownFpm || 0) + ' ' + (this.L.fpm || 'ft/min')
       : reason === 'bank' ? Math.round(bankDeg) + '°'
-        : Math.round(ac.tas * MS_TO_KT) + ' kt'
+        : reason === 'structure' ? (extra || 0).toFixed(1) + ' g'
+          : Math.round(ac.tas * MS_TO_KT) + ' kt'
     // An impact is worth more energy than an arrival: a wing against a tower
     // at cruise speed is not a firm landing.
     if (reason === 'obstacle' || reason === 'terrain') this.shake = Math.min(1.8, this.shake + 0.5)

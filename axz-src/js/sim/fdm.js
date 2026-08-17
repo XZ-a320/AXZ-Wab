@@ -201,7 +201,7 @@ export function makeConfig(spec) {
     mdd: spec.mdd || 0.78,
     waveDrag: spec.waveDrag != null ? spec.waveDrag : 0.075,
     machInlet: spec.machInlet || 1.0,
-    engine, spoolUp, spoolDown,
+    engine, spoolUp, spoolDown, nEng,
     lapse: spec.lapse != null ? spec.lapse : 1,
     // A fighter's gear is up in five seconds; an airliner's takes ten.
     gearRate: spec.len < 20 ? 0.5 : spec.len > 55 ? 0.20 : 0.28,
@@ -246,6 +246,11 @@ export function makeConfig(spec) {
        15, an F-16 at 324, and now they do. */
     rollPower: (rollRate * DEG) * 0.48 * b / (2 * vRoll),
     vRoll,
+    /* The certification limit load factor. It already set the manoeuvring
+       speed; the airframe needs it too, because the limit and 1.5 times it —
+       the ultimate factor everything is built to — are where damage starts
+       and where the aeroplane comes apart. */
+    nLimit: spec.nLimit || 2.5,
   }
 }
 
@@ -335,6 +340,22 @@ export class Aircraft {
     this.touchdownBurst = 0
     this.touchdownFpm = 0; this.wasAirborne = false; this.justLanded = null
     this.crashed = false
+
+    /* --- Systems ----------------------------------------------------------
+       Health per system, 1 is serviceable and 0 is gone. A crash used to be
+       the only thing that could go wrong, which made every flight binary: you
+       either arrived or you were a fireball, and nothing in between ever
+       happened. These break for reasons, they degrade rather than switch, and
+       every one of them changes something you can feel.
+
+       Engines are per unit, because losing one of four is a different
+       aeroplane from losing one of two, and losing the only one you have is a
+       glider. */
+    this.eng = new Array(this.cfg.nEng).fill(1)
+    this.sys = { hyd: 1, elec: 1, gear: 1, flap: 1, pitot: 1 }
+    this.failures = []           // what has gone, in the order it went
+    this.newFailure = null       // one frame's worth, for the caller to log
+    this.failureRate = 0         // per flight hour; the page sets it
   }
 
   /** Static gear compression: what the legs are already squashed by at rest. */
@@ -514,7 +535,11 @@ export class Aircraft {
        idle to go-around thrust; a fighter's low-bypass core is spinning small
        parts and answers in about two; a piston answers as fast as the throttle
        plate moves. */
-    this.gearPos = approach(this.gearPos, this.gearDown ? 1 : 0, cfg.gearRate, dt)
+    /* Gear and flaps run on hydraulics. With the system gone they stay exactly
+       where they were, which is why losing it on the ground is nothing and
+       losing it clean on approach is the flight you remember. */
+    const hyd = this.sys.hyd > 0 && this.sys.gear > 0
+    if (hyd) this.gearPos = approach(this.gearPos, this.gearDown ? 1 : 0, cfg.gearRate, dt)
     const demand = clamp(this.throttle, 0, 1)
     this.thrustLag = approach(this.thrustLag, demand,
       demand > this.thrustLag ? cfg.spoolUp : cfg.spoolDown, dt)
@@ -533,7 +558,13 @@ export class Aircraft {
     this.alpha = V > 1 ? Math.atan2(-vb.y, Math.max(u, 0.1)) : 0
     this.beta = V > 1 ? Math.asin(clamp(vb.x / V, -1, 1)) : 0
     this.tas = V
-    this.ias = V * Math.sqrt(rho / 1.225)
+    /* A blocked pitot does not read zero, it reads WRONG — and the indicated
+       airspeed is the one number a pilot flies the approach on. Frozen at
+       whatever it last saw is the classic failure and the classic killer. */
+    const trueIas = V * Math.sqrt(rho / 1.225)
+    if (this.sys.pitot > 0) { this.ias = trueIas; this.iasFrozen = trueIas }
+    else this.ias = this.iasFrozen || trueIas
+    this.iasTrue = trueIas
 
     const ground = elevation(this.pos.x, this.pos.z)
     // agl is the CG height, which is what ground effect wants. The radio
@@ -578,8 +609,10 @@ export class Aircraft {
     const CY = -0.90 * this.beta
 
     this.stalling = Math.abs(this.alpha) > stallAlpha && V > 12
-    this.overspeed = this.ias * 1.943844 > cfg.vne || mach > cfg.mmo ||
-      (this.flap > 0 && this.ias * 1.943844 > flap.vfe)
+    // Against the REAL speed: the aeroplane does not care what the gauge says.
+    const iasKt = this.iasTrue * 1.943844
+    this.overspeed = iasKt > cfg.vne || mach > cfg.mmo ||
+      (this.flap > 0 && iasKt > flap.vfe)
 
     const L = qbar * cfg.S * CL
     const D = qbar * cfg.S * CD
@@ -599,7 +632,12 @@ export class Aircraft {
 
     // Thrust along the nose. `thrustAvailable` owns the three engine
     // behaviours; here it is only asked for the number at the spooled lever.
-    const thrust = this.crashed ? 0 : this.thrustAvailable(rho, V, this.thrustLag)
+    /* Only the engines still turning make thrust. Losing one of four costs a
+       quarter; losing the only one you have makes a glider, and that is the
+       single most instructive thing that can happen to somebody flying a
+       single-engine aeroplane. */
+    const thrust = this.crashed ? 0
+      : this.thrustAvailable(rho, V, this.thrustLag) * this.engineFraction
     Fb = vadd(Fb, { x: 0, y: 0, z: -thrust })
 
     // Keep the non-gravitational force separately: a G meter reads SPECIFIC
@@ -609,10 +647,29 @@ export class Aircraft {
     let F = vadd(Faero, { x: 0, y: -cfg.mass * G, z: 0 })
 
     let M = this.aeroMoments(qbar, V, flap, dt)
+    /* ASYMMETRIC THRUST. An engine out on one side is not just less push, it
+       is a yawing moment that has to be held off with rudder — which is the
+       entire reason an engine failure is an emergency rather than an
+       inconvenience. Summed over the engines' real spanwise stations, so
+       losing an outboard engine on a four-holer is worse than an inboard. */
+    if (!this.crashed && this.eng.length > 1) {
+      const per = this.thrustAvailable(rho, V, this.thrustLag) / this.eng.length
+      let yaw = 0
+      for (let i = 0; i < this.eng.length; i++) {
+        // Alternating sides, working outward: -,+,-,+ across the span.
+        const side = (i % 2) ? 1 : -1
+        const lane = this.eng.length >= 4 ? (i < 2 ? 0.28 : 0.52) : 0.34
+        const arm = side * cfg.b * lane
+        if (!(this.eng[i] > 0)) yaw += per * arm      // the missing one
+      }
+      M = { x: M.x, y: M.y + yaw, z: M.z }
+    }
     // Tumble: no control, and the damping that a pilot's hands supplied is gone.
     if (this.crashed) {
       M = { x: M.x * 0.15 + qbar * 12, y: M.y * 0.15 - qbar * 7, z: M.z * 0.15 + qbar * 9 }
     }
+
+    this.updateSystems(dt)
 
     // Ground reactions come last so they can see the aerodynamic state.
     const gr = this.groundForces(dt)
@@ -886,8 +943,116 @@ export class Aircraft {
 
   rotWorld() { return qrot(this.q, this.omega) }
 
+  /* --- Systems -------------------------------------------------------------
+     Things break for three reasons and all three are read off the physics.
+
+     OVERSTRESS. Past the certification limit load factor the airframe starts
+     taking damage, and past 1.5 times it — which is the ultimate factor every
+     transport is built to — it comes apart. That is not a rule invented for
+     this simulator; it is the number the aeroplane was designed to.
+
+     OVERSPEED. Past Vne or Mmo the loads on control surfaces climb steeply,
+     and what goes first is hydraulics and flaps, not the wing.
+
+     WEAR. A random rate, per flight hour, set on the page. At zero nothing
+     ever fails by itself and the only way to break an aeroplane is to fly it
+     badly, which is where this started; at the top it is roughly one failure
+     an hour, which is far worse than any real aeroplane and is the point.  */
+  updateSystems(dt) {
+    const cfg = this.cfg
+    if (this.crashed) return
+    const gAbs = Math.abs(this.gLoad)
+    const nLim = cfg.nLimit
+
+    // Overstress. Proportional to how far past the limit, so a brief excursion
+    // costs a little and holding it costs the wing.
+    if (gAbs > nLim) {
+      const over = (gAbs - nLim) / nLim
+      this.stress = (this.stress || 0) + over * dt
+      if (gAbs > nLim * 1.5) this.breakStructure('gLoad', gAbs)
+      else if (this.stress > 2.5) { this.stress = 0; this.hurt('hyd', 0.5, 'overstress') }
+    } else {
+      this.stress = Math.max(0, (this.stress || 0) - dt * 0.4)
+    }
+
+    // Overspeed: the surfaces and the systems that drive them.
+    if (this.overspeed) {
+      this.vneTime = (this.vneTime || 0) + dt
+      if (this.vneTime > 12) { this.vneTime = 0; this.hurt('hyd', 0.6, 'overspeed') }
+      if (this.vneTime > 6 && this.flap > 0) this.hurt('flap', 1, 'overspeed')
+    } else {
+      this.vneTime = Math.max(0, (this.vneTime || 0) - dt * 0.5)
+    }
+
+    /* Wear. A Poisson process at the chosen rate, which is the honest way to
+       model something that has no warning: the probability in any given step
+       is the rate times the step, and where it lands is weighted by how much
+       of the aeroplane each system is. */
+    if (this.failureRate > 0) {
+      const p = (this.failureRate / 3600) * dt
+      if (Math.random() < p) this.rollFailure()
+    }
+  }
+
+  /** Pick something to break, weighted the way real failures are distributed. */
+  rollFailure() {
+    const pool = []
+    for (let i = 0; i < this.eng.length; i++) if (this.eng[i] > 0.5) pool.push(['eng' + i, 4])
+    if (this.sys.hyd > 0.5) pool.push(['hyd', 3])
+    if (this.sys.elec > 0.5) pool.push(['elec', 2])
+    if (this.hasRetractableGear && this.sys.gear > 0.5) pool.push(['gear', 2])
+    if (this.flaps.length > 1 && this.sys.flap > 0.5) pool.push(['flap', 2])
+    if (this.sys.pitot > 0.5) pool.push(['pitot', 1])
+    const total = pool.reduce((n, [, w]) => n + w, 0)
+    if (!total) return
+    let r = Math.random() * total
+    for (const [what, w] of pool) {
+      r -= w
+      if (r <= 0) { this.hurt(what, 1, 'wear'); return }
+    }
+  }
+
+  /** Damage a system, and remember the first time each one goes. */
+  hurt(what, amount, why) {
+    if (what.startsWith('eng')) {
+      const i = +what.slice(3)
+      if (!(this.eng[i] > 0)) return
+      this.eng[i] = Math.max(0, this.eng[i] - amount)
+      if (this.eng[i] <= 0) this.note('eng', why, i + 1)
+      return
+    }
+    if (!(this.sys[what] > 0)) return
+    this.sys[what] = Math.max(0, this.sys[what] - amount)
+    if (this.sys[what] <= 0) this.note(what, why)
+  }
+
+  note(what, why, n) {
+    const rec = { what, why, n }
+    this.failures.push(rec)
+    this.newFailure = rec
+  }
+
+  /** Past the ultimate load factor the airframe does not bend, it breaks. */
+  breakStructure(why, detail) {
+    if (this.crashed) return
+    this.structural = { why, detail }
+  }
+
+  /** How much of the fleet's thrust is still turning. */
+  get engineFraction() {
+    if (!this.eng.length) return 1
+    let n = 0
+    for (const e of this.eng) n += e > 0 ? 1 : 0
+    return n / this.eng.length
+  }
+
   /* --- Cockpit switches --------------------------------------------------- */
-  setFlap(i) { this.flap = clamp(i | 0, 0, this.flaps.length - 1) }
+  setFlap(i) {
+    // No hydraulics, no flaps. They stay where they were.
+    if (!(this.sys.hyd > 0 && this.sys.flap > 0)) return false
+    this.flap = clamp(i | 0, 0, this.flaps.length - 1)
+    return true
+  }
   flapUp() { this.setFlap(this.flap - 1) }
   flapDown() { this.setFlap(this.flap + 1) }
   get flapDeg() { return this.flaps[this.flap].deg }
@@ -897,7 +1062,17 @@ export class Aircraft {
     return f.label != null ? f.label : String(f.deg)
   }
   get flapVfe() { return this.flaps[this.flap].vfe }
-  toggleGear() { if (!this.onGround || this.gearPos < 1) this.gearDown = !this.gearDown; else this.gearDown = !this.gearDown }
+  /* A 172's legs are bolted on. The lever did nothing on a real one because
+     there is no lever, and folding them was the aeroplane doing something it
+     physically cannot — including the belly landing it could then be scored
+     for. The flag was already in the type table and simply never read. */
+  get hasRetractableGear() { return !this.spec.fixedGear }
+  toggleGear() {
+    if (!this.hasRetractableGear) return false
+    if (!(this.sys.hyd > 0 && this.sys.gear > 0)) return false
+    this.gearDown = !this.gearDown
+    return true
+  }
   /**
    * Reference approach speed for the CURRENT configuration, in m/s.
    * 1.3 times the stall, which is where the airline number comes from, and it

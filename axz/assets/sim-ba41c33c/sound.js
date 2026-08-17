@@ -522,6 +522,16 @@ export class Sound {
     crack(t + 0.11, 0.62)
   }
 
+  /** The single chime that says something on the aeroplane has just gone. */
+  alertOnce() {
+    if (!this.ready || !this.enabled) return
+    if (this.pack && this.playClip(this.pack.master, 0.85)) return
+    // No voice pack on this type: two descending tones, which is what a
+    // caution chime is on everything that does not talk.
+    this.blip(880, 0.20, 'sine', 0.22)
+    setTimeout(() => this.blip(660, 0.32, 'sine', 0.22), 190)
+  }
+
   /** Servo whine for gear and flaps. */
   servo(up) {
     if (!this.ready || !this.enabled) return

@@ -725,7 +725,8 @@
       "n1": "N1",
       "machLabel": "MACH",
       "reheat": "A/B",
-      "none": "NONE"
+      "none": "NONE",
+      "gLabel": "G"
     },
     "cameras": {
       "cockpit": "Cockpit",
@@ -781,7 +782,8 @@
       "bank": "Banked too far at touchdown, wingtip first",
       "gear": "Landed with the gear up",
       "obstacle": "Hit a building",
-      "terrain": "Flew into the ground"
+      "terrain": "Flew into the ground",
+      "structure": "The airframe came apart under load"
     },
     "soundLabel": "Sound",
     "tipLabel": "Next time:",
@@ -791,7 +793,8 @@
       "bank": "In a crosswind, use the sideslip: rudder toward the centreline, aileron into the wind, and arrive with the nose down the runway and the wings close to level. The wind row in the flight data tells you which side it is coming from.",
       "gear": "Press G on final to lower the gear. Both the flight data and the PFD show GEAR in green when it is down and locked; if it is not green, it is not down.",
       "obstacle": "The city is solid, not a backdrop. The towers in the middle of it stand higher than the approach altitude at either field, so going through town at low level means going round them or over them. The height readout is measured from the ground under you, not from the roofs.",
-      "terrain": "That is controlled flight into terrain. The ridge runs down the west side of the KSFO to KSNS route and reaches nine hundred metres, and it is easiest to hit at night or with your head down in the instruments. Hold your altitude until you are established, and do not go below a thousand feet before the PAPI is in sight."
+      "terrain": "That is controlled flight into terrain. The ridge runs down the west side of the KSFO to KSNS route and reaches nine hundred metres, and it is easiest to hit at night or with your head down in the instruments. Hold your altitude until you are established, and do not go below a thousand feet before the PAPI is in sight.",
+      "structure": "Past 1.5 times the certification limit load factor the airframe comes apart, and that is not a number invented for this simulator: it is the ultimate load factor every transport is built to. The limit is 2.5 g for a transport and 9 g for a fighter, and the quickest way to find it is a hard pull at high speed. The g reading on the flight display changes colour as you approach it."
     },
     "gyroscope": "Gyroscope",
     "gyroOn": "Gyroscope on. Hold the phone how you like, then press Recentre.",
@@ -835,7 +838,8 @@
       "time": "Time of day",
       "windDir": "Wind from",
       "windSpeed": "Wind speed",
-      "turbulence": "Turbulence"
+      "turbulence": "Turbulence",
+      "failure": "Failure rate"
     },
     "times": {
       "dawn": "Dawn",
@@ -863,7 +867,28 @@
     "newTypesTitle": "Fifth generation, and the bombers",
     "newTypesBody": "What separates the F-22 from the F-16 is not that it is newer. It supercruises: it holds Mach 1.82 with the burner unlit, the only one of the fifteen that can stay supersonic without reheat, and there is a build gate watching that specifically, because the day it stops being true it has stopped being an F-22. The F-35 has one engine, but that one gives 125 kN dry and 191 kN lit, and its wing is sized for carrying rather than turning, so it accelerates hard and is the slower of the two flat out. Both have twin fins canted outward, which is not styling: a vertical surface returns a radar signal straight back to whatever painted it, and tilting it sends that return somewhere else. The chine along the forebody does two jobs the same way, holding the vortex at high alpha and reflecting sideways rather than forward. The B-2 has no fin and no fuselage at all: the whole aeroplane is one cranked double-W wing with the intakes on TOP, because nothing on a stealth bomber may look down at a radar. It holds its heading with split drag rudders at the tips and rolls like a barn door, 20 degrees a second. The B-52 carries eight engines in four twin pods on a wing flexible enough that its tips move four metres, and at 15 degrees a second it is the slowest-rolling thing here. How far thrust falls away with speed is set by bypass ratio: a CFM56 at 5.5 throws a large mass of air slowly and runs out of use once the aeroplane is fast, while the F118 in a B-2 and the TF33 in a B-52 are both under 1 and barely notice. On the airliner lapse the B-2 could not hold its own cruise. It needed 90 kN and had 63.",
     "calloutTitle": "The height callouts",
-    "calloutBody": "Somebody counts you down on final: two thousand five hundred, a thousand, five hundred, four hundred, three hundred, two hundred, one hundred, then seventy, sixty, fifty, forty, thirty, twenty, ten and five. These are seventeen recordings rather than synthesis, for the same reason the alerts are: the calls are a particular human voice, and an approximation of a particular voice is an approximation of nothing. They fire on the CROSSING rather than on the height, and re-arm only after climbing back above it, so a float in the flare cannot shout \"twenty\" at you four times running. Coming down fast, fifty, forty, thirty and twenty arrive inside a second, which is what a real one does. The files were re-encoded: mono at 32 kbps, silence trimmed off both ends, loudness matched to -16 LUFS. Seventeen calls come to 73 KB, a quarter of what arrived, and nothing about them sounds different. Like the engines, not one byte of it downloads before Start is pressed."
+    "calloutBody": "Somebody counts you down on final: two thousand five hundred, a thousand, five hundred, four hundred, three hundred, two hundred, one hundred, then seventy, sixty, fifty, forty, thirty, twenty, ten and five. These are seventeen recordings rather than synthesis, for the same reason the alerts are: the calls are a particular human voice, and an approximation of a particular voice is an approximation of nothing. They fire on the CROSSING rather than on the height, and re-arm only after climbing back above it, so a float in the flare cannot shout \"twenty\" at you four times running. Coming down fast, fifty, forty, thirty and twenty arrive inside a second, which is what a real one does. The files were re-encoded: mono at 32 kbps, silence trimmed off both ends, loudness matched to -16 LUFS. Seventeen calls come to 73 KB, a quarter of what arrived, and nothing about them sounds different. Like the engines, not one byte of it downloads before Start is pressed.",
+    "failLevels": {
+      "none": "None",
+      "low": "Low",
+      "med": "Moderate",
+      "high": "High"
+    },
+    "sysNames": {
+      "eng": "ENGINE",
+      "hyd": "HYD",
+      "elec": "ELEC",
+      "gear": "GEAR",
+      "flap": "FLAP",
+      "pitot": "PITOT"
+    },
+    "failWhy": {
+      "wear": "FAIL",
+      "overstress": "OVERSTRESS",
+      "overspeed": "OVERSPEED"
+    },
+    "failTitle": "Failures",
+    "failBody": "The failure rate setting decides how often the aeroplane breaks by itself. On None it never does, and the only way to break one is to fly it badly, which is where this started. Above that it is a Poisson process: the probability in any step is the rate times the step, and High is roughly one failure an hour, which is far worse than any real aeroplane and is exactly the point. What breaks is weighted by how much of the aeroplane each system is: engines, hydraulics, electrics, gear, flaps, pitot. Every one of them changes something you can feel. An engine out costs thrust and adds a yawing moment you have to hold off with rudder. Losing one of four costs a quarter; losing the only one you have makes a glider; and an outboard engine is harder to hold than an inboard because the arm is longer. With the hydraulics gone the gear and flaps stay exactly where they were, which is nothing on the ground and is the flight you remember if it happens clean on approach. A blocked pitot does not read zero, it freezes at the last thing it saw: the aerodynamics still run on the real speed and only the gauge is wrong, which is the classic failure and the classic killer. Overstress and overspeed break things too. Past the limit load factor damage accumulates, past 1.5 times it the airframe comes apart, and twelve seconds above Vne costs the hydraulics."
   },
   "aprilfools": {
     "date": "April 1, 2026",

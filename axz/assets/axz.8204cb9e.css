@@ -1664,6 +1664,16 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .sim-ck-brow { fill: #191d22; }
 .sim-ck-side { fill: #171b20; }
 
+/* The failure list, where an EICAS message list is: down the left, amber,
+   and it does not clear itself because neither does the failure. */
+.sim-annun-box { fill: rgba(11, 13, 16, .82); stroke: #d9a13a; stroke-width: 1; }
+.sim-annun-t {
+  fill: #ffc24a;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+
 .sim-warn-box { fill: rgba(11, 13, 16, .86); stroke: #ff5b4a; stroke-width: 1.4; }
 .sim-warn { fill: transparent; font-family: var(--font-mono); font-size: 21px; letter-spacing: .16em; }
 .sim-warn.is-on { fill: #ff5b4a; }

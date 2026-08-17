@@ -151,6 +151,9 @@ export class HUD {
     const chips = [
       ['thr', L.throttle], ['n1', L.n1], ['flap', L.flaps], ['gear', L.gear],
       ['spd', L.spoilers], ['brk', L.brakes], ['mach', L.machLabel],
+      // Load factor, because the airframe now breaks at a number and there
+      // has to be somewhere to watch that number.
+      ['g', L.gLabel],
     ]
     const gap = 8
     const cw = (W - gap * (chips.length + 1)) / chips.length
@@ -280,6 +283,12 @@ export class HUD {
     this.warn = el('text', {
       x: ADI_X, y: ADI_Y - 60, class: 'sim-warn', 'text-anchor': 'middle',
     }, svg)
+
+    /* --- Failure annunciator ------------------------------------------------
+       Down the left, under the speed tape, where an EICAS message list is.
+       Amber, stacked, newest at the top, and it stays there — a failure does
+       not clear itself and neither does the line about it. */
+    this.annun = el('g', { class: 'sim-annun' }, svg)
 
     /* --- Live text mirror --------------------------------------------------
        The SVG is decorative to assistive tech; this is the readable state, and
@@ -421,6 +430,12 @@ export class HUD {
     // Mach matters on two of the eleven and is quietly informative on the rest.
     const mach = ac.mach || 0
     this.setChip('mach', mach.toFixed(2), mach >= 1 ? 'hot' : '')
+    /* Load factor against the type's own certification limit: amber from the
+       limit, red past 1.25 of it, and the airframe lets go at 1.5. */
+    const g = ac.gLoad || 0
+    const lim = ac.cfg.nLimit
+    this.setChip('g', g.toFixed(1), Math.abs(g) > lim * 1.25 ? 'hot'
+      : Math.abs(g) > lim ? 'warn' : '')
 
     /* Radio altimeter: blank above 2,500 ft, which is what a real one does. */
     const ra = (ac.radioAlt != null ? ac.radioAlt : ac.agl) * M_TO_FT
@@ -449,6 +464,26 @@ export class HUD {
         `${L.heading} ${Math.round(hdg).toString().padStart(3, '0')}, ` +
         `${L.vs} ${Math.round(fpm)} ${L.fpm}` + (w ? `. ${w}` : '')
     }
+  }
+
+  /**
+   * The failure list. Rewritten only when it changes, because it is DOM and
+   * most frames it is identical.
+   */
+  setFailures(lines) {
+    const key = lines.join('|')
+    if (key === this.annunKey) return
+    this.annunKey = key
+    while (this.annun.firstChild) this.annun.removeChild(this.annun.firstChild)
+    lines.slice(0, 5).forEach((text, i) => {
+      const y = 74 + i * 19
+      const box = el('rect', {
+        x: 8, y: y - 13, width: 176, height: 17, rx: 2, class: 'sim-annun-box',
+      }, this.annun)
+      const t = el('text', { x: 14, y, class: 'sim-annun-t' }, this.annun)
+      t.textContent = text
+      return box
+    })
   }
 
   /** Identity block. Set when the aeroplane or the camera changes, not per frame. */
