@@ -101,7 +101,6 @@ export class Effects {
     this.tContrail = 0
     this.tVortex = 0
     this.tSpray = 0
-    this.tShock = 0
     this.tDiamond = 0
   }
 
@@ -216,58 +215,22 @@ export class Effects {
     }
 
     /* --- The barrier -----------------------------------------------------
-       Two effects, and both are things a camera has actually caught.
+       The condensation collar is NOT here any more. It is a shell of vapour
+       standing on the airframe, and a shell is geometry: see `shockConeMesh`
+       in model.js and the ghost pass in main.js. Built out of billboards it
+       could only ever be a smear that streamed away behind, because a sprite
+       has no surface for the grazing-angle term to work on and nothing holds
+       it on an aeroplane travelling at three hundred metres a second.
 
-       THE SHOCK COLLAR. Between about Mach 0.94 and 1.06 the pressure drop
-       behind the shock cools the air past its dew point and a cone of cloud
-       stands on the aeroplane. It is a condensation effect, not a speed
-       effect, so it wants moist air: it is drawn strongest low down and fades
-       out with altitude, which is why the famous photographs are all of
-       aeroplanes at sea level and none of them are of anything at 50,000 ft.
-       It appears going up THROUGH the barrier and again coming back down. */
-    const mach = ac.mach || 0
-    if (mach > 0.94 && mach < 1.08 && !ac.onGround) {
-      const near = clamp(1 - Math.abs(mach - 1.005) / 0.062, 0, 1)
-      const moist = clamp(1 - ac.pos.y / 9000, 0.08, 1)
-      const strength = near * moist
-      this.tShock += dt
-      const every = 0.008
-      while (this.tShock > every && strength > 0.04) {
-        this.tShock -= every
-        // A ring standing off the aft fuselage, which is where the cone sits.
-        /* Sized against the AIRFRAME, not against the fuselage. A real cone is
-           as wide as the aeroplane is long and stands off the rear third of
-           it; at a couple of metres across it was technically present and
-           invisible from any distance you would actually watch from. */
-        const a = Math.random() * Math.PI * 2
-        const rad = ac.spec.dia * (1.1 + Math.random() * 1.5)
-        const p = bodyPoint({
-          x: Math.cos(a) * rad,
-          y: Math.sin(a) * rad,
-          z: ac.spec.len * (0.10 + Math.random() * 0.30),
-        })
-        /* Carried at the aeroplane's own velocity, and short-lived. The cone
-           STANDS on the airframe; it does not stream off it. Spawned at rest
-           in world space, a Mach 1 aeroplane leaves its own condensation a
-           hundred metres behind within a third of a second and what you see is
-           a contrail. Given the aircraft's velocity and a heavy drag, each
-           puff holds station for a moment and then slides aft, which is what
-           the trailing edge of a real cone does. */
-        P.spawn({
-          x: p.x, y: p.y, z: p.z,
-          vx: ac.vel.x, vy: ac.vel.y, vz: ac.vel.z,
-          max: 0.18 + strength * 0.12, size: ac.spec.len * 0.10, grow: 12.0,
-          r: 1, g: 1, b: 1, a: 0.55 * strength, fade: 3.0, drag: 2.2, kind: KIND.PUFF,
-        })
-      }
-    }
+       What is still particles is the exhaust, because that genuinely IS a
+       cloud of separate things being left behind. */
 
     /* SHOCK DIAMONDS. A reheated engine running supersonic exhausts into air
        it cannot expand to, so the plume alternately over- and under-expands
        and stands up a row of bright nodes. They are fixed in the plume, not
        carried away by it, which is what makes them read as diamonds rather
        than as sparks. */
-    if (mach > 1 && (ac.abFrac || 0) > 0.05 && !ac.onGround) {
+    if ((ac.mach || 0) > 1 && (ac.abFrac || 0) > 0.05 && !ac.onGround) {
       this.tDiamond += dt
       const every = 0.03
       while (this.tDiamond > every) {

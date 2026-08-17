@@ -18,7 +18,9 @@ import {
   AIRPORTS, AP_LIST, LEGS, elevation, terrainPatch, terrainGrid, runwayMesh,
   runwayLights, scenery, hdgVec, trees, papiUnits, papiState, CITY,
 } from './world.js'
-import { aircraftMesh, gearMesh, liveryFor, decalQuads, stanceHeight } from './model.js'
+import {
+  aircraftMesh, gearMesh, liveryFor, decalQuads, stanceHeight, shockConeMesh,
+} from './model.js'
 import { Aircraft, Wind, setFlapSets } from './fdm.js'
 import { Particles, Effects, Clouds, KIND, explode, burn } from './particles.js'
 import { Post } from './post.js'
@@ -184,6 +186,8 @@ export class Sim {
       this.props.push(new Mesh(gl, scenery(ap, CITY[key][0], CITY[key][1])))
       this.papis[key] = papiUnits(ap)
     }
+    // One unit cone, scaled per frame from the Mach angle.
+    this.shockCone = new Mesh(gl, shockConeMesh())
     this.shadowQuad = new Mesh(gl, {
       pos: [-1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, -1, 1, 0, 1, -1, 0, 1],
       normal: [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
@@ -943,6 +947,44 @@ export class Sim {
        not a shadow map and does not pretend to be; what it supplies is the one
        depth cue that matters on short final, which is how far above the runway
        you actually are. */
+    /* The shock cone. Drawn as a shell rather than as particles, so it stands
+       ON the aeroplane instead of streaming off it, and so the grazing-angle
+       term makes it a bright rim around a clear middle — which is what a real
+       one looks like and what a cloud of billboards can never be.
+
+       Everything about it comes from the Mach number. The half-angle is the
+       Mach angle, mu = asin(1/M): ninety degrees at Mach 1, closing as it goes
+       faster, which turns the disc that stands on an aeroplane crossing the
+       barrier into the long cone that trails a supersonic one. It needs moist
+       air to condense at all, so it fades out with altitude — the reason every
+       famous photograph of one was taken near the sea. */
+    const mach = ac.mach || 0
+    if (mach > 0.92 && !ac.onGround && !ac.crashed) {
+      const near = clamp(1 - Math.abs(mach - 1.02) / 0.16, 0, 1)
+      const moist = clamp(1 - ac.pos.y / 11000, 0, 1)
+      const alpha = 0.60 * near * moist
+      if (alpha > 0.01) {
+        const mu = Math.asin(clamp(1 / Math.max(mach, 1.0001), 0, 1))
+        const len = ac.spec.len * 0.75
+        /* radius = length * tan(mu), which is the cone the shock actually
+           makes — but tan goes to infinity as the Mach angle opens to ninety
+           degrees, so at Mach 1.00 the true cone is an infinite disc. It has
+           to be bounded by the aeroplane: a real collar is about half a span
+           across, and the useful part of the Mach angle is the way it CLOSES
+           above Mach 1.2, turning that disc into a narrowing cone. */
+        const rad = clamp(len * Math.tan(mu) * 0.22, ac.spec.dia * 0.6, ac.spec.span * 0.45)
+        const m = m4mul(acModel, m4model(
+          { x: 0, y: 0, z: -ac.spec.len * 0.25 }, { x: 0, y: 0, z: 0, w: 1 }, 1))
+        // The unit cone runs down +Z, which is aft, and is scaled anisotropically.
+        const scaled = new Float32Array(m)
+        for (let i = 0; i < 3; i++) {
+          scaled[i] *= rad; scaled[4 + i] *= rad; scaled[8 + i] *= len
+        }
+        R.ghost(this.shockCone, scaled, proj, view, env,
+          { color: [1, 1, 1], alpha, rim: 2.6 })
+      }
+    }
+
     if (ac.radioAlt < 400) {
       const gy = elevation(ac.pos.x, ac.pos.z)
       const fade = clamp(1 - ac.radioAlt / 400, 0, 1)

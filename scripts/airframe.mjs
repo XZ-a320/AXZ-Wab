@@ -469,12 +469,70 @@ export const SIM_TYPES = {
     // No airline paint on a fighter, and no cabin windows to draw.
     lowVis: true,
   },
+  /* --- Fifth generation ---------------------------------------------------
+     What makes these different from the F-16 is not that they are newer. The
+     Raptor has thrust vectoring and supercruises, which means it holds Mach
+     1.8 on DRY power — the only aeroplane in the roster that does not need
+     reheat to stay supersonic. The F-35 has one very large engine and a wing
+     sized for carrying rather than turning, so it accelerates hard and is
+     slower than either of them flat out. */
+  'f22': {
+    name: 'Lockheed Martin F-22A', axz: false, reg: 'SIM-F22',
+    len: 18.92, span: 13.56, dia: 2.10, h: 5.08, engines: 2,
+    mass: 29410, wingArea: 78.04, thrust: 116000, thrustAB: 156000,
+    vne: 750, mmo: 2.25, mdd: 0.94, waveDrag: 0.026, machInlet: 1.95,
+    shape: 'fighter', flapSet: 'fighter', engine: 'turbofan-ab',
+    cl0: 0.05, cd0: 0.0172, oswald: 0.76, stallDeg: 26,
+    ceiling: 19812, tailStrikeDeg: 15, rollRate: 100, nLimit: 9.0, acShift: 0.10,
+    track: 3.05, dihedral: 0.0, twinFin: true, chined: true, lowVis: true,
+    armed: 'aim120', hardpoints: 8,
+  },
+  'f35': {
+    name: 'Lockheed Martin F-35A', axz: false, reg: 'SIM-F35',
+    len: 15.67, span: 10.70, dia: 2.00, h: 4.33, engines: 1,
+    mass: 22470, wingArea: 42.70, thrust: 125000, thrustAB: 191000,
+    vne: 700, mmo: 1.60, mdd: 0.93, waveDrag: 0.038, machInlet: 1.32,
+    shape: 'fighter', flapSet: 'fighter', engine: 'turbofan-ab',
+    cl0: 0.05, cd0: 0.0201, oswald: 0.74, stallDeg: 24,
+    ceiling: 15000, tailStrikeDeg: 14, rollRate: 200, nLimit: 9.0, acShift: 0.11,
+    track: 2.60, dihedral: 0.0, twinFin: true, chined: true, lowVis: true,
+    armed: 'aim120', hardpoints: 6,
+  },
+
+  /* --- Bombers ------------------------------------------------------------
+     A flying wing has no fin at all, which is why it needs a computer to fly
+     straight and why it rolls like a barn door; and a B-52 has eight engines
+     in four pods and a wing so flexible its tips move four metres. Neither is
+     a big fighter. */
+  'b2': {
+    name: 'Northrop Grumman B-2A', axz: false, reg: 'SIM-B2A',
+    len: 21.03, span: 52.43, dia: 3.40, h: 5.18, engines: 4,
+    mass: 152600, wingArea: 478, thrust: 77000, vne: 400, mmo: 0.95,
+    mdd: 0.88, waveDrag: 0.058, machInlet: 1.0, lapse: 0.55,
+    shape: 'wing', flapSet: 'fighter', engine: 'turbofan',
+    cl0: 0.06, cd0: 0.0112, oswald: 0.88, stallDeg: 18,
+    ceiling: 15200, tailStrikeDeg: 12, rollRate: 20, nLimit: 2.0, acShift: 0.13,
+    track: 12.19, dihedral: 0.0, lowVis: true,
+    armed: 'jdam', hardpoints: 16,
+  },
+  'b52': {
+    name: 'Boeing B-52H', axz: false, reg: 'SIM-B52',
+    len: 48.50, span: 56.39, dia: 3.66, h: 12.40, engines: 8,
+    mass: 120000, wingArea: 370, thrust: 76000, vne: 390, mmo: 0.86,
+    mdd: 0.80, waveDrag: 0.084, machInlet: 1.0, lapse: 0.62,
+    shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
+    warnPack: 'boeing',
+    cl0: 0.14, cd0: 0.0225, oswald: 0.78, stallDeg: 15.5,
+    ceiling: 15000, tailStrikeDeg: 11, rollRate: 15, nLimit: 2.0, acShift: 0.17,
+    track: 8.00, dihedral: -0.02, lowVis: true,
+    armed: 'jdam', hardpoints: 20,
+  },
 }
 
 /** The four the airline actually operates, in the order the site lists them. */
 export const AXZ_ORDER = ['b-737x', 'b-321x', 'b-1717', 'b-0001f']
 /** Everything else the simulator offers. */
-export const SIM_ONLY = ['a320', 'b744', 'b789', 'c172', 'conc', 'g650', 'f16']
+export const SIM_ONLY = ['a320', 'b744', 'b789', 'c172', 'conc', 'g650', 'f16', 'f22', 'f35', 'b2', 'b52']
 
 /**
  * Stall and reference speeds in knots, for the type at its landing setting.

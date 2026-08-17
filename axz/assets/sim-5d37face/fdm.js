@@ -202,6 +202,7 @@ export function makeConfig(spec) {
     waveDrag: spec.waveDrag != null ? spec.waveDrag : 0.075,
     machInlet: spec.machInlet || 1.0,
     engine, spoolUp, spoolDown,
+    lapse: spec.lapse != null ? spec.lapse : 1,
     // A fighter's gear is up in five seconds; an airliner's takes ten.
     gearRate: spec.len < 20 ? 0.5 : spec.len > 55 ? 0.20 : 0.28,
     prop: !!spec.prop,
@@ -411,7 +412,14 @@ export class Aircraft {
        cruised past its own Mmo. */
     const ram = cfg.engine === 'turbojet-reheat' ? 1 + 0.62 * clamp(mach, 0, 2.1)
       : cfg.engine === 'turbofan-ab' ? 1 + 0.30 * clamp(mach, 0, 1.8)
-        : clamp(1 - 0.90 * mach + 0.42 * mach * mach, 0.28, 1)
+        /* How hard a fan lapses with speed is set by its BYPASS RATIO. A
+           CFM56 at 5.5 is throwing a large mass of air backwards slowly, so
+           once the aeroplane is moving fast the air is already arriving at
+           nearly that speed and the fan adds little. A military core at 0.9 —
+           the F118 in a B-2, the TF33 in a B-52 — is throwing a small mass
+           very fast and barely notices. At the airliner's lapse a B-2 could
+           not hold its own cruise: it needed 90 kN and had 63. */
+        : clamp(1 - 0.90 * cfg.lapse * mach + 0.42 * cfg.lapse * mach * mach, 0.28, 1)
     /* Intake pressure recovery, which is what actually sets a top speed. An
        F-16's intake is a fixed normal-shock duct and stops feeding the engine
        somewhere past Mach 1.8 — that, not thrust, is why the published figure

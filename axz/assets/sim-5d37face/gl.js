@@ -262,6 +262,55 @@ void main() {
   gl_FragColor = vec4(mix(t.rgb * vShade, uFogColor, f), t.a);
 }`
 
+/* --- Ghost ----------------------------------------------------------------
+   A translucent shell, unlit, whose opacity comes from the VIEWING ANGLE.
+
+   This exists for the shock cone, and the angle term is the whole reason it
+   works. A cone of condensation is a thin shell of vapour: looking straight
+   through the face of it you are seeing through a few centimetres and it is
+   nearly invisible, while at the edge, where the line of sight runs along the
+   shell, you are looking through metres of it and it is opaque white. That is
+   why a real vapour cone reads as a bright RIM with a clear middle, and it is
+   why a plain translucent cone looks like a plastic bag instead.
+
+   The term is the standard grazing-angle one: 1 - |N·V|, raised to a power to
+   tighten the rim. Nothing here is lit, because condensation in front of an
+   aeroplane is scattering daylight from every direction at once.            */
+const GHOST_VERT = `
+attribute vec3 aPos;
+attribute vec3 aNormal;
+uniform mat4 uProj, uView, uModel;
+uniform vec3 uCamPos;
+varying vec3 vNormal;
+varying vec3 vView;
+varying float vFogDepth;
+void main() {
+  vec4 world = uModel * vec4(aPos, 1.0);
+  vec4 eye = uView * world;
+  gl_Position = uProj * eye;
+  vFogDepth = -eye.z;
+  vNormal = normalize((uModel * vec4(aNormal, 0.0)).xyz);
+  vView = normalize(uCamPos - world.xyz);
+}`
+
+const GHOST_FRAG = `
+precision mediump float;
+varying vec3 vNormal;
+varying vec3 vView;
+varying float vFogDepth;
+uniform vec3 uColor;
+uniform float uAlpha, uRim;
+uniform vec3 uFogColor;
+uniform float uFogNear, uFogFar;
+void main() {
+  float facing = abs(dot(normalize(vNormal), normalize(vView)));
+  float rim = pow(1.0 - facing, uRim);
+  float a = uAlpha * rim;
+  if (a < 0.004) discard;
+  float f = clamp((vFogDepth - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
+  gl_FragColor = vec4(mix(uColor, uFogColor, f), a);
+}`
+
 function compile(gl, type, src) {
   const s = gl.createShader(type)
   gl.shaderSource(s, src)
@@ -394,6 +443,22 @@ export class Renderer {
       uFogFar: gl.getUniformLocation(this.decal, 'uFogFar'),
     }
 
+    this.ghostProg = program(gl, GHOST_VERT, GHOST_FRAG)
+    this.gloc = {
+      aPos: gl.getAttribLocation(this.ghostProg, 'aPos'),
+      aNormal: gl.getAttribLocation(this.ghostProg, 'aNormal'),
+      uProj: gl.getUniformLocation(this.ghostProg, 'uProj'),
+      uView: gl.getUniformLocation(this.ghostProg, 'uView'),
+      uModel: gl.getUniformLocation(this.ghostProg, 'uModel'),
+      uCamPos: gl.getUniformLocation(this.ghostProg, 'uCamPos'),
+      uColor: gl.getUniformLocation(this.ghostProg, 'uColor'),
+      uAlpha: gl.getUniformLocation(this.ghostProg, 'uAlpha'),
+      uRim: gl.getUniformLocation(this.ghostProg, 'uRim'),
+      uFogColor: gl.getUniformLocation(this.ghostProg, 'uFogColor'),
+      uFogNear: gl.getUniformLocation(this.ghostProg, 'uFogNear'),
+      uFogFar: gl.getUniformLocation(this.ghostProg, 'uFogFar'),
+    }
+
     gl.enable(gl.DEPTH_TEST)
     gl.enable(gl.CULL_FACE)
     gl.cullFace(gl.BACK)
@@ -433,6 +498,39 @@ export class Renderer {
     gl.enable(gl.CULL_FACE)
     gl.disable(gl.BLEND)
     gl.disableVertexAttribArray(L.aUV)
+  }
+
+  /**
+   * Draw a translucent shell. Depth-tested against the scene but not written
+   * to, and drawn from both sides, so the far wall of the cone shows through
+   * the near one the way a real shell of vapour does.
+   */
+  ghost(mesh, model, proj, view, env, { color = [1, 1, 1], alpha = 0.5, rim = 2.2 } = {}) {
+    const gl = this.gl, L = this.gloc
+    gl.useProgram(this.ghostProg)
+    gl.uniformMatrix4fv(L.uProj, false, proj)
+    gl.uniformMatrix4fv(L.uView, false, view)
+    gl.uniformMatrix4fv(L.uModel, false, model)
+    gl.uniform3f(L.uCamPos, env.camPos.x, env.camPos.y, env.camPos.z)
+    gl.uniform3f(L.uColor, color[0], color[1], color[2])
+    gl.uniform1f(L.uAlpha, alpha)
+    gl.uniform1f(L.uRim, rim)
+    gl.uniform3f(L.uFogColor, env.fog[0], env.fog[1], env.fog[2])
+    gl.uniform1f(L.uFogNear, env.fogNear)
+    gl.uniform1f(L.uFogFar, env.fogFar)
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.posBuf)
+    gl.enableVertexAttribArray(L.aPos); gl.vertexAttribPointer(L.aPos, 3, gl.FLOAT, false, 0, 0)
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.norBuf)
+    gl.enableVertexAttribArray(L.aNormal); gl.vertexAttribPointer(L.aNormal, 3, gl.FLOAT, false, 0, 0)
+
+    gl.enable(gl.BLEND)
+    gl.disable(gl.CULL_FACE)
+    gl.depthMask(false)
+    gl.drawArrays(gl.TRIANGLES, 0, mesh.count)
+    gl.depthMask(true)
+    gl.enable(gl.CULL_FACE)
+    gl.disable(gl.BLEND)
   }
 
   /** Upload a canvas as a texture. Everything here is drawn, not downloaded. */

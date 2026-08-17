@@ -567,7 +567,7 @@ console.log('\nflight simulator')
      747 is what made it visible; the 737 had been quietly doing it too. */
   const roster = JSON.parse(await page.getAttribute('[data-sim-stage]', 'data-sim-fleet'))
   const types = roster._order || []
-  types.length === 11 ? ok(`${types.length} types are selectable`) : bad(`${types.length} types, expected 11`)
+  types.length === 15 ? ok(`${types.length} types are selectable`) : bad(`${types.length} types, expected 15`)
 
   /* Nothing may be underground. This is the regression for the report that
      "all the aircraft are stuck in the ground": the stance was a multiple of

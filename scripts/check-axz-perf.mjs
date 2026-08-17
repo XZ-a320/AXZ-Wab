@@ -45,6 +45,13 @@ const PUB = {
   conc: { mach: 2.04, alt: 17000, tol: 0.12 },
   g650: { mach: 0.925, alt: 13000, tol: 0.12 },
   f16: { mach: 2.05, alt: 12000, tol: 0.12 },
+  // The Raptor's number is the one it is famous for, and it is quoted at
+  // altitude; supercruise is checked separately below because holding Mach 1.8
+  // on DRY power is the whole point of the aeroplane.
+  f22: { mach: 2.25, alt: 15000, tol: 0.14 },
+  f35: { mach: 1.60, alt: 12000, tol: 0.14 },
+  b2: { mach: 0.92, alt: 11000, tol: 0.14 },
+  b52: { mach: 0.86, alt: 12000, tol: 0.12 },
 }
 
 const fails = []
@@ -100,6 +107,35 @@ for (const id of ['conc', 'f16']) {
    asserts the solve is still right — and in particular that Concorde is not
    rolling like an F-16, which is what it did when authority scaled inversely
    with span and a short-winged delta was handed more of it than a 737.      */
+/* --- Supercruise ----------------------------------------------------------
+   The Raptor's defining trick, and the one thing that separates it from every
+   other fighter in the roster: it holds supersonic flight on DRY power, with
+   the burner unlit. If this ever stops being true the aeroplane has stopped
+   being an F-22.                                                            */
+console.log('\nsupercruise, dry power only\n')
+{
+  const t = SIM_TYPES.f22
+  const spec = { ...t, clAlpha: liftSlope(t.span, t.wingArea), restHeight: t.dia * 0.9 }
+  const ac = new F.Aircraft(spec, [], spec.restHeight)
+  const alt = 15000
+  ac.pos.y = alt
+  const cfg = ac.cfg
+  const rho = F.airDensity(alt), a = F.speedOfSound(alt)
+  const kInd = 1 / (Math.PI * cfg.oswald * cfg.AR)
+  let dry = 0
+  for (let V = 200; V < 800; V += 0.5) {
+    const q = 0.5 * rho * V * V
+    const CL = (cfg.mass * 9.80665) / (q * cfg.S)
+    const CD = cfg.cd0 + F.waveDrag(cfg, V / a) + kInd * CL * CL
+    // 0.92 of lever travel is full MILITARY power: everything below the detent.
+    if (ac.thrustAvailable(rho, V, 0.92) - q * cfg.S * CD > 0) dry = V
+  }
+  const m = dry / a
+  const ok = m >= 1.5
+  console.log('  f22 holds Mach ' + m.toFixed(2) + ' unlit, published supercruise 1.82  ' + (ok ? '\u2713' : '\u2717'))
+  if (!ok) fails.push(`f22: supercruises at only Mach ${m.toFixed(2)}, which is not supercruise`)
+}
+
 console.log('\nroll rate at the manoeuvring speed, full deflection\n')
 console.log('  type      model   published')
 for (const id of [...AXZ_ORDER, ...SIM_ONLY]) {

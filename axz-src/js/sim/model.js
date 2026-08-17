@@ -30,6 +30,12 @@ export function liveryFor(reg) {
   if (reg === 'SIM-102') return { accent: [0.10, 0.20, 0.52], belly: [0.30, 0.33, 0.38] }
   if (reg === 'SIM-650') return { accent: [0.62, 0.52, 0.24], belly: [0.22, 0.24, 0.27] }
   if (reg === 'SIM-F16') return { accent: [0.40, 0.44, 0.48], belly: [0.52, 0.55, 0.58], skin: [0.44, 0.48, 0.52] }
+  // The two stealth fighters wear a darker, flatter grey than a fourth-
+  // generation air-superiority scheme, and the bombers darker again.
+  if (reg === 'SIM-F22') return { accent: [0.30, 0.33, 0.37], belly: [0.38, 0.41, 0.45], skin: [0.34, 0.37, 0.41] }
+  if (reg === 'SIM-F35') return { accent: [0.33, 0.35, 0.38], belly: [0.42, 0.45, 0.48], skin: [0.38, 0.40, 0.43] }
+  if (reg === 'SIM-B2A') return { accent: [0.16, 0.17, 0.19], belly: [0.13, 0.14, 0.16], skin: [0.21, 0.22, 0.25] }
+  if (reg === 'SIM-B52') return { accent: [0.24, 0.26, 0.24], belly: [0.30, 0.31, 0.30], skin: [0.31, 0.33, 0.31] }
   return { accent: CYAN, belly: [0.28, 0.30, 0.33] }
 }
 
@@ -61,6 +67,8 @@ export function liveryFor(reg) {
    any type added later.                                                     */
 export function finTipY(spec) {
   if (spec.shape === 'light') return spec.dia * 0.21 + spec.h * 0.50
+  // A flying wing has no fin at all, so its highest point is its own spine.
+  if (spec.shape === 'wing') return spec.dia * 0.62
   if (spec.shape === 'fighter') return spec.dia * 0.30 + spec.h * 0.52
   if (spec.shape === 'bizjet') return spec.dia * 0.32 + spec.h * 0.62
   if (spec.shape === 'delta') return spec.dia * 0.30 + spec.h * 0.66
@@ -90,6 +98,7 @@ export function aircraftMesh(spec, livery) {
   if (shape === 'delta') return extents(deltaMesh(spec, livery))
   if (shape === 'bizjet') return extents(bizjetMesh(spec, livery))
   if (shape === 'fighter') return extents(fighterMesh(spec, livery))
+  if (shape === 'wing') return extents(wingMesh(spec, livery))
   return extents(jetMesh(spec, livery))
 }
 
@@ -277,8 +286,17 @@ function jetMesh(spec, livery) {
       { x: px, y: py + nr * 2.0, z: pz + nl * 0.35 },
       shade(GREY, 0.8))
   }
+  /* Station per engine. A four-holer's inboard and outboard nacelles are at
+     genuinely different places, and a B-52 carries EIGHT in four twin pods —
+     two pods a side, each holding a pair. Putting all eight at one fraction,
+     or four, would have lost the aeroplane. */
   const nEng = spec.engines || 2
-  if (nEng >= 4) {
+  if (nEng >= 8) {
+    // Four pods, each drawn as a close-coupled pair.
+    for (const sgn of [-1, 1]) {
+      for (const f of [0.24, 0.44]) { nacelle(sgn, f - 0.028); nacelle(sgn, f + 0.028) }
+    }
+  } else if (nEng >= 4) {
     for (const sgn of [-1, 1]) { nacelle(sgn, 0.28); nacelle(sgn, 0.52) }
   } else if (nEng === 2) {
     nacelle(-1, 0.34); nacelle(1, 0.34)
@@ -1088,20 +1106,179 @@ function fighterMesh(spec, livery) {
       sgn > 0 ? shade(dark, 1.04) : shade(dark, 0.98))
   }
 
-  // Fin: single, broad, swept, with the type's low-visibility flash on it.
+  /* Fins. One upright on a fourth-generation fighter; TWO, canted outward, on
+     both of the fifth-generation ones — and the cant is not styling. A vertical
+     surface returns a radar signal straight back to whatever painted it, and
+     tilting it throws that return somewhere else. It is the single feature
+     that reads "stealth" at a glance, which is why an F-22 and an F-35 look
+     more like each other than either looks like an F-16. */
   const tip = finTipY(spec)
   const fz = tailZ - L * 0.325
-  B.quad2(
-    { x: 0, y: r * 0.48, z: fz },
-    { x: 0, y: r * 0.48, z: fz + L * 0.325 },
-    { x: 0, y: tip, z: fz + L * 0.330 },
-    { x: 0, y: tip, z: fz + L * 0.185 },
-    shade(skin, 1.02))
-  B.quad2(
-    { x: 0, y: r * 0.48 + (tip - r * 0.48) * 0.55, z: fz + L * 0.120 },
-    { x: 0, y: r * 0.48 + (tip - r * 0.48) * 0.55, z: fz + L * 0.300 },
-    { x: 0, y: r * 0.48 + (tip - r * 0.48) * 0.86, z: fz + L * 0.305 },
-    { x: 0, y: r * 0.48 + (tip - r * 0.48) * 0.86, z: fz + L * 0.225 },
-    accent)
+  const finPanel = (xBase, cant, height) => {
+    const y0 = r * 0.48
+    const dx = (height - y0) * Math.tan(cant)
+    B.quad2(
+      { x: xBase, y: y0, z: fz },
+      { x: xBase, y: y0, z: fz + L * 0.325 },
+      { x: xBase + dx, y: height, z: fz + L * 0.330 },
+      { x: xBase + dx, y: height, z: fz + L * 0.185 },
+      shade(skin, 1.02))
+  }
+  if (spec.twinFin) {
+    for (const sgn of [-1, 1]) finPanel(sgn * r * 0.62, sgn * 0.48, tip)
+  } else {
+    finPanel(0, 0, tip)
+    B.quad2(
+      { x: 0, y: r * 0.48 + (tip - r * 0.48) * 0.55, z: fz + L * 0.120 },
+      { x: 0, y: r * 0.48 + (tip - r * 0.48) * 0.55, z: fz + L * 0.300 },
+      { x: 0, y: r * 0.48 + (tip - r * 0.48) * 0.86, z: fz + L * 0.305 },
+      { x: 0, y: r * 0.48 + (tip - r * 0.48) * 0.86, z: fz + L * 0.225 },
+      accent)
+  }
+
+  /* Chines. A hard edge running from the radome back along the forebody, which
+     is what the two stealth fighters have instead of a round nose: it holds
+     the vortex at high alpha and it reflects sideways rather than forward. */
+  if (spec.chined) {
+    for (const sgn of [-1, 1]) {
+      B.quad2(
+        { x: 0, y: r * 0.10, z: noseZ },
+        { x: sgn * r * 0.90, y: r * 0.02, z: noseZ + L * 0.30 },
+        { x: sgn * r * 0.86, y: -r * 0.10, z: noseZ + L * 0.42 },
+        { x: 0, y: -r * 0.02, z: noseZ + L * 0.02 },
+        shade(dark, 1.04))
+    }
+  }
+  return B.build()
+}
+
+/* --- Flying wing ----------------------------------------------------------
+   A B-2 has no fuselage and no tail. The whole aeroplane is one cranked
+   double-W planform with the crew and the engines buried in the thickest part
+   of it, and it holds its heading with split drag rudders at the tips rather
+   than with a fin. Built from the same ring-and-quad primitives as everything
+   else, but there is nothing here to reuse from the airliner: an aeroplane
+   with no fin cannot go through a builder whose stance is measured from the
+   top of one.                                                               */
+function wingMesh(spec, livery) {
+  const B = makeBuilder()
+  const L = spec.len, S = spec.span, r = spec.dia / 2
+  const half = S / 2
+  const skin = livery.skin || [0.26, 0.28, 0.31]
+  const dark = shade(skin, 0.80)
+  const noseZ = -L * 0.46, tailZ = L * 0.54
+
+  /* The planform, as spanwise stations. Each is a leading and trailing edge
+     and a thickness, and the sawtooth trailing edge is the shape everyone
+     recognises: four W points across the back. */
+  const ST = [
+    // fraction of half-span, LE z, TE z, thickness fraction
+    [0.00, 0.00, 1.00, 1.00],
+    [0.16, 0.16, 0.78, 0.72],
+    [0.34, 0.34, 0.95, 0.44],
+    [0.52, 0.52, 0.70, 0.28],
+    [0.72, 0.70, 0.88, 0.16],
+    [1.00, 0.96, 1.00, 0.05],
+  ]
+  const at = (sgn, i) => {
+    const [f, le, te, th] = ST[i]
+    const x = sgn * half * f
+    return {
+      le: { x, y: 0, z: noseZ + (tailZ - noseZ) * le },
+      te: { x, y: 0, z: noseZ + (tailZ - noseZ) * te },
+      t: r * th,
+    }
+  }
+  for (const sgn of [-1, 1]) {
+    for (let i = 0; i < ST.length - 1; i++) {
+      const a = at(sgn, i), b = at(sgn, i + 1)
+      const up = (p, t) => ({ x: p.x, y: p.y + t, z: p.z })
+      const dn = (p, t) => ({ x: p.x, y: p.y - t * 0.34, z: p.z })
+      if (sgn > 0) {
+        B.quad(up(a.le, a.t), up(b.le, b.t), up(b.te, b.t), up(a.te, a.t), shade(skin, 1.04))
+        B.quad(dn(a.le, a.t), dn(a.te, a.t), dn(b.te, b.t), dn(b.le, b.t), dark)
+        B.quad(dn(a.le, a.t), dn(b.le, b.t), up(b.le, b.t), up(a.le, a.t), shade(skin, 0.94))
+        B.quad(dn(a.te, a.t), up(a.te, a.t), up(b.te, b.t), dn(b.te, b.t), shade(dark, 0.92))
+      } else {
+        B.quad(up(a.te, a.t), up(b.te, b.t), up(b.le, b.t), up(a.le, a.t), shade(skin, 1.04))
+        B.quad(dn(b.le, b.t), dn(b.te, b.t), dn(a.te, a.t), dn(a.le, a.t), dark)
+        B.quad(up(a.le, a.t), up(b.le, b.t), dn(b.le, b.t), dn(a.le, a.t), shade(skin, 0.94))
+        B.quad(dn(b.te, b.t), up(b.te, b.t), up(a.te, a.t), dn(a.te, a.t), shade(dark, 0.92))
+      }
+    }
+  }
+
+  // The cockpit blister, low and faired into the centre section.
+  const cz = noseZ + L * 0.20
+  for (const sgn of [-1, 1]) {
+    B.quad2(
+      { x: sgn * r * 0.30, y: r * 0.98, z: cz },
+      { x: sgn * r * 0.46, y: r * 1.22, z: cz + L * 0.12 },
+      { x: sgn * r * 0.46, y: r * 0.96, z: cz + L * 0.26 },
+      { x: sgn * r * 0.30, y: r * 0.92, z: cz + L * 0.02 },
+      GLASS)
+  }
+
+  /* Intakes on TOP of the wing, which is the other giveaway: nothing on a
+     stealth bomber may look down at a radar, including its compressor faces. */
+  for (const sgn of [-1, 1]) {
+    const ix = sgn * half * 0.20, iw = half * 0.075
+    const iz = noseZ + L * 0.42
+    B.quad(
+      { x: ix - iw, y: r * 0.98, z: iz }, { x: ix + iw, y: r * 0.98, z: iz },
+      { x: ix + iw, y: r * 1.16, z: iz + L * 0.10 }, { x: ix - iw, y: r * 1.16, z: iz + L * 0.10 },
+      shade(dark, 0.7))
+    B.quad(
+      { x: ix - iw, y: r * 0.98, z: iz }, { x: ix - iw, y: r * 1.16, z: iz + L * 0.10 },
+      { x: ix + iw, y: r * 1.16, z: iz + L * 0.10 }, { x: ix + iw, y: r * 0.98, z: iz },
+      INK)
+  }
+  return B.build()
+}
+
+/* --- Shock cone -----------------------------------------------------------
+   The Prandtl-Glauert condensation cloud, as real geometry rather than a
+   cloud of billboards.
+
+   Why geometry. The effect is a SHELL: a thin surface of vapour standing off
+   the airframe, bright where you look along it and clear where you look
+   through it. Built out of sprites it can only ever be a smear that streams
+   away, because a sprite has no surface to look along and no way to stay put
+   on an aeroplane doing three hundred metres a second. Built as a shell, the
+   grazing-angle term in the ghost shader does the whole job for free.
+
+   The shape is the Mach cone, and its half-angle is not a guess: mu = asin(1/M)
+   is the angle of the shock a body makes at Mach M, which is 90 degrees at
+   Mach 1 and closes as it goes faster. That is why the cloud is a flat disc
+   standing on the aeroplane as it passes through the barrier and a long narrow
+   cone once it is past — and why the photographs that everyone knows, all
+   taken at just about Mach 1, show a disc.
+
+   Returned as a unit shape running from the origin down +Z, one metre long
+   and one metre in radius, so the caller scales it per frame from the Mach
+   number without rebuilding anything.                                       */
+export function shockConeMesh(segments = 40, rings = 7) {
+  const B = makeBuilder()
+  const white = [1, 1, 1]
+  const ringAt = t => {
+    // A slightly convex profile rather than a straight cone: the real shell
+    // bells out at its base where the pressure recovers.
+    const rad = Math.pow(t, 0.72)
+    const out = []
+    for (let i = 0; i < segments; i++) {
+      const a = (i / segments) * Math.PI * 2
+      out.push({ x: Math.cos(a) * rad, y: Math.sin(a) * rad, z: t })
+    }
+    return out
+  }
+  let prev = ringAt(0.001)
+  for (let r = 1; r <= rings; r++) {
+    const cur = ringAt(r / rings)
+    for (let i = 0; i < segments; i++) {
+      const j = (i + 1) % segments
+      B.quad(prev[i], cur[i], cur[j], prev[j], white)
+    }
+    prev = cur
+  }
   return B.build()
 }

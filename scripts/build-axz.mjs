@@ -1121,6 +1121,8 @@ function simPage(c, lang) {
          certification limit load factor that sets the speed it is quoted at,
          and how far the aerodynamic centre runs aft through the transonic. */
       rollRate: t.rollRate, nLimit: t.nLimit, acShift: t.acShift,
+      twinFin: !!t.twinFin, chined: !!t.chined, lapse: t.lapse,
+      armed: t.armed || '', hardpoints: t.hardpoints || 0,
       warnPack: t.warnPack || '',
       name: t.axz ? c.fleet[id].name : t.name,
       reg: t.axz ? c.fleet[id].reg : t.reg,
@@ -1354,6 +1356,9 @@ function simPage(c, lang) {
 
   <h2>${esc(S.reheatTitle)}</h2>
   <p class="prose">${P(S.reheatBody)}</p>
+
+  <h2>${esc(S.newTypesTitle)}</h2>
+  <p class="prose">${P(S.newTypesBody)}</p>
 
   <h2>${esc(S.machTitle)}</h2>
   <p class="prose">${P(S.machBody)}</p>
