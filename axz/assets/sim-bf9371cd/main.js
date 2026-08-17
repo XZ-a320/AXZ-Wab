@@ -291,11 +291,31 @@ export class Sim {
     }
 
     if (kind === 'runway' || kind === 'takeoff') {
-      const p = onRwy(ksfo, 0.06)
-      ac.place(p.x, ksfo.elev + ac.restHeight, p.z, ksfo.rwy.hdg, 0, { onGround: true })
-      ac.throttle = 0; ac.setFlap(kind === 'takeoff' ? 2 : 0)
-      ac.gearDown = true; ac.gearPos = 1
-      ac.parkingBrake = kind === 'runway'
+      /* Cold and dark belongs on the APRON, not lined up on the runway. An
+         aeroplane with its engines off and the park brake set is not somewhere
+         a runway is ever occupied from, and starting there skipped the taxi
+         that is the whole point of choosing it. The stand is beside the
+         taxiway the field already draws, abeam the midpoint, facing the
+         terminal — so the first thing you do is start up and taxi. */
+      if (kind === 'runway') {
+        const R = ksfo.rwy
+        const d = hdgVec(R.hdg)
+        const rgt = { x: -d.z, z: d.x }
+        const u = -R.len * 0.18
+        const v = R.width / 2 + 138          // clear of the parallel taxiway
+        const p = { x: ksfo.x + d.x * u + rgt.x * v, z: ksfo.z + d.z * u + rgt.z * v }
+        // Nose out toward the taxiway, which is how an aeroplane is parked.
+        ac.place(p.x, ksfo.elev + ac.restHeight, p.z, (R.hdg + 90) % 360, 0, { onGround: true })
+        ac.throttle = 0; ac.setFlap(0)
+        ac.gearDown = true; ac.gearPos = 1
+        ac.parkingBrake = true
+      } else {
+        const p = onRwy(ksfo, 0.06)
+        ac.place(p.x, ksfo.elev + ac.restHeight, p.z, ksfo.rwy.hdg, 0, { onGround: true })
+        ac.throttle = 0; ac.setFlap(2)
+        ac.gearDown = true; ac.gearPos = 1
+        ac.parkingBrake = false
+      }
       this.input.throttle = 0
       this.mission = { active: true, phase: 'takeoff', best: null }
     } else if (kind === 'approach') {
@@ -346,7 +366,8 @@ export class Sim {
     // Aircraft.place, and zeroing it afterwards handed the aeroplane a
     // nose-down pitching moment it then flew all the way into the ground.
     this.refreshNear(true)
-    this.onEvent({ type: 'scenario', kind, phase: this.mission.phase })
+    this.onEvent({ type: 'scenario', kind, phase: this.mission.phase,
+      from: this.origin.icao, to: this.dest.icao })
   }
 
   refreshNear(force = false) {
@@ -459,6 +480,7 @@ export class Sim {
       this.checkEvents(dtReal)
     }
 
+    this.clock = ((this.clock || 0) + dtReal) % 3600
     this.updateCamera(dtReal)
     if (this.shake > 0.001) {
       // Positional only. Shaking the ORIENTATION as well made the horizon
@@ -807,6 +829,9 @@ export class Sim {
       ambient: this.light.amb,
       camPos: this.camPos,
       fog: sky, fogNear, fogFar,
+      // Wall-clock seconds, for the water. Wrapped so the sines never lose
+      // precision in a long session.
+      time: (this.clock = (this.clock || 0)) % 3600,
     }
 
     /* Depth pass. The cascade follows the AEROPLANE, not the camera: in tower

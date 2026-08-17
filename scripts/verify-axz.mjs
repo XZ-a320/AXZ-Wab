@@ -604,12 +604,41 @@ console.log('\nflight simulator')
     ? ok('every type stands at its published overall height')
     : bad(`drawn height disagrees with the published figure: ${wrongHeight.map(r => `${r.id} ${r.drawn} vs ${r.specH}`).join(', ')}`)
 
+  /* Cold and dark starts on the APRON. An aeroplane with its engines off and
+     the park brake set is not somewhere a runway is ever occupied from, and
+     starting there skipped the taxi that is the whole reason to choose it. */
+  const cold = await page.evaluate(async () => {
+    const s = window.__axzSimHandle.sim
+    const base = document.querySelector('[data-sim-stage]').getAttribute('data-sim-src').replace('boot.js', '')
+    const W = await import(base + 'world.js')
+    s.setAircraft('b-737x'); s.setScenario('runway')
+    const p = s.ac.pos
+    return {
+      onPavement: W.onPavement(p.x, p.z, 0),
+      onRunway: W.AIRPORTS.KSFO.rwys.some(r => {
+        const d = W.hdgVec(r.hdg), c = W.rwyCentre(W.AIRPORTS.KSFO, r)
+        const dx = p.x - c.x, dz = p.z - c.z
+        return Math.abs(dx * d.x + dz * d.z) < r.len / 2 &&
+               Math.abs(dx * -d.z + dz * d.x) < r.width / 2
+      }),
+      brake: s.ac.parkingBrake,
+      flap: s.ac.flapDeg,
+    }
+  })
+  !cold.onRunway && cold.brake && cold.flap === 0
+    ? ok('cold and dark starts off the runway, brake set, flaps up')
+    : bad(`cold and dark: onRunway=${cold.onRunway} brake=${cold.brake} flap=${cold.flap}`)
+
   /* And the runway has to be on screen. It was wound clockwise seen from
      above, so back-face culling threw all four away; then the far mesh covered
      what was left. A runway you cannot see is not a runway. */
   const rwy = await page.evaluate(() => new Promise(res => {
     const s = window.__axzSimHandle.sim
-    s.setAircraft('b-737x'); s.setScenario('runway'); s.cameraMode = 2
+    /* The TAKE-OFF scenario, which is the one lined up on the strip. Cold and
+       dark now starts on the apron, where an aeroplane with its engines off
+       and the park brake set actually sits — so it is no longer the scenario
+       that proves a runway is drawn. */
+    s.setAircraft('b-737x'); s.setScenario('takeoff'); s.cameraMode = 2
     s.updateCamera = () => {
       s.camPos = { x: s.ac.pos.x + 1, y: s.ac.pos.y + 240, z: s.ac.pos.z + 1 }
       s.camQ = s.lookAt(s.camPos, s.ac.pos)
@@ -686,12 +715,17 @@ console.log('\nflight simulator')
     ? ok('keys are ignored while the page, not the sim, has focus')
     : bad(`the sim consumed a key aimed elsewhere: ${camBefore} -> ${camAfter}`)
 
+  /* Sound comes up WITH the simulator now. The property that matters was never
+     "starts muted" — it is that the page makes no noise at somebody who only
+     came to read, and that is guaranteed by the audio context not existing
+     until Start is pressed, which is asserted above. What is checked here is
+     that it starts on and that the toggle still reports its state. */
   const pressed = await page.getAttribute('[data-sim-action="sound"]', 'aria-pressed')
-  pressed === 'false' ? ok('sound starts muted and is opt-in') : bad(`sound button starts aria-pressed=${pressed}`)
+  pressed === 'true' ? ok('sound comes up with the simulator, from the same press') : bad(`sound button starts aria-pressed=${pressed}`)
   await page.click('[data-sim-action="sound"]')
   await page.waitForTimeout(300)
   const on = await page.getAttribute('[data-sim-action="sound"]', 'aria-pressed')
-  on === 'true' ? ok('the sound toggle reports its state') : bad(`sound toggle did not update: ${on}`)
+  on === 'false' ? ok('the sound toggle reports its state') : bad(`sound toggle did not update: ${on}`)
   await page.close(); await c2.close()
 }
 {

@@ -467,6 +467,17 @@
 .sim-vs-rail { stroke: #6d7681; stroke-width: 1.4; }
 .sim-vs-needle { stroke: #ffd15c; stroke-width: 3; }
 .sim-cue { fill: #d94436; }
+/* The high-speed end of the tape. Amber rather than red: it is a limit you are
+   approaching, not one you have passed. */
+.sim-vmo { fill: #d9a13a; }
+.sim-bank-n {
+  fill: #cfd5dc;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .06em;
+}
+.sim-bank-n.is-warn { fill: #ff8a4a; }
 
 .sim-ra-box { fill: rgba(11, 13, 16, .8); stroke: #6d7681; stroke-width: 1; }
 .sim-ra {
@@ -529,6 +540,20 @@
 .sim-panel { margin-block-start: var(--s-3); }
 /* A toolbar, not a row of loose buttons: one rule under it, tight spacing, and
    the buttons sharing a baseline with the heading that follows. */
+/* A stateful button carries its setting in the corner, because a verb alone
+   cannot say which way it is set. */
+.sim-tog { position: relative; }
+.sim-tog__st {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-end: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--ink-3);
+}
+.sim-tog__st[data-on="true"] { color: var(--remark); }
+
 .sim-bar {
   display: flex;
   flex-wrap: wrap;
@@ -724,7 +749,7 @@
 
 .sim-touch__rud {
   position: absolute;
-  inset-inline: 96px 172px;
+  inset-inline: 96px 260px;
   inset-block-end: 14px;
   height: 46px;
   border: 1px solid rgba(233, 229, 220, .55);
@@ -740,17 +765,27 @@
   pointer-events: none;
 }
 
+/* The two right-hand clusters share an edge, so they are given separate ends
+   of it: the bar is anchored to the TOP and the pad to the BOTTOM. Anchored
+   from the top with a percentage, as the pad was, they overlapped on any
+   landscape phone short enough that the bar's four stacked buttons reached
+   past 18% of the height — which is most of them. */
 .sim-touch__pad {
   position: absolute;
-  inset-inline-end: 12px;
-  inset-block: 18% 74px;
+  /* Clear of the bar's LANE, not merely below it. Separating them vertically
+     only works while both fit, and on a short landscape phone they did not:
+     the fix has to be one that cannot fail at any height. The bar owns the
+     76 px column at the edge; the pad starts inboard of it. */
+  inset-inline-end: 96px;
+  inset-block-start: auto;
+  inset-block-end: 68px;
   display: grid;
-  grid-template-columns: repeat(2, 74px);
-  gap: 8px;
-  align-content: center;
+  grid-template-columns: repeat(2, 72px);
+  gap: 7px;
+  align-content: end;
 }
 .sim-touch__btn {
-  min-height: 46px;
+  min-height: 44px;
   border: 1px solid rgba(233, 229, 220, .55);
   background: rgba(11, 13, 16, .42);
   color: #f3f0e9;
@@ -770,10 +805,13 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
+  gap: 5px;
+  /* Narrow and short: this is the cluster you press between flights, not the
+     one you fly with, and every pixel it takes is a pixel off the pad. */
+  width: 76px;
 }
 .sim-touch__barbtn {
-  min-height: 38px;
+  min-height: 32px;
   padding-inline: 10px;
   border: 1px solid rgba(233, 229, 220, .45);
   background: rgba(11, 13, 16, .52);

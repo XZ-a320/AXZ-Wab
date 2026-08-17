@@ -34,6 +34,17 @@ export async function boot(cfg) {
   const crashBox = stage.querySelector('[data-sim-crash]')
   const setText = (k, v) => { if (cells[k]) cells[k].textContent = v }
 
+  /* Starting positions name the fields of the flight they belong to, and the
+     codes travel WITH the event. A hoisted declaration, and it reads nothing
+     off `sim`: the Sim constructor sets the opening scenario, which fires this
+     handler, and at that moment `sim` is still in its temporal dead zone. That
+     is the third time this file has been bitten by exactly that, and it is
+     what the note at the top of it is about. */
+  function scenarioText(kind, from, to) {
+    return (L.scenarios[kind] || kind)
+      .replace('{from}', from || '').replace('{to}', to || '')
+  }
+
   let sim
   try {
     sim = new Sim({
@@ -83,7 +94,7 @@ export async function boot(cfg) {
     } else if (ev.type === 'scenario') {
       hideCrash()
       if (log) log.innerHTML = ''
-      pushLog(L.scenarios[ev.kind] || ev.kind, 'info')
+      pushLog(scenarioText(ev.kind, ev.from, ev.to), 'info')
     }
   }
 
@@ -167,10 +178,19 @@ export async function boot(cfg) {
   }
 
   /* --- Controls around the canvas ---------------------------------------- */
+  const paintScenarios = () => {
+    if (!scSel) return
+    const r = sim.readout()
+    for (const opt of scSel.options) {
+      opt.textContent = scenarioText(opt.value, r.origin, r.dest)
+    }
+  }
+
   const flSel = stage.querySelector('[data-sim-flight]')
   if (flSel) flSel.addEventListener('change', () => {
     sim.setFlight(flSel.value)
     sim.setScenario(scSel ? scSel.value : sim.scenario)
+    paintScenarios()
   })
   const acSel = stage.querySelector('[data-sim-aircraft]')
   const scSel = stage.querySelector('[data-sim-scenario]')
@@ -210,6 +230,18 @@ export async function boot(cfg) {
     sim.canvas.focus()
   })
 
+  /* Keep the corner word on the two stateful buttons in step with the sim. */
+  const paintToggles = () => {
+    for (const node of stage.querySelectorAll('[data-sim-state]')) {
+      const which = node.getAttribute('data-sim-state')
+      const on = which === 'assist' ? !!sim.ac.assist : !!sim.sound.enabled
+      node.textContent = on ? L.on : L.off
+      node.setAttribute('data-on', String(on))
+      const btn = node.closest('[data-sim-action]')
+      if (btn) btn.setAttribute('aria-pressed', String(on))
+    }
+  }
+
   for (const btn of stage.querySelectorAll('[data-sim-action]')) {
     btn.addEventListener('click', () => {
       const a = btn.getAttribute('data-sim-action')
@@ -224,6 +256,7 @@ export async function boot(cfg) {
         btn.setAttribute('aria-pressed', String(on))
         pushLog(L.soundLabel + ' ' + (on ? L.on : L.off), 'info')
       }
+      paintToggles()
       // Give the keys back to the simulator after a mouse press, or the next
       // key stroke goes to the button that still has focus.
       sim.canvas.focus()
@@ -243,14 +276,19 @@ export async function boot(cfg) {
 
   /* Audio is created here and nowhere else. boot() only ever runs from the
      press on Start, which is the user gesture a browser requires before an
-     AudioContext will run at all. It begins muted; the Sound button unmutes. */
+     AudioContext will run at all — and because that press IS the gesture, the
+     sound can come up with it. It used to start muted, which meant the
+     engines, the alerts and the callouts were all off until you found the
+     button, and most people never did. The page itself is still silent: none
+     of this exists until Start is pressed. */
   sim.sound.init()
-  sim.sound.setEnabled(false)
+  sim.sound.setEnabled(true)
   // The five alert clips, 48 KB in total, fetched from the same press that
   // downloaded the engine and never before it.
   sim.sound.loadClips()
   const sndBtn = stage.querySelector('[data-sim-action="sound"]')
-  if (sndBtn) sndBtn.setAttribute('aria-pressed', 'false')
+  if (sndBtn) sndBtn.setAttribute('aria-pressed', 'true')
+  paintToggles()
 
   /* --- Fullscreen ---------------------------------------------------------
      Two affordances for one state, because they are needed at different

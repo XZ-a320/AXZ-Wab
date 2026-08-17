@@ -138,10 +138,6 @@ for (const key of Object.keys(AIRPORTS)) {
   // How far the made surface reaches, for the terrain flattening below.
   ap.spread = Math.max(...ap.rwys.map(r =>
     Math.hypot(r.len / 2 + Math.abs(r.along), Math.abs(r.offset))))
-  // Which way the town lies from the field. Hashed off the code so it is
-  // stable, and never straight off either end of the main runway.
-  const hh = [...key].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7)
-  ap.townBrg = (ap.rwy.hdg + 90 + (hh % 120) - 60) * DEG
 }
 
 /** Every airport, in the order the route list uses, then the neighbours. */
@@ -193,7 +189,17 @@ function fbm(x, z, oct = 4) {
 /* --- Water ----------------------------------------------------------------
    Two bodies, both named on the home page. Each is a smooth distance field so
    the shoreline is soft rather than a circle.                               */
-const BAY = { x: 11000, z: -9000, r: 15000 }        // San Francisco Bay, NE of KSFO
+/* San Francisco Bay lies BETWEEN San Francisco and Oakland, and both airports
+   are built on its shore — SFO on the west side, OAK on the east, facing each
+   other across the water. Placed off to the north-east it reached neither, so
+   the ground rose to 47 m two and a half kilometres off the end of runway 28
+   and the 01 thresholds, which in life sit at the water's edge, were in the
+   middle of a hillside. Centred between the two fields it does what it does in
+   life: the 28s depart over it and the 01s land toward it.
+
+   Water can be laid right up to a field without flooding it, because the
+   airport plateau is applied AFTER the water in `elevation` and overrides it. */
+const BAY = { x: 6800, z: -5700, r: 12400 }         // San Francisco Bay
 const MONTEREY = { x: 34000, z: 104000, r: 21000 }  // Monterey Bay, SW of Salinas
 // The Yangtze delta half: the landmarks the routes section lists for ZSPD-ZSNJ
 // are 长江三角洲, 太湖 and 镇江, so there is an estuary east of Pudong and a
@@ -205,6 +211,10 @@ const TAIHU = { x: 470000, z: 150000, r: 32000 }    // Lake Tai, on the route
    A very large circle centred far to the west is a straight shoreline by the
    time it reaches the route, which is what it should look like. */
 const PACIFIC = { x: -210000, z: 70000, r: 205000 }
+/* The South Bay. San Francisco Bay does not stop at the airport — it runs
+   south past it toward San Jose, and that southern arm is what the 01
+   thresholds face. Without it the crossing pair landed toward a hillside. */
+const SOUTHBAY = { x: 3000, z: 8000, r: 12000 }
 // San Pablo Bay, north of the one already here, so the bay system reads.
 const SANPABLO = { x: 22000, z: -46000, r: 13000 }
 // The Yangtze estuary itself, which is what ZSPD sits beside.
@@ -212,11 +222,17 @@ const YANGTZE = { x: 596000, z: 96000, r: 46000 }
 
 function waterField(x, z) {
   let w = 0
-  for (const b of [BAY, MONTEREY, EASTSEA, TAIHU, PACIFIC, SANPABLO, YANGTZE]) {
+  for (const b of [BAY, SOUTHBAY, MONTEREY, EASTSEA, TAIHU, PACIFIC, SANPABLO, YANGTZE]) {
     const d = Math.hypot(x - b.x, z - b.z)
     // Wobble the radius so the coast is not a compass circle.
     const wob = (fbm(x * 0.00004, z * 0.00004, 2) - 0.5) * b.r * 0.5
-    w = Math.max(w, clamp(1 - (d - wob) / b.r, 0, 1))
+    /* A BASIN with a shoreline, not a cone. Falling linearly from one at the
+       centre to zero at the rim meant a body of water was only fully wet at
+       its exact middle: the bay reached 0.42 where San Francisco's runway 28
+       departs over it, which after blending with the land left 36 m of hill
+       where there should have been open water. Full depth out to the shore
+       ramp, and the ramp is where the coast is. */
+    w = Math.max(w, clamp((b.r - d + wob) / (b.r * 0.22), 0, 1))
   }
   return w
 }
@@ -639,6 +655,39 @@ export function trees(camX, camZ, range, out) {
  * distance from the field, so there is a core worth threading and a suburb
  * worth being low over.
  */
+/**
+ * Where the town is.
+ *
+ * Chosen rather than hashed: of twelve candidate bearings round the field, the
+ * one whose centre sits on the HIGHEST GROUND wins, with anything under water
+ * rejected outright. Hashing it was stable and cheap and put San Francisco's
+ * downtown in the middle of the bay the moment the bay was drawn where it
+ * really is — the field ended up with a skyline of zero buildings. Deciding it
+ * from the terrain means a town cannot be built in the sea however the
+ * coastline is redrawn later.
+ *
+ * Deterministic, and memoised, because it is asked for every frame.
+ */
+const townCache = new Map()
+function townCentre(ap, spread) {
+  const hit = townCache.get(ap.icao)
+  if (hit) return hit
+  const r = spread * 0.52
+  let best = null, bestH = -1e9
+  for (let i = 0; i < 12; i++) {
+    // Never straight off either end of the main runway: that is the approach.
+    const brg = (ap.rwy.hdg + 40 + i * 30) * DEG
+    const p = { x: ap.x + Math.cos(brg) * r, z: ap.z + Math.sin(brg) * r }
+    const g = elevation(p.x, p.z)
+    if (g < 2) continue
+    if (g > bestH) { bestH = g; best = p }
+  }
+  // Every candidate under water: no town, which is a legitimate answer.
+  const out = best || { x: ap.x, z: ap.z, dry: false }
+  townCache.set(ap.icao, out)
+  return out
+}
+
 const boxCache = new Map()
 export function cityBoxes(ap, count = 90, spread = 4200) {
   const key = `${ap.icao}:${count}:${spread}`
@@ -648,10 +697,7 @@ export function cityBoxes(ap, count = 90, spread = 4200) {
      city is near an airport rather than around it. Scattering height by
      distance from the runway instead gave a uniform carpet of low blocks with
      nothing worth flying round: the tallest thing anywhere was 37 m. */
-  const town = {
-    x: ap.x + Math.cos(ap.townBrg) * spread * 0.52,
-    z: ap.z + Math.sin(ap.townBrg) * spread * 0.52,
-  }
+  const town = townCentre(ap, spread)
   for (let i = 0; i < count; i++) {
     // Hashed, not random: the skyline is the same on every reload.
     const a = hash2(i * 7 + 11, i * 13 + 5) * Math.PI * 2

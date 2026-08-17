@@ -69,7 +69,7 @@
     "originalImage": "Original",
     "originalImageClose": "Close",
     "simCta": "Open the flight simulator",
-    "simCtaNote": "Fly these two routes in your browser"
+    "simCtaNote": "Fly an aeroplane in your browser"
   },
   "routes": {
     "_order": [
@@ -260,7 +260,7 @@
       "status": "Status"
     },
     "status": "ON TIME",
-    "statusNote": "This board has exactly one status. A virtual airline does not run late.",
+    "statusNote": "This board has exactly one status. Air Xiao Ze does not run late.",
     "clocksTitle": "Local time at each base",
     "clockNote": "",
     "bases": [
@@ -575,16 +575,16 @@
     "headerSub": "Air Xiao Ze (AXZ) · Simulator",
     "intro": "Fly the two Air Xiao Ze routes in your browser. The aircraft are dimensioned from the same table as the fleet drawings, and the routes, runway headings and cruise levels are the ones already published here. The aerodynamics are coefficient based: lift varies with angle of attack, the wing stalls, the engines take time to spool, the landing gear is a spring and damper, and how gently you arrive depends on how you flare.",
     "startButton": "Start the simulator",
-    "startNote": "The simulator downloads only when you press this, about 40 KB. Leave it alone and this page loads nothing extra.",
+    "startNote": "",
     "loading": "Loading the simulator...",
     "unsupported": "Your browser has no working WebGL, so the simulator cannot run. The control table and the scoring bands below are unaffected.",
     "failed": "The simulator failed to start. The control table and the scoring bands below are unaffected.",
     "aircraftLabel": "Aircraft",
     "scenarioLabel": "Start position",
     "scenarios": {
-      "runway": "Parked on the KSFO threshold, cold",
-      "takeoff": "Lined up at KSFO, flaps set",
-      "approach": "Ten miles final into KSNS at 3,000 ft",
+      "runway": "Cold and dark on the {from} apron",
+      "takeoff": "Lined up at {from}, flaps set",
+      "approach": "Ten miles out from {to} at 3,000 ft",
       "cruise": "Mid route, at cruise level"
     },
     "controlsTitle": "Controls",
@@ -861,7 +861,9 @@
     "machTitle": "The sound barrier",
     "machBody": "Concorde and the F-16 can pass Mach 1 and the other nine cannot, which is not a setting but what the thrust and the wave drag work out to. Three things happen on the way through, and each of them is real. The lift-curve slope rises and then collapses: Prandtl-Glauert makes the wing more sensitive as 1/sqrt(1-M squared), the shocks form and it falls away, and supersonically it settles at the thin-aerofoil value of 4/sqrt(M squared -1), except that a low-aspect-ratio wing cannot exceed its own slender-body limit of pi times AR over two. At their own cruise speeds that puts Concorde, at an aspect ratio of 1.83, down from 2.92 to 2.28, a fifth, while the F-16 at Mach 2 is down from 3.95 to 2.23, which is nearly half. The delta was shaped to hold its lift across the barrier and it does; the fighter was not and does not. That is the reason the two feel so unlike each other at speed. It comes out of the aspect ratio; none of it is typed in. The aerodynamic centre runs aft, so the lift the wing already has starts pushing the nose down. That is Mach tuck, and it is what Concorde pumped twenty tonnes of fuel aft to trim out. Control effectiveness follows the same slope, so the controls go heavy. What you can see: between Mach 0.94 and 1.08 a collar of condensation stands on the rear fuselage, because the pressure drop behind the shock cools the air past its dew point, which is why it is strongest low down in moist air and almost absent high up, and why every famous photograph of one was taken near the sea. In reheat above Mach 1 a row of shock diamonds stands in the exhaust. The sound is a double crack, not a bang: the bow shock arrives, the pressure drops below ambient behind it, and the tail shock brings it back, which the ear hears as two reports about a tenth of a second apart. From the flight deck you barely hear your own, because the shock cone trails behind you and you are in front of it. Going supersonic the cockpit gets quieter, which is the thing every Concorde passenger remembers and no simulator ever models.",
     "newTypesTitle": "Fifth generation, and the bombers",
-    "newTypesBody": "What separates the F-22 from the F-16 is not that it is newer. It supercruises: it holds Mach 1.82 with the burner unlit, the only one of the fifteen that can stay supersonic without reheat, and there is a build gate watching that specifically, because the day it stops being true it has stopped being an F-22. The F-35 has one engine, but that one gives 125 kN dry and 191 kN lit, and its wing is sized for carrying rather than turning, so it accelerates hard and is the slower of the two flat out. Both have twin fins canted outward, which is not styling: a vertical surface returns a radar signal straight back to whatever painted it, and tilting it sends that return somewhere else. The chine along the forebody does two jobs the same way, holding the vortex at high alpha and reflecting sideways rather than forward. The B-2 has no fin and no fuselage at all: the whole aeroplane is one cranked double-W wing with the intakes on TOP, because nothing on a stealth bomber may look down at a radar. It holds its heading with split drag rudders at the tips and rolls like a barn door, 20 degrees a second. The B-52 carries eight engines in four twin pods on a wing flexible enough that its tips move four metres, and at 15 degrees a second it is the slowest-rolling thing here. How far thrust falls away with speed is set by bypass ratio: a CFM56 at 5.5 throws a large mass of air slowly and runs out of use once the aeroplane is fast, while the F118 in a B-2 and the TF33 in a B-52 are both under 1 and barely notice. On the airliner lapse the B-2 could not hold its own cruise. It needed 90 kN and had 63."
+    "newTypesBody": "What separates the F-22 from the F-16 is not that it is newer. It supercruises: it holds Mach 1.82 with the burner unlit, the only one of the fifteen that can stay supersonic without reheat, and there is a build gate watching that specifically, because the day it stops being true it has stopped being an F-22. The F-35 has one engine, but that one gives 125 kN dry and 191 kN lit, and its wing is sized for carrying rather than turning, so it accelerates hard and is the slower of the two flat out. Both have twin fins canted outward, which is not styling: a vertical surface returns a radar signal straight back to whatever painted it, and tilting it sends that return somewhere else. The chine along the forebody does two jobs the same way, holding the vortex at high alpha and reflecting sideways rather than forward. The B-2 has no fin and no fuselage at all: the whole aeroplane is one cranked double-W wing with the intakes on TOP, because nothing on a stealth bomber may look down at a radar. It holds its heading with split drag rudders at the tips and rolls like a barn door, 20 degrees a second. The B-52 carries eight engines in four twin pods on a wing flexible enough that its tips move four metres, and at 15 degrees a second it is the slowest-rolling thing here. How far thrust falls away with speed is set by bypass ratio: a CFM56 at 5.5 throws a large mass of air slowly and runs out of use once the aeroplane is fast, while the F118 in a B-2 and the TF33 in a B-52 are both under 1 and barely notice. On the airliner lapse the B-2 could not hold its own cruise. It needed 90 kN and had 63.",
+    "calloutTitle": "The height callouts",
+    "calloutBody": "Somebody counts you down on final: two thousand five hundred, a thousand, five hundred, four hundred, three hundred, two hundred, one hundred, then seventy, sixty, fifty, forty, thirty, twenty, ten and five. These are seventeen recordings rather than synthesis, for the same reason the alerts are: the calls are a particular human voice, and an approximation of a particular voice is an approximation of nothing. They fire on the CROSSING rather than on the height, and re-arm only after climbing back above it, so a float in the flare cannot shout \"twenty\" at you four times running. Coming down fast, fifty, forty, thirty and twenty arrive inside a second, which is what a real one does. The files were re-encoded: mono at 32 kbps, silence trimmed off both ends, loudness matched to -16 LUFS. Seventeen calls come to 73 KB, a quarter of what arrived, and nothing about them sounds different. Like the engines, not one byte of it downloads before Start is pressed."
   },
   "aprilfools": {
     "date": "April 1, 2026",

@@ -53,6 +53,7 @@ uniform vec3 uFogColor;
 uniform float uFogNear, uFogFar;
 uniform vec3 uCamPos;
 uniform float uSpecular, uShininess;
+uniform float uTime;
 uniform mat4 uLightVP, uLightVP2;
 uniform sampler2D uShadow, uShadow2;
 uniform float uShadowOn, uShadowTexel, uShadowTexel2;
@@ -111,10 +112,17 @@ void main() {
   float spec = uSpecular;
   float shine = uShininess;
   if (water > 0.5) {
-    // Ripple the normal so the glint breaks up instead of being a mirror disc.
-    float w = sin(vWorld.x * 0.021 + vWorld.z * 0.013) * 0.5
-            + sin(vWorld.x * 0.007 - vWorld.z * 0.031) * 0.5;
-    n = normalize(n + vec3(w * 0.035, 0.0, w * 0.028));
+    /* Ripple the normal so the glint breaks up instead of being a mirror disc,
+       and MOVE it. Static water is the single thing that reads as plastic: the
+       surface was mathematically rippled and perfectly still, so the sun's
+       glare sat in one place however the aeroplane moved. Three crossing waves
+       at incommensurate rates and speeds never repeat into a visible pattern. */
+    float t = uTime;
+    float w = sin(vWorld.x * 0.021 + vWorld.z * 0.013 + t * 0.9) * 0.42
+            + sin(vWorld.x * 0.007 - vWorld.z * 0.031 - t * 1.3) * 0.38
+            + sin(vWorld.x * 0.041 + vWorld.z * 0.037 + t * 2.1) * 0.20;
+    float w2 = cos(vWorld.x * 0.017 - vWorld.z * 0.009 + t * 1.1) * 0.5;
+    n = normalize(n + vec3(w * 0.038, 0.0, w2 * 0.030));
     // Fresnel: water seen edge-on reflects the sky, water seen from above is
     // dark. This one term is most of what makes it read as a liquid.
     float fres = pow(1.0 - clamp(dot(n, v), 0.0, 1.0), 4.0);
@@ -398,6 +406,7 @@ export class Renderer {
         uCamPos: gl.getUniformLocation(p, 'uCamPos'),
         uSpecular: gl.getUniformLocation(p, 'uSpecular'),
         uShininess: gl.getUniformLocation(p, 'uShininess'),
+        uTime: gl.getUniformLocation(p, 'uTime'),
         uLightVP: gl.getUniformLocation(p, 'uLightVP'),
         uShadow: gl.getUniformLocation(p, 'uShadow'),
         uShadowOn: gl.getUniformLocation(p, 'uShadowOn'),
@@ -659,6 +668,7 @@ export class Renderer {
       // Material defaults to matte; setMaterial raises it for the airframe.
       gl.uniform1f(L.uSpecular, 0.0)
       gl.uniform1f(L.uShininess, 24)
+      if (L.uTime) gl.uniform1f(L.uTime, env.time || 0)
       const sm = env.shadow
       gl.uniform1f(L.uShadowOn, sm && sm.ok ? 1 : 0)
       if (sm && sm.ok) {

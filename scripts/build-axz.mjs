@@ -1163,8 +1163,16 @@ function simPage(c, lang) {
   const acOpts =
     `<optgroup label="${esc(S.fleetGroup)}">${AXZ_ORDER.map(acOpt).join('')}</optgroup>` +
     `<optgroup label="${esc(S.otherGroup)}">${SIM_ONLY.map(acOpt).join('')}</optgroup>`
+  /* The starting positions name the fields of the SELECTED FLIGHT. They used
+     to say KSFO and KSNS whatever was chosen, so on the two Shanghai legs the
+     picker described somewhere the aeroplane was not. The server renders the
+     first flight's version and the engine rewrites them on every change. */
+  const legOf = { AXZ001: ['KSFO', 'KSNS'], AXZ002: ['KSNS', 'KSFO'],
+    AXZ003: ['ZSPD', 'ZSNJ'], AXZ004: ['ZSNJ', 'ZSPD'] }
+  const scName = (k, from, to) =>
+    S.scenarios[k].replace('{from}', from).replace('{to}', to)
   const scOpts = ['takeoff', 'runway', 'approach', 'cruise'].map(k =>
-    `<option value="${esc(k)}"${k === 'takeoff' ? ' selected' : ''}>${esc(S.scenarios[k])}</option>`).join('')
+    `<option value="${esc(k)}"${k === 'takeoff' ? ' selected' : ''}>${esc(scName(k, 'KSFO', 'KSNS'))}</option>`).join('')
 
   /* Conditions. Midday and STILL AIR, because the first thing anyone flies
      here should not be a crosswind landing they did not ask for. The wind was
@@ -1297,7 +1305,15 @@ function simPage(c, lang) {
     <div class="sim-panel" data-sim-panel hidden>
       <div class="sim-bar">
         ${['pause', 'reset', 'camera', 'assist', 'sound'].map(a =>
-    `<button class="btn" type="button" data-sim-action="${a}">${esc(S.actions[a])}</button>`).join('')}
+    `<button class="btn sim-tog" type="button" data-sim-action="${a}"${
+      ['assist', 'sound'].includes(a) ? ' aria-pressed="true"' : ''
+    }>${esc(S.actions[a])}${
+      /* Assist and Sound are STATES, and a button that only carries a verb
+         cannot say which way it is set. The word rides in the corner so the
+         setting is readable without pressing it to find out. */
+      ['assist', 'sound'].includes(a)
+        ? `<span class="sim-tog__st" data-sim-state="${a}">${esc(S.hud.on)}</span>` : ''
+    }</button>`).join('')}
       </div>
       <h2 class="record__label">${esc(S.readoutTitle)}</h2>
       <div class="sim-grid">${fieldCells}</div>
@@ -1368,6 +1384,9 @@ function simPage(c, lang) {
 
   <h2>${esc(S.soundTitle)}</h2>
   <p class="prose">${P(S.soundBody)}</p>
+
+  <h2>${esc(S.calloutTitle)}</h2>
+  <p class="prose">${P(S.calloutBody)}</p>
 
   <h2>${esc(S.papiTitle)}</h2>
   <p class="prose">${P(S.papiBody)}</p>

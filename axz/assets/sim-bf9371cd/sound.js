@@ -99,6 +99,24 @@ const VOICES = {
    and says the same words. A Cessna's stall warning is a pneumatic reed horn
    in the wing leading edge and a fighter has its own voice, so neither gets
    an airliner's alerts: they keep the synthesised tone.                     */
+/* --- Radio-altimeter callouts ---------------------------------------------
+   The voice that counts you down to the runway. These are the automatic
+   height calls an airliner makes on every approach, and they are the reason a
+   landing has a rhythm: you stop reading the altimeter somewhere around five
+   hundred and fly the last of it on what you are being told.
+
+   Fired on DESCENT through each height and armed again only after climbing
+   back above it, so a float in the flare does not stutter "twenty" at you four
+   times. RETARD rides on the ten-foot call, which is where an Airbus says it.
+   The list is descending because that is the order they happen in.          */
+const CALLOUTS = [
+  [2500, 'callout-2500'], [1000, 'callout-1000'], [500, 'callout-500'],
+  [400, 'callout-400'], [300, 'callout-300'], [200, 'callout-200'],
+  [100, 'callout-100'], [70, 'callout-70'], [60, 'callout-60'],
+  [50, 'callout-50'], [40, 'callout-40'], [30, 'callout-30'],
+  [20, 'callout-20'], [10, 'callout-10'], [5, 'callout-5'],
+]
+
 const WARN_PACKS = {
   boeing: { stall: 'warn-boeing-airspeed', pullup: 'warn-boeing-pullup', master: 'warn-boeing-master' },
   airbus: { stall: 'warn-airbus-stall', pullup: 'warn-boeing-pullup', master: 'warn-airbus-master' },
@@ -127,6 +145,8 @@ export class Sound {
     this.clipsLoading = true
     const names = new Set()
     for (const p of Object.values(WARN_PACKS)) for (const n of Object.values(p)) names.add(n)
+    for (const [, n] of CALLOUTS) names.add(n)
+    names.add('callout-above'); names.add('callout-gear')
     await Promise.all([...names].map(async name => {
       try {
         const res = await fetch(this.audioBase + name + '.m4a')
@@ -134,6 +154,49 @@ export class Sound {
         this.clips[name] = await this.ctx.decodeAudioData(await res.arrayBuffer())
       } catch (e) { /* a missing alert falls back to the synthesised tone */ }
     }))
+  }
+
+  /** Play a clip once. Used by the height callouts, which never loop. */
+  playClip(name, gain = 1.0) {
+    if (!this.ready || !this.enabled) return false
+    const buf = this.clips[name]
+    if (!buf) return false
+    const src = this.ctx.createBufferSource()
+    src.buffer = buf
+    const g = this.ctx.createGain()
+    g.gain.value = gain
+    src.connect(g); g.connect(this.master)
+    src.start()
+    return true
+  }
+
+  /**
+   * The automatic height calls, fired on descent through each one.
+   *
+   * Armed again only after climbing back above the height plus a margin, so a
+   * float in the flare cannot stutter the same call at you four times — which
+   * is the whole difficulty with doing this off a threshold rather than off an
+   * edge.
+   */
+  callouts(ac) {
+    if (!this.pack) return               // only the types that have the voice
+    if (!this.armed) this.armed = {}
+    const ra = (ac.radioAlt != null ? ac.radioAlt : ac.agl) * 3.280839895
+    if (ac.onGround || ac.crashed || !(ra > 0)) return
+    for (const [ft, clip] of CALLOUTS) {
+      if (ra > ft * 1.12 + 3) { this.armed[ft] = true; continue }
+      if (ra <= ft && this.armed[ft]) {
+        this.armed[ft] = false
+        /* One call per frame, and no wall-clock cooldown. The arming
+           hysteresis above already stops a float in the flare from repeating
+           a call, and a rate limit measured against the audio clock silently
+           swallowed the whole descent below a thousand feet: coming down at
+           three thousand a minute you pass fifty, forty, thirty and twenty
+           inside a second, and a real one calls all four. */
+        this.playClip(clip, 0.95)
+        break
+      }
+    }
   }
 
   /** Start a looping alert, or do nothing if it is already running. */
@@ -599,6 +662,8 @@ export class Sound {
       else this.stopClip(this.pack.master)
       this.warn.out.gain.setTargetAtTime(0, t, 0.03)
       if (!alive) this.stopAllClips()
+      // The height calls, on the types that have the voice for them.
+      this.callouts(ac)
     } else {
       // Synthesised: an intermittent tone, not a siren.
       if (stall) {

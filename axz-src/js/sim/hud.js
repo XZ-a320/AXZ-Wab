@@ -190,8 +190,18 @@ export class HUD {
       t.textContent = String(Math.abs(d))
     }
 
-    // Fixed symbols: bank pointer and the aircraft reference.
-    const bankG = el('g', {}, svg)
+    /* Bank scale and pointer. THE POINTER USED TO ROTATE WITH THE HORIZON,
+       which is a sky pointer and is what real EFIS does — and it was read,
+       reasonably, as a bank needle pointing the wrong way. The horizon itself
+       was always right: a right bank rolls it anticlockwise, which is what the
+       maths and the drawn aeroplane both do.
+
+       So the ambiguity is removed rather than argued with. The scale now turns
+       with the horizon and the pointer is FIXED to the aircraft, so the angle
+       between a stationary index and a moving scale is the bank, and there is
+       nothing on the instrument that can be mistaken for a needle pointing the
+       wrong way. A number underneath settles it either way. */
+    const bankG = el('g', { class: 'sim-bank-scale' }, svg)
     for (const a of [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60]) {
       const r1 = ADI_R, r2 = ADI_R - (a % 30 === 0 ? 12 : 7)
       const rad = (a - 90) * Math.PI / 180
@@ -201,8 +211,13 @@ export class HUD {
         class: 'sim-bank-tick',
       }, bankG)
     }
-    this.bankPtr = el('path', {
-      d: `M${ADI_X} ${ADI_Y - ADI_R + 2} l-8 14 l16 0 Z`, class: 'sim-bank-ptr',
+    this.bankScale = bankG
+    // Fixed index. It belongs to the aeroplane, so it never moves.
+    el('path', {
+      d: `M${ADI_X} ${ADI_Y - ADI_R - 3} l-7 -11 l14 0 Z`, class: 'sim-bank-ptr',
+    }, svg)
+    this.bankText = el('text', {
+      x: ADI_X, y: ADI_Y + ADI_R - 8, class: 'sim-bank-n', 'text-anchor': 'middle',
     }, svg)
     el('path', {
       d: `M${ADI_X - 62} ${ADI_Y} h34 l10 12 l10 -12 h34`,
@@ -293,7 +308,12 @@ export class HUD {
     const cap = el('text', { x: cx, y: cy - h / 2 - 8, class: 'sim-small', 'text-anchor': 'middle' }, g)
     cap.textContent = `${label} (${unit})`
     const cue = el('rect', { x: cx - w / 2, y: cy, width: 6, height: 0, class: 'sim-cue' }, inner)
-    return { g, ticks, value, cue, cx, cy, w, h }
+    /* The high-speed end. There was a low-speed cue and nothing at the top, so
+       the tape said how close you were to falling out of the sky and nothing
+       at all about how close you were to breaking the aeroplane — and the
+       overspeed warning only tells you once you are already past it. */
+    const vmo = el('rect', { x: cx - w / 2, y: cy, width: 6, height: 0, class: 'sim-vmo' }, inner)
+    return { g, ticks, value, cue, vmo, cx, cy, w, h }
   }
 
   /** Redraw a tape's moving scale around the current value. */
@@ -330,8 +350,13 @@ export class HUD {
     const px = e.pitch * RAD * 3.4
     this.horizon.setAttribute('transform',
       `translate(${ADI_X} ${ADI_Y}) rotate(${(-e.bank * RAD).toFixed(2)}) translate(0 ${px.toFixed(1)})`)
-    this.bankPtr.setAttribute('transform',
+    // The scale turns with the horizon; the index above it does not.
+    this.bankScale.setAttribute('transform',
       `rotate(${(-e.bank * RAD).toFixed(2)} ${ADI_X} ${ADI_Y})`)
+    const bankDeg = e.bank * RAD
+    this.bankText.textContent = Math.abs(bankDeg) < 1.5 ? ''
+      : Math.round(Math.abs(bankDeg)) + (bankDeg > 0 ? '\u00b0R' : '\u00b0L')
+    this.bankText.setAttribute('class', 'sim-bank-n' + (Math.abs(bankDeg) > 33 ? ' is-warn' : ''))
 
     this.paintTape(this.spdTape, kt, 20, 1.9)
     this.paintTape(this.altTape, ft, 500, 0.13, v => String(Math.round(v)))
@@ -342,6 +367,19 @@ export class HUD {
     const cueTop = this.spdTape.cy + (kt - vs) * 1.9
     this.spdTape.cue.setAttribute('y', Math.max(cueTop, this.spdTape.cy - 98))
     this.spdTape.cue.setAttribute('height', Math.max(0, Math.min(this.spdTape.cy + 98 - cueTop, 196)))
+
+    /* The barber pole. Drawn from the LOWER of the two limits that actually
+       apply: an indicated-airspeed limit that matters low down, and a Mach
+       limit that takes over high up, which is why a real one moves down the
+       tape as you climb. */
+    const vmoKt = ac.cfg.vne
+    const machLimitKt = ac.mach > 0.05
+      ? kt * (ac.cfg.mmo / Math.max(ac.mach, 0.05)) : 9999
+    const limit = Math.min(vmoKt, machLimitKt)
+    const poleBot = this.spdTape.cy + (kt - limit) * 1.9
+    this.spdTape.vmo.setAttribute('y', this.spdTape.cy - 98)
+    this.spdTape.vmo.setAttribute('height',
+      Math.max(0, Math.min(poleBot - (this.spdTape.cy - 98), 196)))
 
     const vy = this.vsY(fpm)
     this.vsNeedle.setAttribute('y1', ADI_Y - vy)
