@@ -102,9 +102,15 @@ export function qToEuler(q) {
   const up = qrot(q, { x: 0, y: 1, z: 0 })     // roof
   const heading = Math.atan2(fwd.x, -fwd.z)
   const pitch = Math.asin(clamp(fwd.y, -1, 1))
-  // Bank: angle of the roof vector away from the vertical plane holding the nose.
+  /* Bank: angle of the roof vector away from the vertical plane holding the
+     nose, POSITIVE WITH THE RIGHT WING DOWN — which is the sign qFromEuler
+     below takes, and the sign every aerodynamic coefficient in fdm.js is
+     written in. It used to come back with the opposite sign, so the pair did
+     not round-trip: qToEuler(qFromEuler(0, 0, +0.3)).bank was -0.3. The only
+     consumer that could see it was the attitude indicator, and it saw it
+     backwards — a right bank rolled the artificial horizon the wrong way. */
   const right = qrot(q, { x: 1, y: 0, z: 0 })
-  const bank = Math.atan2(right.y, up.y)
+  const bank = Math.atan2(-right.y, up.y)
   return { heading, pitch, bank }
 }
 

@@ -22,7 +22,7 @@ import {
   clamp, DEG, approach, qrot, qinv, qmul, qnorm, qFromAxisAngle, qFromEuler,
   vadd, vsub, vscale, vdot, vcross, vlen, vnorm,
 } from './math.js'
-import { elevation } from './world.js'
+import { elevation, obstacleAt, onPavement } from './world.js'
 
 const G = 9.80665
 /** Lever position where the burner lights, on the types that have one. */
@@ -62,6 +62,32 @@ export const flapsFor = spec => FLAP_SETS[spec && spec.flapSet] || FLAP_SETS.air
 /** How many detents THIS type has. Concorde has one; an airliner has five. */
 export const flapSteps = spec => flapsFor(spec).length
 
+/**
+ * Wave drag, as a fraction of the wing area.
+ *
+ * It is a BUMP, not a step. Drag climbs steeply from the drag-divergence Mach
+ * number, peaks a little past Mach 1 where the shock system is worst, and then
+ * FALLS AWAY as the shocks sweep back and settle — which is the whole reason
+ * a supersonic aeroplane is possible at all. The previous version saturated at
+ * its maximum and stayed there, so past Mach 1 the aeroplane was pushing a
+ * wall that never let go: Concorde topped out at Mach 0.70 and the F-16 at
+ * 1.38, against published figures of 2.04 and 2.05.
+ *
+ * The supersonic decay follows the slender-body result that wave drag falls
+ * with sqrt(M² - 1), normalised so the curve is continuous at the peak.
+ */
+export function waveDrag(cfg, mach) {
+  const mdd = cfg.mdd
+  if (mach <= mdd) return 0
+  const PEAK = 1.10
+  if (mach < PEAK) {
+    const x = (mach - mdd) / (PEAK - mdd)
+    return cfg.waveDrag * x * x * (3 - 2 * x)          // smooth rise to the peak
+  }
+  const ref = Math.sqrt(PEAK * PEAK - 1)
+  return cfg.waveDrag * Math.max(0.16, ref / Math.sqrt(Math.max(mach * mach - 1, ref * ref)))
+}
+
 /** The speed of sound at an altitude, ISA. Mach matters once a type can reach it. */
 export function speedOfSound(altM) {
   const T = altM < 11000 ? 288.15 - 0.0065 * altM : 216.65
@@ -89,7 +115,13 @@ export function makeConfig(spec) {
   const AR = (b * b) / S
   const c = S / b
   const mass = spec.mass || 1650 * spec.len
-  const dry = spec.thrust || 242000 * (spec.len / 39.47)
+  /* PER ENGINE, times the number of them. The table used to mix the two
+     conventions — a total for the airliners and a per-engine figure for the
+     types added later — and the model applied whatever it found once along the
+     nose. Concorde therefore flew on one Olympus instead of four and could not
+     reach Mach 0.71; the Gulfstream flew on one engine of two. */
+  const nEng = spec.engines || 1
+  const dry = (spec.thrust || 121400) * nEng
   /* Gear stiffness is sized from the STANCE, not from a constant. At a fixed
      `mass * 13` the static squat came out at 25 cm for everything, which is
      seven per cent of a 737's leg and a quarter of a Cessna's — and a quarter
@@ -117,7 +149,15 @@ export function makeConfig(spec) {
     maxThrust: dry,
     /* Reheat is a second published figure, not a multiplier. The Olympus 593
        gives 139.4 kN dry and 169.2 kN lit; the F110 gives 76.3 and 131. */
-    abThrust: spec.thrustAB || 0,
+    abThrust: (spec.thrustAB || 0) * nEng,
+    nEng,
+    /* Transonic. `mdd` is where the drag rise starts, `waveDrag` is how big the
+       peak is, and `machInlet` is where the intake stops being able to feed the
+       engine — which on a fixed normal-shock intake like the F-16's is the real
+       reason the aeroplane has a top speed at all. */
+    mdd: spec.mdd || 0.78,
+    waveDrag: spec.waveDrag != null ? spec.waveDrag : 0.075,
+    machInlet: spec.machInlet || 1.0,
     engine, spoolUp, spoolDown,
     // A fighter's gear is up in five seconds; an airliner's takes ten.
     gearRate: spec.len < 20 ? 0.5 : spec.len > 55 ? 0.20 : 0.28,
@@ -294,10 +334,26 @@ export class Aircraft {
     // would otherwise have to, which is why a turbojet gains thrust with speed
     // where a big fan does not.
     const mach = V / speedOfSound(Math.max(this.pos.y, 0))
+    /* A high-bypass fan works the other way round: most of its thrust comes
+       from accelerating a large mass of air by a little, so as the aeroplane
+       speeds up the air is already arriving fast and the fan adds less to it.
+       A CFM56 makes about 121 kN standing still and about 24 at cruise, and
+       only half of that fall is density. Without this the take-off roll came
+       out at 717 m against a real 65-tonne 737's 1,300, and every airliner
+       cruised past its own Mmo. */
     const ram = cfg.engine === 'turbojet-reheat' ? 1 + 0.62 * clamp(mach, 0, 2.1)
       : cfg.engine === 'turbofan-ab' ? 1 + 0.30 * clamp(mach, 0, 1.8)
-        : 1
-    return T * dens * ram
+        : clamp(1 - 0.90 * mach + 0.42 * mach * mach, 0.28, 1)
+    /* Intake pressure recovery, which is what actually sets a top speed. An
+       F-16's intake is a fixed normal-shock duct and stops feeding the engine
+       somewhere past Mach 1.8 — that, not thrust, is why the published figure
+       is 2.05. Concorde's intake ramps move, which is why it could hold
+       recovery past Mach 2 and cruise there on dry power. Without this term an
+       aeroplane with reheat simply accelerates until the wave drag catches it,
+       which is nowhere near the right number. */
+    const over = Math.max(0, mach - cfg.machInlet)
+    const recovery = clamp(1 - 2.6 * over * over, 0.12, 1)
+    return T * dens * ram * recovery
   }
 
   /** Does this type have a burner at all? */
@@ -424,18 +480,8 @@ export class Aircraft {
     if (this.crashed) CL *= 0.12
     const CD0 = cfg.cd0 + flap.dCD + this.gearPos * 0.019 + this.spoilers * 0.055
     const kInd = 1 / (Math.PI * cfg.oswald * cfg.AR)
-    /* Wave drag. Below the drag-divergence Mach number there is none; through
-       the transonic it climbs steeply and then settles. Without it a supersonic
-       aeroplane simply accelerates for ever, and the one thing that makes
-       Concorde and the fighter interesting — that the sound barrier is a wall
-       you have to push through, and that reheat is what pushes you through it —
-       does not exist. */
     const mach = V / speedOfSound(Math.max(this.pos.y, 0))
-    const mdd = cfg.mmo > 1.2 ? 0.93 : 0.72
-    const wave = mach > mdd
-      ? 0.028 * Math.pow(clamp((mach - mdd) / 0.16, 0, 1), 2.2) *
-        (1 + 0.9 / Math.max(mach, 1)) : 0
-    const CD = CD0 + wave + kInd * CL * CL * ge
+    const CD = CD0 + waveDrag(cfg, mach) + kInd * CL * CL * ge
     const CY = -0.90 * this.beta
 
     this.mach = mach
@@ -505,8 +551,29 @@ export class Aircraft {
       this.q = qnorm(qmul(this.q, dq))
     }
 
+    /* --- Impact ------------------------------------------------------------
+       Two ways to hit something that is not a runway, and until now neither of
+       them did anything: the aeroplane was quietly lifted back out of the
+       hillside it had flown into, and the city was scenery you passed through.
+
+       A building is checked against the SAME box list that draws the skyline,
+       with the span as the radius, because a wingtip is what actually catches
+       a tower. Terrain is a crash when the aeroplane arrives on it away from
+       pavement with real speed — which is CFIT, and is what flying into the
+       Santa Cruz mountains at 250 knots should be. */
+    this.impact = null
+    if (!this.crashed) {
+      const top = obstacleAt(this.pos.x, this.pos.z, this.cfg.b * 0.42)
+      if (top != null && this.pos.y - this.restHeight * 0.35 < top && this.tas > 18) {
+        this.impact = 'obstacle'
+      } else if (this.pos.y - ground < this.restHeight * 0.55 && this.tas > 40 &&
+                 !onPavement(this.pos.x, this.pos.z, 60)) {
+        this.impact = 'terrain'
+      }
+    }
+
     // Never let the aeroplane end up under the terrain, whatever the forces did.
-    const floor = elevation(this.pos.x, this.pos.z) + 0.3
+    const floor = ground + 0.3
     if (this.pos.y < floor) {
       this.pos.y = floor
       if (this.vel.y < 0) this.vel.y = 0
@@ -570,6 +637,10 @@ export class Aircraft {
        gives about four degrees a second, so a flare is a flare. */
     if (this.assist) {
       Mpitch -= this.omega.x * cfg.Ix * (this.onGround ? 1.4 : 3.2)
+      /* Roll damping on the ground. An aeroplane sitting on three legs is
+         enormously damped in roll by the legs themselves, and without a term
+         for it any disturbance on the runway rings rather than settling. */
+      if (this.onGround) Mroll -= (-this.omega.z) * cfg.Iz * 2.4
     }
     if (this.assist && !this.onGround) {
       Mroll -= (-this.omega.z) * cfg.Iz * 1.25
@@ -658,13 +729,20 @@ export class Aircraft {
       const vF = vdot(vPoint, fwd), vS = vdot(vPoint, side)
       // A skid scrapes; it does not roll. That drag is the cost of a tailstrike.
       const muRoll = c.tail ? 0.62 : 0.02 + this.brakes * 0.55 + (this.parkingBrake ? 0.9 : 0)
-      const muSide = c.tail ? 0.62 : 0.85
+      /* Side grip. At 0.85 with a viscous term stiff enough to saturate it at
+         a metre a second of slip, every wheel developed 0.85 g sideways the
+         instant the aeroplane was not pointing exactly where it was going —
+         and 0.85 g through a contact patch three metres below the centre of
+         gravity is a rolling moment that tips the aeroplane over. A tyre on
+         dry concrete corners at about 0.55, and a taxiing aeroplane is nowhere
+         near even that. */
+      const muSide = c.tail ? 0.62 : 0.55
       if (c.tail) this.tailStrike = true
 
       // Viscous first, then clamped to the friction circle — a pure Coulomb
       // model chatters at a stop, a pure viscous one never stops at all.
       let fF = clamp(-vF * cfg.mass * 0.9, -muRoll * N, muRoll * N)
-      let fS = clamp(-vS * cfg.mass * 2.2, -muSide * N, muSide * N)
+      let fS = clamp(-vS * cfg.mass * 0.9, -muSide * N, muSide * N)
       if (retract < 0.5) { fF *= 3; fS *= 1.5 }   // a belly does not roll
 
       Fc = vadd(Fc, vadd(vscale(fwd, fF), vscale(side, fS)))
@@ -700,6 +778,11 @@ export class Aircraft {
   flapUp() { this.setFlap(this.flap - 1) }
   flapDown() { this.setFlap(this.flap + 1) }
   get flapDeg() { return this.flaps[this.flap].deg }
+  /** What the detent is MARKED, which is not always a number of degrees. */
+  get flapLabel() {
+    const f = this.flaps[this.flap]
+    return f.label != null ? f.label : String(f.deg)
+  }
   get flapVfe() { return this.flaps[this.flap].vfe }
   toggleGear() { if (!this.onGround || this.gearPos < 1) this.gearDown = !this.gearDown; else this.gearDown = !this.gearDown }
   /**

@@ -16,7 +16,7 @@ import {
 import { Renderer, Mesh } from './gl.js'
 import {
   AIRPORTS, AP_LIST, LEGS, elevation, terrainPatch, terrainGrid, runwayMesh,
-  runwayLights, scenery, hdgVec, trees, papiUnits, papiState,
+  runwayLights, scenery, hdgVec, trees, papiUnits, papiState, CITY,
 } from './world.js'
 import { aircraftMesh, gearMesh, liveryFor, decalQuads, stanceHeight } from './model.js'
 import { Aircraft, Wind, setFlapSets } from './fdm.js'
@@ -176,7 +176,6 @@ export class Sim {
     this.lights = []
     this.props = []
     this.papis = {}
-    const CITY = { KSFO: [110, 5200], KSNS: [55, 2600], ZSPD: [120, 6000], ZSNJ: [70, 3400] }
     for (const key of AP_LIST) {
       const ap = AIRPORTS[key]
       this.runways.push(new Mesh(gl, runwayMesh(ap, false)))
@@ -574,6 +573,12 @@ export class Sim {
        arrive at a bank the wingtip reaches first, or arrive with the gear up.
        1,200 ft/min is roughly twice a firm airline landing and about where a
        737's gear design limit sits, so it is a fair line to draw. */
+    /* Hitting something that is not a runway. The flight model reports it from
+       inside the integrator, because the aeroplane can cross a tower block
+       between one frame and the next and a per-frame position test would miss
+       it entirely at 300 knots. */
+    if (!ac.crashed && ac.impact) this.crash(ac.impact)
+
     if (!ac.crashLatch && ac.onGround) {
       const bank = Math.abs(qToEuler(ac.q).bank)
       let reason = null
@@ -616,6 +621,9 @@ export class Sim {
     const detail = reason === 'hard' ? Math.round(ac.lastTouchdownFpm || 0) + ' ' + (this.L.fpm || 'ft/min')
       : reason === 'bank' ? Math.round(bankDeg) + '°'
         : Math.round(ac.tas * MS_TO_KT) + ' kt'
+    // An impact is worth more energy than an arrival: a wing against a tower
+    // at cruise speed is not a firm landing.
+    if (reason === 'obstacle' || reason === 'terrain') this.shake = Math.min(1.8, this.shake + 0.5)
     this.onEvent({ type: 'crash', reason, energy, detail })
   }
 
@@ -667,9 +675,12 @@ export class Sim {
       this.camQ = this.lookAt(p, ac.pos)
       this.fov = 52 * DEG
     } else {
-      // Tower: a fixed point beside the nearest airport, tracking the aircraft.
+      /* Tower: a fixed point beside the nearest airport, tracking the aircraft.
+         It used to consider only the two Californian fields, so on the Shanghai
+         to Nanjing legs the camera sat six hundred kilometres away looking at
+         nothing at all. Every field is a candidate now. */
       let best = AIRPORTS.KSFO, bd = Infinity
-      for (const k of ['KSFO', 'KSNS']) {
+      for (const k of AP_LIST) {
         const a = AIRPORTS[k], d = Math.hypot(a.x - ac.pos.x, a.z - ac.pos.z)
         if (d < bd) { bd = d; best = a }
       }

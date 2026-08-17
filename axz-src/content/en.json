@@ -240,14 +240,15 @@
   },
   "netmap": {
     "title": "Route Network",
-    "note": "Both routes are drawn to one scale. The San Francisco pair is 68 mi apart, the Shanghai pair 174 mi, and the lengths on the map are in that proportion. Only the two end airports are plotted; the waypoints between them are written out in the routings above.",
+    "note": "",
     "scaleLabel": "Scale",
     "scaleValue": "62 mi",
     "northLabel": "N",
     "selectTitle": "Pick a sector and it is marked on both the map and its progress strip",
     "showAll": "Show all",
     "selectedNote": "Selected sector",
-    "legAria": "Sector"
+    "legAria": "Sector",
+    "alt": "Route network chart, both routes drawn to one scale"
   },
   "board": {
     "note": "Four flight numbers, two bases. The clocks below run on local time at each base.",
@@ -261,7 +262,7 @@
     "status": "ON TIME",
     "statusNote": "This board has exactly one status. A virtual airline does not run late.",
     "clocksTitle": "Local time at each base",
-    "clockNote": "The clocks are converted using your device time zone and only start once the page is open. With scripts off this shows the time zone name instead.",
+    "clockNote": "",
     "bases": [
       {
         "icao": "KSFO",
@@ -311,16 +312,6 @@
         "url": "https://route.hkrscoc.com"
       },
       {
-        "name": "VATSIM",
-        "desc": "Online flying network, staffed by human controllers.",
-        "url": "https://www.vatsim.net"
-      },
-      {
-        "name": "IVAO",
-        "desc": "The other online flying network.",
-        "url": "https://www.ivao.aero"
-      },
-      {
         "name": "SimBrief",
         "desc": "Releases and fuel planning, and a great deal more serious than the dispatch desk here.",
         "url": "https://www.simbrief.com"
@@ -329,11 +320,21 @@
         "name": "Aviation Weather Center",
         "desc": "METARs and TAFs, from the US National Weather Service.",
         "url": "https://aviationweather.gov"
+      },
+      {
+        "name": "VATSIM",
+        "desc": "Online flying network, staffed by human controllers.",
+        "url": "https://www.vatsim.net"
+      },
+      {
+        "name": "IVAO",
+        "desc": "The other online flying network.",
+        "url": "https://www.ivao.aero"
       }
     ],
     "livery": {
       "title": "B-1717 Livery File",
-      "note": "The only collaboration livery in the fleet. This file follows the recorder's own rule: fill a field in if there is something to put there, and write None if there is not.",
+      "note": "The only collaboration livery in the fleet.",
       "rows": [
         {
           "k": "Registration",
@@ -358,7 +359,7 @@
       ],
       "photoLabel": "Livery photograph",
       "photoNone": "None",
-      "photoNote": "There is no photograph of this aircraft in the file, so the field is left empty."
+      "photoNote": ""
     }
   },
   "guestbook": {
@@ -778,7 +779,9 @@
     "crashReasons": {
       "hard": "Touched down too hard for the gear",
       "bank": "Banked too far at touchdown, wingtip first",
-      "gear": "Landed with the gear up"
+      "gear": "Landed with the gear up",
+      "obstacle": "Hit a building",
+      "terrain": "Flew into the ground"
     },
     "soundLabel": "Sound",
     "tipLabel": "Next time:",
@@ -786,7 +789,9 @@
     "crashTips": {
       "hard": "Start easing back at about 20 feet and add the back pressure gradually rather than all at once. Aim to have the sink rate under 200 ft/min before the wheels arrive; the dispatch desk only calls it the Runway Masseur under 60.",
       "bank": "In a crosswind, use the sideslip: rudder toward the centreline, aileron into the wind, and arrive with the nose down the runway and the wings close to level. The wind row in the flight data tells you which side it is coming from.",
-      "gear": "Press G on final to lower the gear. Both the flight data and the PFD show GEAR in green when it is down and locked; if it is not green, it is not down."
+      "gear": "Press G on final to lower the gear. Both the flight data and the PFD show GEAR in green when it is down and locked; if it is not green, it is not down.",
+      "obstacle": "The city is solid, not a backdrop. The towers in the middle of it stand higher than the approach altitude at either field, so going through town at low level means going round them or over them. The height readout is measured from the ground under you, not from the roofs.",
+      "terrain": "That is controlled flight into terrain. The ridge runs down the west side of the KSFO to KSNS route and reaches nine hundred metres, and it is easiest to hit at night or with your head down in the instruments. Hold your altitude until you are established, and do not go below a thousand feet before the PAPI is in sight."
     },
     "gyroscope": "Gyroscope",
     "gyroOn": "Gyroscope on. Hold the phone how you like, then press Recentre.",
@@ -848,7 +853,9 @@
     "weatherTitle2": "Setting the weather yourself",
     "weatherBody2": "Under the starting position are time of day, wind direction, wind speed and turbulence. These four change real quantities inside the simulator rather than a filter over the picture. Time moves the sun, so the shadows swing round with it, night is genuinely dark, and that is the point at which the runway lights start earning their place. Wind direction and speed go straight into the aerodynamics: a headwind changes the ground speed without touching the airspeed, and a crosswind you do not correct for will carry you off the centreline. Turbulence sets the gust amplitude, and on Severe you will be correcting the whole way down final. The wind still slows near the surface, so the crosswind in the flare is always a little less than the one you had on the approach.",
     "cockpitTitle": "The cockpit view",
-    "cockpitBody": "Press C for the cockpit view. There is now a glareshield, window posts and a panel with the flight display mounted in it rather than floating in the air. The eye height is worked out per type from the fuselage diameter and the length, so the flight deck of a 747 is a dozen metres above a Cessna and the horizon crosses the window frame differently when the two rotate. The frame is drawn rather than modelled, and it hides nothing you would have been able to see out of the real one anyway."
+    "cockpitBody": "Press C for the cockpit view. There is now a glareshield, window posts and a panel with the flight display mounted in it rather than floating in the air. The eye height is worked out per type from the fuselage diameter and the length, so the flight deck of a 747 is a dozen metres above a Cessna and the horizon crosses the window frame differently when the two rotate. The frame is drawn rather than modelled, and it hides nothing you would have been able to see out of the real one anyway.",
+    "runwaysTitle": "The runways",
+    "runwaysBody": "Each of the four fields now has the runways it really has rather than one of them. KSFO has the parallel 28L and 28R at their real 228 m spacing plus the crossing 01L and 01R; Salinas has 31 and 26 crossing each other; Pudong gets three of its four parallels; Lukou has 06 and the 07 that opened in 2020. That is not only a picture: a crosswind you cannot hold on 28R is straight down the runway on 01L, and two strips at the same airport ninety degrees apart make the choice a real one. The landing score and the PAPI still read the published runway."
   },
   "aprilfools": {
     "date": "April 1, 2026",

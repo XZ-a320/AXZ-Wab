@@ -33,6 +33,17 @@ export function liveryFor(reg) {
   return { accent: CYAN, belly: [0.28, 0.30, 0.33] }
 }
 
+/* WINDING. Every closed surface in this file — fuselage tubes, nacelle
+   barrels, the exhaust cone, the light single's boxy body — is built as rings
+   of vertices from nose to tail, and each quad must be wound COUNTER-CLOCKWISE
+   SEEN FROM OUTSIDE or `cullFace(BACK)` throws away the skin you can see and
+   keeps the one you cannot. Written the natural way round, `a[i], a[j], b[j],
+   b[i]` across a forward ring and an aft ring, the normal comes out pointing
+   into the tube: every aeroplane in the roster was inside-out, and looking at
+   one from outside you saw straight through the near side of the fuselage to
+   the inside of the far side. The rule is to step ALONG the body first —
+   `a[i], b[i], b[j], a[j]` — and the caps follow from it.                    */
+
 /* --- Stance ---------------------------------------------------------------
    How high the centre of gravity sits above the ground with the aeroplane
    standing on its own gear. This used to be a multiple of the fuselage radius
@@ -133,14 +144,14 @@ function jetMesh(spec, livery) {
       const j = (i + 1) % SIDES
       const up = Math.cos((i / SIDES) * Math.PI * 2 + Math.PI / SIDES)
       const col = up > 0.35 ? BONE : up < -0.55 ? livery.belly : (up > -0.1 ? shade(accent, 1.0) : BONE)
-      B.quad(a[i], a[j], b[j], b[i], col)
+      B.quad(a[i], b[i], b[j], a[j], col)
     }
   }
   // Cap the nose and the tail cone so the tube is closed.
   const n0 = rings[0], nLast = rings[rings.length - 1]
   for (let i = 1; i < SIDES - 1; i++) {
-    B.tri(n0[0], n0[i + 1], n0[i], BONE)
-    B.tri(nLast[0], nLast[i], nLast[i + 1], livery.belly)
+    B.tri(n0[0], n0[i], n0[i + 1], BONE)
+    B.tri(nLast[0], nLast[i + 1], nLast[i], livery.belly)
   }
 
   /* Upper deck. A stretched fairing along the top of the forward fuselage,
@@ -253,7 +264,7 @@ function jetMesh(spec, livery) {
     }
     const a = cyl(pz, nr * 0.92), b = cyl(pz + nl * 0.25, nr), c = cyl(pz + nl, nr * 0.80)
     for (const [p, q, col] of [[a, b, shade(GREY, 1.0)], [b, c, shade(GREY, 0.88)]]) {
-      for (let i = 0; i < 8; i++) B.quad(p[i], p[(i + 1) % 8], q[(i + 1) % 8], q[i], col)
+      for (let i = 0; i < 8; i++) B.quad(p[i], q[i], q[(i + 1) % 8], p[(i + 1) % 8], col)
     }
     // Intake face and the fan behind it.
     for (let i = 1; i < 7; i++) B.tri(a[0], a[i], a[i + 1], INK)
@@ -341,7 +352,13 @@ export function gearMesh(spec, stance) {
   const wide = spec.shape === 'fighter'
   const mainZ = L * (wide ? 0.075 : 0.045)
   const noseFwd = noseZ + L * (wide ? 0.30 : 0.135)
-  const track = r * (spec.shape === 'delta' ? 1.55 : wide ? 1.15 : 0.98)
+  /* HALF the published main-gear track. This was a multiple of the fuselage
+     radius, which came out at about half the real figure on every type: a
+     737's mains are 5.72 m apart and it was standing on 3.7. The ratio of
+     half-track to centre-of-gravity height IS the roll-over threshold, so at
+     that width the aeroplanes tipped over from a small steering input on the
+     ground and a crosswind landing was unflyable. */
+  const track = (spec.track || spec.dia * 1.5) / 2
 
   /* The tail skid. Not landing gear — it never retracts, and it is what stops
      a rotation instead of the flight model politely declining to keep pitching.
@@ -553,10 +570,10 @@ function lightMesh(spec, livery) {
       { x: -w1, y: yo1 - h1, z: z1 }, { x: w1, y: yo1 - h1, z: z1 },
       { x: w1, y: yo1 + h1, z: z1 }, { x: -w1, y: yo1 + h1, z: z1 },
     ]
-    B.quad(A[3], A[2], Bv[2], Bv[3], col)                       // roof
-    B.quad(Bv[0], Bv[1], A[1], A[0], shade(col, 0.72))          // floor
-    B.quad(A[1], A[2], Bv[2], Bv[1], shade(col, 0.92))          // right
-    B.quad(Bv[0], Bv[3], A[3], A[0], shade(col, 0.86))          // left
+    B.quad(A[3], Bv[3], Bv[2], A[2], col)                       // roof
+    B.quad(Bv[0], A[0], A[1], Bv[1], shade(col, 0.72))          // floor
+    B.quad(A[1], Bv[1], Bv[2], A[2], shade(col, 0.92))          // right
+    B.quad(Bv[0], A[0], A[3], Bv[3], shade(col, 0.86))          // left
     return Bv
   }
   const w = r * 0.92, h = r * 1.05
@@ -697,13 +714,13 @@ function deltaMesh(spec, livery) {
       // A cheatline this narrow is most of the paint scheme on a Concorde.
       const col = up > 0.30 ? skin : up < -0.55 ? livery.belly
         : (up > -0.05 ? accent : skin)
-      B.quad(a[i], a[j], b[j], b[i], col)
+      B.quad(a[i], b[i], b[j], a[j], col)
     }
   }
   const n0 = rings[0], nL = rings[rings.length - 1]
   for (let i = 1; i < SIDES - 1; i++) {
-    B.tri(n0[0], n0[i + 1], n0[i], skin)
-    B.tri(nL[0], nL[i], nL[i + 1], livery.belly)
+    B.tri(n0[0], n0[i], n0[i + 1], skin)
+    B.tri(nL[0], nL[i + 1], nL[i], livery.belly)
   }
 
   // The visor and the flight-deck glass, right at the top of the needle.
@@ -843,13 +860,13 @@ function bizjetMesh(spec, livery) {
       const up = Math.cos((i / SIDES) * Math.PI * 2 + Math.PI / SIDES)
       const col = up > 0.30 ? skin : up < -0.50 ? livery.belly
         : (up > 0.02 ? shade(accent, 1.0) : skin)
-      B.quad(a[i], a[j], b[j], b[i], col)
+      B.quad(a[i], b[i], b[j], a[j], col)
     }
   }
   const n0 = rings[0], nL = rings[rings.length - 1]
   for (let i = 1; i < SIDES - 1; i++) {
-    B.tri(n0[0], n0[i + 1], n0[i], skin)
-    B.tri(nL[0], nL[i], nL[i + 1], livery.belly)
+    B.tri(n0[0], n0[i], n0[i + 1], skin)
+    B.tri(nL[0], nL[i + 1], nL[i], livery.belly)
   }
   for (const sgn of [-1, 1]) {
     B.quad2(
@@ -911,7 +928,7 @@ function bizjetMesh(spec, livery) {
     }
     const a = cyl(ez, nr * 0.90), b = cyl(ez + nl * 0.22, nr), c = cyl(ez + nl, nr * 0.78)
     for (const [p, q, col] of [[a, b, shade(GREY, 1.0)], [b, c, shade(GREY, 0.88)]]) {
-      for (let i = 0; i < 8; i++) B.quad(p[i], p[(i + 1) % 8], q[(i + 1) % 8], q[i], col)
+      for (let i = 0; i < 8; i++) B.quad(p[i], q[i], q[(i + 1) % 8], p[(i + 1) % 8], col)
     }
     for (let i = 1; i < 7; i++) B.tri(a[0], a[i], a[i + 1], INK)
     for (let i = 1; i < 7; i++) B.tri(c[0], c[i + 1], c[i], shade(INK, 1.6))
@@ -987,17 +1004,17 @@ function fighterMesh(spec, livery) {
       const j = (i + 1) % SIDES
       const up = Math.cos((i / SIDES) * Math.PI * 2 + Math.PI / SIDES)
       // Two-tone tactical grey: darker on top, lighter underneath, no stripe.
-      B.quad(a[i], a[j], b[j], b[i], up > 0.2 ? dark : up < -0.4 ? shade(skin, 1.12) : skin)
+      B.quad(a[i], b[i], b[j], a[j], up > 0.2 ? dark : up < -0.4 ? shade(skin, 1.12) : skin)
     }
   }
   const n0 = rings[0]
-  for (let i = 1; i < SIDES - 1; i++) B.tri(n0[0], n0[i + 1], n0[i], shade(dark, 0.8))
+  for (let i = 1; i < SIDES - 1; i++) B.tri(n0[0], n0[i], n0[i + 1], shade(dark, 0.8))
   // Exhaust nozzle: a short dark cone, open at the back.
   const nL2 = rings[rings.length - 1]
   const nozz = ring(tailZ + L * 0.035, r * 0.56, r * 0.56)
   for (let i = 0; i < SIDES; i++) {
     const j = (i + 1) % SIDES
-    B.quad(nL2[i], nL2[j], nozz[j], nozz[i], shade(GREY, 0.5))
+    B.quad(nL2[i], nozz[i], nozz[j], nL2[j], shade(GREY, 0.5))
   }
   for (let i = 1; i < SIDES - 1; i++) B.tri(nozz[0], nozz[i], nozz[i + 1], [0.05, 0.05, 0.06])
 

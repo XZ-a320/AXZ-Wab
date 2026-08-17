@@ -20,16 +20,38 @@ import { clamp, DEG } from './math.js'
    airports' real coordinates, at the distance THIS SITE publishes (110 km) —
    the same decision the 2D network map makes, and for the same reason: the
    drawing must not contradict the prose beside it. */
+/* Each field now has the runways it really has, not one of them. The FIRST in
+   the list is the one the site publishes and the one the landing score is
+   measured on; the rest are the real parallel and crossing strips, placed by
+   their published length, width and offset from the field centre. That is
+   what makes an approach a choice rather than a corridor — a crosswind that
+   is impossible on 28R is a gift on 01L, and the two are 90 degrees apart at
+   the same airport.
+
+   `offset` is metres to the right of the field centre, measured across the
+   runway's own heading; `along` is metres up its own centreline. */
 export const AIRPORTS = {
   KSFO: {
     icao: 'KSFO', name: 'San Francisco', elev: 4,
     x: 0, z: 0,
-    rwy: { id: '28R', hdg: 284, len: 3618, width: 61 },
+    rwys: [
+      { id: '28R', hdg: 284, len: 3618, width: 61, offset: 0, along: 0 },
+      // The parallel. KSFO's 28s are 228 m apart, which is why they can be
+      // used together and why the pair is the airport's whole capacity story.
+      { id: '28L', hdg: 284, len: 3618, width: 61, offset: 228, along: 0 },
+      // And the crossing pair, 7,500 ft, which is the crosswind runway.
+      { id: '01L', hdg: 14, len: 2286, width: 61, offset: -160, along: -300 },
+      { id: '01R', hdg: 14, len: 2286, width: 61, offset: 60, along: -300 },
+    ],
   },
   KSNS: {
     icao: 'KSNS', name: 'Salinas', elev: 26,
     x: Math.sin(147.3 * DEG) * 110000, z: -Math.cos(147.3 * DEG) * 110000,
-    rwy: { id: '31', hdg: 310, len: 1829, width: 46 },
+    rwys: [
+      { id: '31', hdg: 310, len: 1829, width: 46, offset: 0, along: 0 },
+      // Salinas' other strip, 4,825 ft, crossing the first.
+      { id: '26', hdg: 264, len: 1471, width: 46, offset: 0, along: 240 },
+    ],
   },
   /* The China pair. The site publishes two routes and only one of them was
      flyable, which made half the airline decorative. Same construction: the
@@ -39,18 +61,93 @@ export const AIRPORTS = {
   ZSPD: {
     icao: 'ZSPD', name: 'Shanghai Pudong', elev: 4,
     x: 620000, z: 210000,
-    rwy: { id: '35L', hdg: 350, len: 4000, width: 60 },
+    rwys: [
+      { id: '35L', hdg: 350, len: 4000, width: 60, offset: 0, along: 0 },
+      // Pudong runs four parallels. Two more of them, at their real spacing.
+      { id: '35R', hdg: 350, len: 3800, width: 60, offset: 440, along: -120 },
+      { id: '34L', hdg: 344, len: 3800, width: 60, offset: -1600, along: 200 },
+    ],
   },
   ZSNJ: {
     icao: 'ZSNJ', name: 'Nanjing Lukou', elev: 15,
     x: 620000 + Math.sin(283.4 * DEG) * 280000,
     z: 210000 - Math.cos(283.4 * DEG) * 280000,
-    rwy: { id: '06', hdg: 60, len: 3600, width: 45 },
+    rwys: [
+      { id: '06', hdg: 60, len: 3600, width: 45, offset: 0, along: 0 },
+      // Lukou's second runway, which opened in 2020.
+      { id: '07', hdg: 66, len: 3600, width: 45, offset: 1100, along: -200 },
+    ],
   },
 }
 
-/** Every airport, in the order the route list uses. */
-export const AP_LIST = ['KSFO', 'KSNS', 'ZSPD', 'ZSNJ']
+
+/** Where a runway's centre sits in world coordinates. */
+export function rwyCentre(ap, r) {
+  const d = hdgVec(r.hdg)
+  const rgt = { x: -d.z, z: d.x }
+  return {
+    x: ap.x + d.x * r.along + rgt.x * r.offset,
+    z: ap.z + d.z * r.along + rgt.z * r.offset,
+  }
+}
+
+/* --- The neighbours -------------------------------------------------------
+   The four fields above are the ones the site publishes and the only ones the
+   airline flies to. These are the airports that are really there, placed on
+   their true bearing and distance from the published field nearest them, with
+   the runways they really have.
+
+   They are here because a landscape with two airports in it is a corridor. A
+   diversion needs somewhere to divert TO, a short field is a different problem
+   from a long one, and 5,000 ft of runway at Half Moon Bay with the sea at one
+   end is a landing challenge that KSFO's 11,870 ft cannot pose.               */
+const NEAR = [
+  // California, from KSFO.
+  ['KOAK', 'Oakland', 'KSFO', 49.9, 17727, 3, [
+    ['12', 122, 3048, 46, 0, 0], ['28R', 284, 1895, 46, -700, 300]]],
+  ['KSJC', 'San Jose', 'KSFO', 126.0, 48566, 19, [
+    ['12L', 122, 3353, 46, -110, 0], ['12R', 122, 3353, 46, 110, 0]]],
+  ['KHAF', 'Half Moon Bay', 'KSFO', 223.3, 16128, 20, [
+    ['12', 122, 1525, 46, 0, 0]]],
+  ['KMRY', 'Monterey', 'KSNS', 232.0, 27500, 78, [
+    ['10R', 100, 2164, 46, 0, 0], ['10L', 100, 1036, 30, 300, -200]]],
+  // The Yangtze delta, from ZSPD.
+  ['ZSSS', 'Shanghai Hongqiao', 'ZSPD', 277.7, 45068, 3, [
+    ['18L', 184, 3400, 60, -180, 0], ['18R', 184, 3300, 60, 180, -150]]],
+  ['ZSWX', 'Wuxi Shuofang', 'ZSPD', 285.0, 128000, 5, [
+    ['03', 30, 3200, 45, 0, 0]]],
+]
+for (const [icao, name, from, brg, dist, elev, rwys] of NEAR) {
+  const base = AIRPORTS[from]
+  AIRPORTS[icao] = {
+    icao, name, elev,
+    x: base.x + Math.sin(brg * DEG) * dist,
+    z: base.z - Math.cos(brg * DEG) * dist,
+    rwys: rwys.map(([id, hdg, len, width, offset, along]) =>
+      ({ id, hdg, len, width, offset, along })),
+  }
+}
+
+/* Every airport keeps a single `rwy` pointing at its published strip. The
+   scenarios, the PAPI, the landing score and the navigation all mean THAT
+   runway when they say "the runway", and none of them had to learn about the
+   others. */
+for (const key of Object.keys(AIRPORTS)) {
+  const ap = AIRPORTS[key]
+  ap.rwy = ap.rwys[0]
+  // How far the made surface reaches, for the terrain flattening below.
+  ap.spread = Math.max(...ap.rwys.map(r =>
+    Math.hypot(r.len / 2 + Math.abs(r.along), Math.abs(r.offset))))
+  // Which way the town lies from the field. Hashed off the code so it is
+  // stable, and never straight off either end of the main runway.
+  const hh = [...key].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7)
+  ap.townBrg = (ap.rwy.hdg + 90 + (hh % 120) - 60) * DEG
+}
+
+/** Every airport, in the order the route list uses, then the neighbours. */
+export const AP_LIST = ['KSFO', 'KSNS', 'ZSPD', 'ZSNJ', ...NEAR.map(n => n[0])]
+/** The four the airline serves. Scenarios and scoring only ever mean these. */
+export const AP_PUBLISHED = ['KSFO', 'KSNS', 'ZSPD', 'ZSNJ']
 
 /* The four flights the site publishes, as flyable legs. */
 export const LEGS = {
@@ -103,10 +200,19 @@ const MONTEREY = { x: 34000, z: 104000, r: 21000 }  // Monterey Bay, SW of Salin
 // lake between the two fields.
 const EASTSEA = { x: 700000, z: 200000, r: 90000 }  // the sea, east of Pudong
 const TAIHU = { x: 470000, z: 150000, r: 32000 }    // Lake Tai, on the route
+/* The Pacific. Its absence was conspicuous: the whole Californian half of this
+   world is a peninsula, Half Moon Bay is ON the coast, and there was no coast.
+   A very large circle centred far to the west is a straight shoreline by the
+   time it reaches the route, which is what it should look like. */
+const PACIFIC = { x: -210000, z: 70000, r: 205000 }
+// San Pablo Bay, north of the one already here, so the bay system reads.
+const SANPABLO = { x: 22000, z: -46000, r: 13000 }
+// The Yangtze estuary itself, which is what ZSPD sits beside.
+const YANGTZE = { x: 596000, z: 96000, r: 46000 }
 
 function waterField(x, z) {
   let w = 0
-  for (const b of [BAY, MONTEREY, EASTSEA, TAIHU]) {
+  for (const b of [BAY, MONTEREY, EASTSEA, TAIHU, PACIFIC, SANPABLO, YANGTZE]) {
     const d = Math.hypot(x - b.x, z - b.z)
     // Wobble the radius so the coast is not a compass circle.
     const wob = (fbm(x * 0.00004, z * 0.00004, 2) - 0.5) * b.r * 0.5
@@ -173,7 +279,9 @@ export function elevation(x, z) {
 
   for (const key of AP_LIST) {
     const ap = AIRPORTS[key]
-    const m = airportMask(x, z, ap, ap.rwy.len * 0.62, 1700)
+    // The plateau has to cover every strip on the field, not just the one the
+    // site publishes, or the crossing runway is draped over a hillside.
+    const m = airportMask(x, z, ap, ap.spread * 1.10, 1700)
     if (m > 0) h = h * (1 - m) + ap.elev * m
   }
   return h
@@ -303,19 +411,25 @@ export function terrainGrid(cx, cz, size, res, col) {
  */
 export function runwayMesh(ap, marks = false) {
   const pos = [], normal = [], color = []
-  const R = ap.rwy
+  for (const R of ap.rwys) buildStrip(ap, R, marks, pos, normal, color)
+  return { pos, normal, color }
+}
+
+function buildStrip(ap, R, marks, pos, normal, color) {
   const dir = hdgVec(R.hdg)
   const rgt = { x: -dir.z, y: 0, z: dir.x }
   const y = ap.elev + 0.06
   const half = R.width / 2
   const asphalt = [0.13, 0.13, 0.14]
   const paint = [0.88, 0.87, 0.82]
+  const taxiway = [0.19, 0.19, 0.20]
+  const c = rwyCentre(ap, R)
 
-  // Threshold sits at -len/2 so the airport's coordinate IS the midpoint.
+  // Threshold sits at -len/2 so the runway's own centre IS the midpoint.
   const at = (u, v, yy = y) => ({
-    x: ap.x + dir.x * u + rgt.x * v,
+    x: c.x + dir.x * u + rgt.x * v,
     y: yy,
-    z: ap.z + dir.z * u + rgt.z * v,
+    z: c.z + dir.z * u + rgt.z * v,
   })
   /* Wound counter-clockwise SEEN FROM ABOVE, which is the reverse of the order
      the corners are written in. This is the same trap the terrain builder
@@ -337,7 +451,18 @@ export function runwayMesh(ap, marks = false) {
     const shoulder = [0.20, 0.21, 0.18]
     quad(at(u0, -half - 26), at(u1, -half - 26), at(u1, -half), at(u0, -half), shoulder)
     quad(at(u0, half), at(u1, half), at(u1, half + 26), at(u0, half + 26), shoulder)
-    return { pos, normal, color }
+
+    /* A parallel taxiway, and the connectors on to it. An airport with a
+       runway and nothing else reads as a strip in a field; the taxiway is the
+       single cheapest thing that makes it read as an airport, and it is where
+       you actually are after you land. */
+    const tw = 23, tv = half + 92
+    quad(at(u0 + 60, tv - tw), at(u1 - 60, tv - tw), at(u1 - 60, tv + tw), at(u0 + 60, tv + tw), taxiway)
+    for (let k = 0; k <= 4; k++) {
+      const u = u0 + 90 + (R.len - 180) * (k / 4)
+      quad(at(u - 22, half), at(u + 22, half), at(u + 22, tv - tw), at(u - 22, tv - tw), taxiway)
+    }
+    return
   }
 
   // Paint sits a hair above the asphalt and is drawn at a deeper offset again.
@@ -358,8 +483,28 @@ export function runwayMesh(ap, marks = false) {
     stripe(base + sign * 300, base + sign * 345, -9, -4)
     stripe(base + sign * 300, base + sign * 345, 4, 9)
   }
+}
 
-  return { pos, normal, color }
+/**
+ * Is this point on a made surface — any runway or its shoulders?
+ * Flying into a field is a crash; arriving on concrete is a landing, and the
+ * difference has to be answerable from a coordinate.
+ */
+export function onPavement(x, z, margin = 0) {
+  for (const key of AP_LIST) {
+    const ap = AIRPORTS[key]
+    if (Math.hypot(x - ap.x, z - ap.z) > ap.spread + 400) continue
+    for (const R of ap.rwys) {
+      const d = hdgVec(R.hdg)
+      const c = rwyCentre(ap, R)
+      const dx = x - c.x, dz = z - c.z
+      const along = dx * d.x + dz * d.z
+      const across = dx * -d.z + dz * d.x
+      if (Math.abs(along) <= R.len / 2 + margin &&
+          Math.abs(across) <= R.width / 2 + 26 + margin) return true
+    }
+  }
+  return false
 }
 
 /* --- PAPI -----------------------------------------------------------------
@@ -410,12 +555,17 @@ export function papiState(papi, p) {
 /** Runway edge and threshold lights, drawn as lines. */
 export function runwayLights(ap) {
   const pos = [], color = []
-  const R = ap.rwy
+  for (const R of ap.rwys) lightStrip(ap, R, pos, color)
+  return { pos, color }
+}
+
+function lightStrip(ap, R, pos, color) {
   const dir = hdgVec(R.hdg)
   const rgt = { x: -dir.z, y: 0, z: dir.x }
   const half = R.width / 2
   const white = [1, 0.96, 0.85], green = [0.2, 1, 0.45], red = [1, 0.28, 0.24]
-  const at = (u, v, yy) => ({ x: ap.x + dir.x * u + rgt.x * v, y: yy, z: ap.z + dir.z * u + rgt.z * v })
+  const c = rwyCentre(ap, R)
+  const at = (u, v, yy) => ({ x: c.x + dir.x * u + rgt.x * v, y: yy, z: c.z + dir.z * u + rgt.z * v })
   const lamp = (u, v, col, h = 0.9) => {
     const a = at(u, v, ap.elev + 0.05), b = at(u, v, ap.elev + h)
     pos.push(a.x, a.y, a.z, b.x, b.y, b.z)
@@ -426,7 +576,6 @@ export function runwayLights(ap) {
   for (let v = -half; v <= half; v += 6) { lamp(u0, v, green, 0.6); lamp(u1, v, red, 0.6) }
   // Approach lights: a lead-in bar out from the landing threshold.
   for (let u = u0 - 90; u > u0 - 900; u -= 90) { lamp(u, 0, white, 1.4); lamp(u, -6, white, 1.1); lamp(u, 6, white, 1.1) }
-  return { pos, color }
 }
 
 /* --- Vegetation -----------------------------------------------------------
@@ -478,6 +627,130 @@ export function trees(camX, camZ, range, out) {
    Blocks, not buildings. They exist to give height reference and parallax on
    approach; a city that tried to look like a city would be a texture budget
    this renderer does not have and a look this site would not want.          */
+/**
+ * The city, as a list of boxes.
+ *
+ * Generated from the same hash as the geometry and cached, because it is now
+ * two things at once: what you see, and what you hit. A skyline that is only
+ * a picture is a skyline you fly through, and an aeroplane that flies through
+ * a tower block at 300 knots is not a simulator.
+ *
+ * Downtown is a real cluster rather than a uniform scatter: heights follow the
+ * distance from the field, so there is a core worth threading and a suburb
+ * worth being low over.
+ */
+const boxCache = new Map()
+export function cityBoxes(ap, count = 90, spread = 4200) {
+  const key = `${ap.icao}:${count}:${spread}`
+  if (boxCache.has(key)) return boxCache.get(key)
+  const out = []
+  /* Downtown is a PLACE, offset from the field on its own bearing, the way a
+     city is near an airport rather than around it. Scattering height by
+     distance from the runway instead gave a uniform carpet of low blocks with
+     nothing worth flying round: the tallest thing anywhere was 37 m. */
+  const town = {
+    x: ap.x + Math.cos(ap.townBrg) * spread * 0.52,
+    z: ap.z + Math.sin(ap.townBrg) * spread * 0.52,
+  }
+  for (let i = 0; i < count; i++) {
+    // Hashed, not random: the skyline is the same on every reload.
+    const a = hash2(i * 7 + 11, i * 13 + 5) * Math.PI * 2
+    const rr = (0.10 + Math.pow(hash2(i * 3 + 1, i * 17), 0.7) * 0.92) * spread
+    const x = town.x + Math.cos(a) * rr, z = town.z + Math.sin(a) * rr
+    // Never build on a runway, on its shoulders, or under anybody's approach.
+    if (onPavement(x, z, 260)) continue
+    if (inApproachPath(x, z)) continue
+    const g = elevation(x, z)
+    if (g < 1) continue
+    /* Height falls off from the centre of TOWN. A cluster of towers with low
+       blocks around it is a city; the same buildings spread evenly are a
+       carpet. The core is worth threading and the suburbs are worth being low
+       over, and both of those are now decisions the pilot can make. */
+    const core = clamp(1 - rr / (spread * 0.34), 0, 1)
+    const tall = Math.pow(hash2(i * 5, i * 23), 1.5)
+    const h = 12 + tall * (22 + core * core * 260)
+    const w = 16 + hash2(i * 31, i * 3) * (16 + core * 26)
+    const d = 16 + hash2(i * 11, i * 41) * (16 + core * 26)
+    const tone = 0.28 + hash2(i * 19, i * 7) * 0.18
+    out.push({ x, y: g, z, w, h, d, tone })
+  }
+
+  /* And a handful of real towers in the middle of it. Left to the hash the
+     tallest thing at any field came out at 61 m, which is a business park:
+     there was nothing in the landscape that a pilot had to go round. These
+     are deterministic, they are the only buildings tall enough to matter, and
+     they are what makes the low pass through town a decision. */
+  const TOWERS = [[0, 0, 232], [180, 120, 196], [-150, 90, 174], [60, -190, 158], [-90, -140, 142]]
+  for (const [ox, oz, hh] of TOWERS) {
+    const x = town.x + ox, z = town.z + oz
+    if (onPavement(x, z, 260) || inApproachPath(x, z)) continue
+    const g = elevation(x, z)
+    if (g < 1) continue
+    // Scaled to the size of the town, so Half Moon Bay does not get a skyline.
+    const s = clamp(spread / 6200, 0.30, 1)
+    out.push({ x, y: g, z, w: 34 * s + 14, h: hh * s, d: 34 * s + 14, tone: 0.33 })
+  }
+  boxCache.set(key, out)
+  return out
+}
+
+/**
+ * Is this point under somebody's final approach?
+ *
+ * A protected wedge out from each runway end, widening with distance, which is
+ * what a real obstacle-limitation surface is for. Without it the denser city
+ * put tower blocks under the six-mile final at KSFO, and an approach flown
+ * hands-off — which is to say the approach scenario, on every start — ended in
+ * a building.
+ */
+export function inApproachPath(x, z) {
+  for (const key of AP_LIST) {
+    const ap = AIRPORTS[key]
+    if (Math.hypot(x - ap.x, z - ap.z) > 15000) continue
+    for (const R of ap.rwys) {
+      const d = hdgVec(R.hdg)
+      const c = rwyCentre(ap, R)
+      const dx = x - c.x, dz = z - c.z
+      const along = dx * d.x + dz * d.z
+      const across = Math.abs(dx * -d.z + dz * d.x)
+      // Both ends: an aeroplane can arrive from either direction.
+      const out = Math.abs(along) - R.len / 2
+      if (out < 0) continue
+      if (out < 13000 && across < 260 + out * 0.10) return true
+    }
+  }
+  return false
+}
+
+/**
+ * The tallest thing standing at a point, in metres above sea level, or null.
+ * Queried by the flight model, so it walks only the boxes that could contain
+ * the point rather than the whole skyline.
+ */
+export function obstacleAt(x, z, pad = 0) {
+  for (const key of AP_LIST) {
+    const ap = AIRPORTS[key]
+    const c = CITY[key]
+    if (!c) continue
+    if (Math.hypot(x - ap.x, z - ap.z) > c[1] + 400) continue
+    for (const b of cityBoxes(ap, c[0], c[1])) {
+      if (Math.abs(x - b.x) <= b.w / 2 + pad && Math.abs(z - b.z) <= b.d / 2 + pad) {
+        return b.y + b.h
+      }
+    }
+  }
+  return null
+}
+
+/* How many blocks each field gets, and how far they spread. Raised from a
+   scatter of ninety to a city, now that they are solid. */
+export const CITY = {
+  KSFO: [340, 6200], KSNS: [130, 3000], ZSPD: [380, 7000], ZSNJ: [190, 4200],
+  // The neighbours get towns too, or they sit in empty fields.
+  KOAK: [260, 5200], KSJC: [300, 5600], KHAF: [70, 2200],
+  KMRY: [140, 3200], ZSSS: [340, 6000], ZSWX: [180, 4000],
+}
+
 export function scenery(ap, count = 90, spread = 4200) {
   const pos = [], normal = [], color = []
   const box = (cx, cy, cz, w, h, d, col) => {
@@ -507,24 +780,10 @@ export function scenery(ap, count = 90, spread = 4200) {
     }
   }
 
-  const R = ap.rwy
-  const dir = hdgVec(R.hdg)
-  for (let i = 0; i < count; i++) {
-    // Hashed, not random: the skyline is the same on every reload.
-    const a = hash2(i * 7 + 11, i * 13 + 5) * Math.PI * 2
-    const r = (0.25 + hash2(i * 3 + 1, i * 17) * 0.75) * spread
-    const x = ap.x + Math.cos(a) * r, z = ap.z + Math.sin(a) * r
-    // Never build on the runway or its approach corridor.
-    const along = (x - ap.x) * dir.x + (z - ap.z) * dir.z
-    const across = Math.abs((x - ap.x) * -dir.z + (z - ap.z) * dir.x)
-    if (Math.abs(along) < R.len / 2 + 700 && across < 260) continue
-    const g = elevation(x, z)
-    if (g < 1) continue
-    const h = 12 + hash2(i * 5, i * 23) * (r < spread * 0.45 ? 78 : 26)
-    const w = 16 + hash2(i * 31, i * 3) * 26
-    const d = 16 + hash2(i * 11, i * 41) * 26
-    const tone = 0.30 + hash2(i * 19, i * 7) * 0.16
-    box(x, g, z, w, h, d, [tone, tone * 0.99, tone * 0.94])
+  /* Drawn from the SAME list the collision test walks. Two generators would
+     be two skylines, and the one you hit would not be the one you can see. */
+  for (const b of cityBoxes(ap, count, spread)) {
+    box(b.x, b.y, b.z, b.w, b.h, b.d, [b.tone, b.tone * 0.99, b.tone * 0.94])
   }
   return { pos, normal, color }
 }

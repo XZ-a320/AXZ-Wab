@@ -239,6 +239,14 @@ export function sideview(spec) {
    Every figure is the manufacturer's published one. Mass is a typical
    operating weight, not MTOW, because that is what you actually fly at.
 
+   THRUST IS PER ENGINE. It has to be said in capitals because it was not, and
+   the ambiguity cost the two newest aeroplanes most of their engines: the
+   airliners carried a total and the new types carried a per-engine figure, the
+   flight model applied whatever it found once along the nose, and Concorde
+   flew a transatlantic aeroplane on a quarter of its thrust while the
+   Gulfstream flew on half. The column in the roster says "×4" and now means
+   it.
+
    What is NOT written down here is anything that can be derived. The
    lift-curve slope comes out of the wingspan and the wing area through
    lifting-line theory, so a 1.83 aspect-ratio delta gets a slope of 2.9 per
@@ -254,41 +262,53 @@ export function sideview(spec) {
    jet's single-slotted flap, a fighter's manoeuvre flaps are not either, and
    Concorde had neither. Referenced by key so eleven types cost four tables. */
 export const FLAP_SETS = {
-  // Slats plus Fowler flaps. The 737/A320/747/787 numbers this was tuned on.
+  /* Slats plus Fowler flaps. The 737/747/787 numbers this was tuned on, and a
+     Boeing quadrant is marked in DEGREES, so the detent is its own label. */
   airliner: [
-    { deg: 0, dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
-    { deg: 5, dCL: 0.28, dCD: 0.0055, dStall: 0.7, vfe: 250 },
-    { deg: 15, dCL: 0.62, dCD: 0.0170, dStall: 1.2, vfe: 210 },
-    { deg: 30, dCL: 1.05, dCD: 0.0480, dStall: 1.6, vfe: 175 },
-    { deg: 40, dCL: 1.28, dCD: 0.0850, dStall: 1.4, vfe: 162 },
+    { deg: 0, label: 'UP', dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
+    { deg: 5, label: '5', dCL: 0.28, dCD: 0.0055, dStall: 0.7, vfe: 250 },
+    { deg: 15, label: '15', dCL: 0.62, dCD: 0.0170, dStall: 1.2, vfe: 210 },
+    { deg: 30, label: '30', dCL: 1.05, dCD: 0.0480, dStall: 1.6, vfe: 175 },
+    { deg: 40, label: '40', dCL: 1.28, dCD: 0.0850, dStall: 1.4, vfe: 162 },
+  ],
+  /* The same devices, but an Airbus lever is not marked in degrees. It has
+     five positions called UP, 1, 2, 3 and FULL, each of which commands its own
+     slat and flap pair, and printing "15" on an A320 is printing a number that
+     appears nowhere in that flight deck. Same aerodynamics, right names. */
+  airbus: [
+    { deg: 0, label: 'UP', dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
+    { deg: 10, label: '1', dCL: 0.28, dCD: 0.0055, dStall: 0.7, vfe: 230 },
+    { deg: 15, label: '2', dCL: 0.62, dCD: 0.0170, dStall: 1.2, vfe: 200 },
+    { deg: 20, label: '3', dCL: 1.05, dCD: 0.0480, dStall: 1.6, vfe: 185 },
+    { deg: 35, label: 'FULL', dCL: 1.28, dCD: 0.0850, dStall: 1.4, vfe: 177 },
   ],
   // Single-slotted flap, no leading-edge device over most of the span, which
   // is why a business jet lands fast for how light it is.
   bizjet: [
-    { deg: 0, dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
-    { deg: 10, dCL: 0.20, dCD: 0.0060, dStall: 0.4, vfe: 250 },
-    { deg: 20, dCL: 0.38, dCD: 0.0190, dStall: 0.7, vfe: 210 },
-    { deg: 39, dCL: 0.55, dCD: 0.0520, dStall: 0.9, vfe: 180 },
+    { deg: 0, label: 'UP', dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
+    { deg: 10, label: '10', dCL: 0.20, dCD: 0.0060, dStall: 0.4, vfe: 250 },
+    { deg: 20, label: '20', dCL: 0.38, dCD: 0.0190, dStall: 0.7, vfe: 210 },
+    { deg: 39, label: '39', dCL: 0.55, dCD: 0.0520, dStall: 0.9, vfe: 180 },
   ],
   // Leading-edge and trailing-edge manoeuvre flaps. Modest lift, and they are
   // there to move the stall angle rather than to make a big low-speed wing.
   fighter: [
-    { deg: 0, dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
-    { deg: 20, dCL: 0.30, dCD: 0.0230, dStall: 1.5, vfe: 300 },
+    { deg: 0, label: 'UP', dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
+    { deg: 20, label: 'MAN', dCL: 0.30, dCD: 0.0230, dStall: 1.5, vfe: 300 },
   ],
   // Plain flaps on a strut-braced wing that already has plenty of area.
   light: [
-    { deg: 0, dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
-    { deg: 10, dCL: 0.42, dCD: 0.0090, dStall: 0.8, vfe: 110 },
-    { deg: 20, dCL: 0.78, dCD: 0.0260, dStall: 1.3, vfe: 95 },
-    { deg: 30, dCL: 1.05, dCD: 0.0560, dStall: 1.6, vfe: 85 },
+    { deg: 0, label: 'UP', dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
+    { deg: 10, label: '10', dCL: 0.42, dCD: 0.0090, dStall: 0.8, vfe: 110 },
+    { deg: 20, label: '20', dCL: 0.78, dCD: 0.0260, dStall: 1.3, vfe: 95 },
+    { deg: 30, label: '30', dCL: 1.05, dCD: 0.0560, dStall: 1.6, vfe: 85 },
   ],
   /* Concorde had no flaps and no slats. The wing makes its landing lift out of
      alpha and the vortices over its leading edge, which is why it comes down
      the slope at fourteen degrees nose-up with the nose drooped so the crew
      can see. One detent, and the flap key does nothing. */
   none: [
-    { deg: 0, dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
+    { deg: 0, label: 'NONE', dCL: 0.00, dCD: 0.0000, dStall: 0.0, vfe: 9999 },
   ],
 }
 
@@ -310,78 +330,85 @@ export const SIM_TYPES = {
   'b-737x': {
     name: 'Boeing 737-800', axz: true, reg: 'B-737X',
     len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2,
-    mass: 65000, wingArea: 124.6, thrust: 242000, vne: 340, mmo: 0.82,
+    mass: 65000, wingArea: 124.6, thrust: 121400, vne: 340, mmo: 0.82,
+    mdd: 0.78, waveDrag: 0.075, machInlet: 1.0,
     shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 12500, tailStrikeDeg: 11,
+    ceiling: 12500, tailStrikeDeg: 11, track: 5.72,
   },
   'b-321x': {
     name: 'Airbus A321', axz: true, reg: 'B-321X',
     len: 44.51, span: 35.80, dia: 3.95, h: 11.76, engines: 2,
-    mass: 71000, wingArea: 122.6, thrust: 293000, vne: 350, mmo: 0.82,
-    shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
+    mass: 71000, wingArea: 122.6, thrust: 143100, vne: 350, mmo: 0.82,
+    mdd: 0.78, waveDrag: 0.075, machInlet: 1.0,
+    shape: 'jet', flapSet: 'airbus', engine: 'turbofan',
     // Flight-deck alert voice. An Airbus gives the cricket and STALL.
     warnPack: 'airbus',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
     // The stretch is what makes an A321 strike its tail earlier than an A320.
-    ceiling: 11900, tailStrikeDeg: 9.7,
+    ceiling: 11900, tailStrikeDeg: 9.7, track: 7.59,
   },
   'b-1717': {
     name: 'Boeing 737-800', axz: true, reg: 'B-1717',
     len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2,
-    mass: 65000, wingArea: 124.6, thrust: 242000, vne: 340, mmo: 0.82,
+    mass: 65000, wingArea: 124.6, thrust: 121400, vne: 340, mmo: 0.82,
+    mdd: 0.78, waveDrag: 0.075, machInlet: 1.0,
     shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 12500, tailStrikeDeg: 11,
+    ceiling: 12500, tailStrikeDeg: 11, track: 5.72,
   },
   'b-0001f': {
     name: 'Boeing 737-800BCF', axz: true, reg: 'B-0001F', cargo: true,
     len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2,
     // A freighter is heavier for the same airframe, and it lands faster for it.
-    mass: 71000, wingArea: 124.6, thrust: 242000, vne: 340, mmo: 0.82,
+    mass: 71000, wingArea: 124.6, thrust: 121400, vne: 340, mmo: 0.82,
+    mdd: 0.78, waveDrag: 0.075, machInlet: 1.0,
     shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 12500, tailStrikeDeg: 11,
+    ceiling: 12500, tailStrikeDeg: 11, track: 5.72,
   },
 
   /* --- Not AXZ aircraft. Simulator types only. --------------------------- */
   'a320': {
     name: 'Airbus A320', axz: false, reg: 'SIM-320',
     len: 37.57, span: 35.80, dia: 3.95, h: 11.76, engines: 2,
-    mass: 62000, wingArea: 122.6, thrust: 240000, vne: 350, mmo: 0.82,
-    shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
+    mass: 62000, wingArea: 122.6, thrust: 120000, vne: 350, mmo: 0.82,
+    mdd: 0.78, waveDrag: 0.075, machInlet: 1.0,
+    shape: 'jet', flapSet: 'airbus', engine: 'turbofan',
     // Flight-deck alert voice. An Airbus gives the cricket and STALL.
     warnPack: 'airbus',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 11900, tailStrikeDeg: 13.5,
+    ceiling: 11900, tailStrikeDeg: 13.5, track: 7.59,
   },
   'b744': {
     name: 'Boeing 747-400', axz: false, reg: 'SIM-744',
     len: 70.66, span: 64.44, dia: 6.50, h: 19.41, engines: 4,
-    mass: 250000, wingArea: 541.2, thrust: 1014000, vne: 365, mmo: 0.92,
+    mass: 250000, wingArea: 541.2, thrust: 252400, vne: 365, mmo: 0.92,
+    mdd: 0.86, waveDrag: 0.070, machInlet: 1.0,
     shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 13700, tailStrikeDeg: 12,
+    ceiling: 13700, tailStrikeDeg: 12, track: 11.0,
     // The hump. Everything about how this aeroplane reads at a glance.
     upperDeck: true,
   },
   'b789': {
     name: 'Boeing 787-9', axz: false, reg: 'SIM-789',
     len: 62.81, span: 60.12, dia: 5.77, h: 17.02, engines: 2,
-    mass: 180000, wingArea: 377, thrust: 640000, vne: 360, mmo: 0.90,
+    mass: 180000, wingArea: 377, thrust: 320000, vne: 360, mmo: 0.90,
+    mdd: 0.86, waveDrag: 0.070, machInlet: 1.0,
     shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 13100, tailStrikeDeg: 9.5,
+    ceiling: 13100, tailStrikeDeg: 9.5, track: 9.79,
     // Raked tips rather than a winglet, and a famously flexible wing.
     rakedTips: true, dihedral: 0.135,
   },
@@ -389,9 +416,10 @@ export const SIM_TYPES = {
     name: 'Cessna 172S', axz: false, reg: 'SIM-172',
     len: 8.28, span: 11.00, dia: 1.25, h: 2.72, engines: 1,
     mass: 1050, wingArea: 16.2, thrust: 3400, vne: 163, mmo: 0.30,
+    mdd: 0.55, waveDrag: 0.100, machInlet: 1.0,
     prop: true, shape: 'light', flapSet: 'light', engine: 'piston',
     cl0: 0.15, cd0: 0.030, oswald: 0.75, stallDeg: 16.5,
-    ceiling: 4100, tailStrikeDeg: 16,
+    ceiling: 4100, tailStrikeDeg: 16, track: 2.51,
     // High wing on a strut, fixed gear, and a propeller disc.
     highWing: true, fixedGear: true, strut: true,
   },
@@ -404,14 +432,14 @@ export const SIM_TYPES = {
     name: 'Aerospatiale/BAC Concorde', axz: false, reg: 'SIM-102',
     len: 61.66, span: 25.60, dia: 2.88, h: 12.20, engines: 4,
     mass: 111130, wingArea: 358.25, thrust: 139400, thrustAB: 169200,
-    vne: 530, mmo: 2.04,
+    vne: 530, mmo: 2.04, mdd: 0.93, waveDrag: 0.024, machInlet: 1.80,
     shape: 'delta', flapSet: 'none', engine: 'turbojet-reheat',
     // Flight-deck alert voice. An Airbus gives the cricket and STALL.
     warnPack: 'airbus',
     // A slender delta makes its lift out of leading-edge vortices, so it keeps
     // gaining CL long past the angle a swept wing would have let go at.
     cl0: 0.05, cd0: 0.0145, oswald: 0.62, stallDeg: 24,
-    ceiling: 18300, tailStrikeDeg: 13, dihedral: 0.0,
+    ceiling: 18300, tailStrikeDeg: 13, track: 7.72, dihedral: 0.0,
   },
   /* The corporate aeroplane. Engines on the aft fuselage and a T-tail, which
      is the whole silhouette, and a wing with no leading-edge device — which is
@@ -420,11 +448,12 @@ export const SIM_TYPES = {
     name: 'Gulfstream G650ER', axz: false, reg: 'SIM-650',
     len: 30.41, span: 30.36, dia: 2.90, h: 7.82, engines: 2,
     mass: 33566, wingArea: 119.2, thrust: 75200, vne: 340, mmo: 0.925,
+    mdd: 0.88, waveDrag: 0.070, machInlet: 1.0,
     shape: 'bizjet', flapSet: 'bizjet', engine: 'turbofan-small',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.12, cd0: 0.0175, oswald: 0.82, stallDeg: 13.5,
-    ceiling: 15545, tailStrikeDeg: 12, dihedral: 0.055,
+    ceiling: 15545, tailStrikeDeg: 12, track: 3.63, dihedral: 0.055,
   },
   /* The fighter. One F110-GE-129: 76.3 kN dry, 131 kN in reheat, against
      12 tonnes — which is more thrust than weight, and the reason this is the
@@ -433,10 +462,10 @@ export const SIM_TYPES = {
     name: 'Lockheed Martin F-16C', axz: false, reg: 'SIM-F16',
     len: 15.06, span: 9.96, dia: 1.60, h: 4.88, engines: 1,
     mass: 12000, wingArea: 27.87, thrust: 76300, thrustAB: 131000,
-    vne: 695, mmo: 2.05,
+    vne: 695, mmo: 2.05, mdd: 0.92, waveDrag: 0.032, machInlet: 1.70,
     shape: 'fighter', flapSet: 'fighter', engine: 'turbofan-ab',
     cl0: 0.05, cd0: 0.0195, oswald: 0.72, stallDeg: 21,
-    ceiling: 15240, tailStrikeDeg: 15, dihedral: 0.0,
+    ceiling: 15240, tailStrikeDeg: 15, track: 2.36, dihedral: 0.0,
     // No airline paint on a fighter, and no cabin windows to draw.
     lowVis: true,
   },

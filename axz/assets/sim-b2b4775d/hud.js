@@ -89,22 +89,51 @@ export class HUD {
        Everything here is a fraction of the same 1000 x 1000 box, and the CSS
        gives the instrument band the matching 40% of the stage, so the panel
        ends exactly where the instruments begin. */
+    /* Built against the A320 and 737 flight decks the owner sent as reference.
+       What makes those photographs read as a cockpit is not the panel, it is
+       the WINDOW: a wide centre pane with a heavy post beside it, a small
+       trapezoidal side window that slopes away, an eyebrow above, and a deep
+       glareshield hood that overhangs the instruments and throws them into
+       shade. The first version had two rectangles and a stick down the middle,
+       which is a bus windscreen. */
     const DECK = 600            // top of the glareshield, per mille of height
     const shell = el('svg', {
       class: 'sim-cockpit', viewBox: '0 0 1000 1000',
       preserveAspectRatio: 'none', 'aria-hidden': 'true', focusable: 'false',
     })
-    // Coaming across the top of the windscreen, dipping in the middle.
-    el('path', { d: 'M0 0 L1000 0 L1000 44 Q500 104 0 44 Z', class: 'sim-ck-coam' }, shell)
-    // Window posts down each side, splayed the way a windscreen frame is, and
-    // stopping at the glareshield rather than running across the instruments.
-    el('path', { d: `M0 0 L104 0 Q64 300 56 ${DECK} L0 ${DECK} Z`, class: 'sim-ck-post' }, shell)
-    el('path', { d: `M1000 0 L896 0 Q936 300 944 ${DECK} L1000 ${DECK} Z`, class: 'sim-ck-post' }, shell)
-    // The centre post, between the two windscreen panes.
-    el('path', { d: `M492 0 L508 0 L506 ${DECK} L494 ${DECK} Z`, class: 'sim-ck-post' }, shell)
-    // The glareshield itself, and the lit lip along its leading edge.
-    el('path', { d: `M0 1000 L0 ${DECK} Q500 ${DECK - 34} 1000 ${DECK} L1000 1000 Z`, class: 'sim-ck-panel' }, shell)
-    el('path', { d: `M0 ${DECK} Q500 ${DECK - 34} 1000 ${DECK}`, class: 'sim-ck-lip' }, shell)
+    const P = (d, cls) => el('path', { d, class: cls }, shell)
+
+    // The roof and the eyebrow line above the windscreen, dipping in the middle.
+    P('M0 0 L1000 0 L1000 40 Q500 96 0 40 Z', 'sim-ck-coam')
+    P('M0 40 Q500 96 1000 40 L1000 60 Q500 116 0 60 Z', 'sim-ck-brow')
+
+    /* Side structure. Two panes a side on an airliner: the big forward one and
+       a small sloped direct-vision window aft of it, with the corner post
+       between them and the heavy A-post outboard. Drawn as one filled region
+       per side so the frame is continuous the way a real one is. */
+    P(`M0 0 L150 0 Q96 300 84 ${DECK} L0 ${DECK} Z`, 'sim-ck-post')
+    P(`M1000 0 L850 0 Q904 300 916 ${DECK} L1000 ${DECK} Z`, 'sim-ck-post')
+    // The corner posts, splayed outward the way the frame really runs.
+    P(`M330 56 L360 56 L322 ${DECK} L286 ${DECK} Z`, 'sim-ck-post')
+    P(`M670 56 L640 56 L678 ${DECK} L714 ${DECK} Z`, 'sim-ck-post')
+    // The centre post between the two forward panes.
+    P(`M488 56 L512 56 L509 ${DECK} L491 ${DECK} Z`, 'sim-ck-post')
+
+    /* The glareshield. A deep hood with a rolled leading edge, sitting proud
+       of the panel below it — this is the piece that says "you are behind
+       something" rather than "there is a bar across the picture". */
+    /* The hood's crown has to reach the top of the instrument band or a sliver
+       of countryside shows between them. A quadratic only travels half way to
+       its control point, so the control has to sit twice as far up as the
+       crown needs to be: crown at DECK - 40 means a control at DECK - 80. */
+    P(`M0 1000 L0 ${DECK} Q500 ${DECK - 80} 1000 ${DECK} L1000 1000 Z`, 'sim-ck-panel')
+    P(`M0 ${DECK} Q500 ${DECK - 80} 1000 ${DECK} L1000 ${DECK + 54} Q500 ${DECK - 26} 0 ${DECK + 54} Z`, 'sim-ck-hood')
+    P(`M0 ${DECK} Q500 ${DECK - 80} 1000 ${DECK}`, 'sim-ck-lip')
+
+    // Side consoles, angling in under the side windows.
+    P(`M0 ${DECK + 40} L96 ${DECK + 70} L120 1000 L0 1000 Z`, 'sim-ck-side')
+    P(`M1000 ${DECK + 40} L904 ${DECK + 70} L880 1000 L1000 1000 Z`, 'sim-ck-side')
+
     this.stage.appendChild(shell)
     this.shell = shell
 
@@ -292,7 +321,13 @@ export class HUD {
     const fpm = ac.vel.y * MS_TO_FPM
 
     // Attitude: translate for pitch, rotate for bank, about the ADI centre.
-    const px = -e.pitch * RAD * 3.4
+    /* The horizon moves DOWN the display when the nose comes up, because the
+       instrument shows the world from the aeroplane and the aeroplane is what
+       stays still. This was negated: pitching up drove the horizon upward and
+       filled the ball with ground, which is what the attitude indicator being
+       "the wrong way round" meant. SVG y grows downward, so nose-up is a
+       positive translate. */
+    const px = e.pitch * RAD * 3.4
     this.horizon.setAttribute('transform',
       `translate(${ADI_X} ${ADI_Y}) rotate(${(-e.bank * RAD).toFixed(2)}) translate(0 ${px.toFixed(1)})`)
     this.bankPtr.setAttribute('transform',
@@ -336,8 +371,10 @@ export class HUD {
     this.setChip('n1', ab > 0.02 ? L.reheat : Math.round(ac.thrustLag * 100) + '%', ab > 0.02 ? 'hot' : '')
     // A single-detent wing has no flap lever to report, and printing "0" for
     // Concorde would imply there was a setting it was not at.
-    this.modeTexts.flap.textContent = ac.flaps.length < 2 ? L.none
-      : ac.flapDeg === 0 ? L.up : String(ac.flapDeg)
+    // The detent's own marking. A Boeing quadrant is marked in degrees and an
+    // Airbus one is marked UP / 1 / 2 / 3 / FULL, and printing "15" on an A320
+    // is printing a number that appears nowhere in that flight deck.
+    this.modeTexts.flap.textContent = ac.flaps.length < 2 ? L.none : ac.flapLabel
     this.setChip('gear', ac.gearPos > 0.98 ? L.down : ac.gearPos < 0.02 ? L.up : '···',
       ac.gearPos > 0.98 ? 'on' : ac.gearPos < 0.02 ? '' : 'warn')
     this.setChip('brk', ac.parkingBrake ? L.park : ac.brakes > 0.5 ? L.on : L.off,

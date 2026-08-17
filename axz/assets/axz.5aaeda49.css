@@ -1643,10 +1643,15 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
    window size. A max-height in pixels cannot do that. */
 .sim[data-view="cockpit"] .sim-hud { height: 40%; }
 .sim[data-view="cockpit"] .sim-pfd { height: 100%; max-height: none; }
+/* Flight-deck greys. Darker as they come toward the eye, which is what makes
+   the hood read as overhanging the panel rather than being painted on it. */
 .sim-ck-panel { fill: #15181c; }
-.sim-ck-lip { fill: none; stroke: #454d57; stroke-width: 5; }
-.sim-ck-post { fill: #1b1f24; }
-.sim-ck-coam { fill: #14171b; }
+.sim-ck-hood { fill: #0d1013; }
+.sim-ck-lip { fill: none; stroke: #4d565f; stroke-width: 4; }
+.sim-ck-post { fill: #1e2228; }
+.sim-ck-coam { fill: #13161a; }
+.sim-ck-brow { fill: #191d22; }
+.sim-ck-side { fill: #171b20; }
 
 .sim-warn-box { fill: rgba(11, 13, 16, .86); stroke: #ff5b4a; stroke-width: 1.4; }
 .sim-warn { fill: transparent; font-family: var(--font-mono); font-size: 21px; letter-spacing: .16em; }

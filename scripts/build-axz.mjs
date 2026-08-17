@@ -537,7 +537,7 @@ function netMap(c, lang) {
 
   const scalePx = (SCALE_KM * PX_PER_KM).toFixed(1)
   return `<figure class="netmap" data-netmap>
-  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(N.note)}" focusable="false">
+  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(N.alt || N.title)}" focusable="false">
     ${legs}
     <g class="net-rose" transform="translate(${W - 26} 34)">
       <path class="net-north" d="M0 11 L0 -11 M-4.5 -4.5 L0 -11 L4.5 -4.5"/>
@@ -553,7 +553,7 @@ function netMap(c, lang) {
     ${buttons}
     <button class="net-btn net-btn--all" type="button" data-net-clear>${esc(N.showAll)}</button>
   </div>
-  <figcaption>${parts(N.note, lang)}</figcaption>
+  ${N.note ? `<figcaption>${parts(N.note, lang)}</figcaption>` : ''}
 </figure>`
 }
 
@@ -606,7 +606,7 @@ function departureBoard(c, lang) {
   <p class="bd-note">${parts(B.statusNote, lang)}</p>
   <h3 class="record__label">${esc(B.clocksTitle)}</h3>
   <div class="clocks">${clocks}</div>
-  <p class="bd-note">${parts(B.clockNote, lang)}</p>
+  ${B.clockNote ? `<p class="bd-note">${parts(B.clockNote, lang)}</p>` : ''}
 </div>`
 }
 
@@ -639,7 +639,7 @@ function resources(c, lang) {
       <aside class="ledger__remarks">
         <span class="ledger__remarks-label">${esc(L.photoLabel)}</span>
         <p class="remark-none">${esc(L.photoNone)}</p>
-        <p class="livery__note">${parts(L.photoNote, lang)}</p>
+        ${L.photoNote ? `<p class="livery__note">${parts(L.photoNote, lang)}</p>` : ''}
       </aside>
     </article>
   </div>
@@ -1110,6 +1110,7 @@ function simPage(c, lang) {
          here, from the published span and wing area, so the roster table and
          the aeroplane can never quote different physics. */
       clAlpha: Math.round(liftSlope(t.span, t.wingArea) * 1e4) / 1e4,
+      mdd: t.mdd, waveDrag: t.waveDrag, machInlet: t.machInlet,
       cl0: t.cl0, cd0: t.cd0, oswald: t.oswald, stallDeg: t.stallDeg,
       flapSet: t.flapSet, engine: t.engine, shape: t.shape,
       thrustAB: t.thrustAB || 0, mmo: t.mmo, ceiling: t.ceiling,
@@ -1339,6 +1340,9 @@ function simPage(c, lang) {
 
   <h2>${esc(S.phoneTitle)}</h2>
   <p class="prose">${P(S.phoneBody)}</p>
+
+  <h2>${esc(S.runwaysTitle)}</h2>
+  <p class="prose">${P(S.runwaysBody)}</p>
 
   <h2>${esc(S.reheatTitle)}</h2>
   <p class="prose">${P(S.reheatBody)}</p>
