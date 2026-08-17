@@ -469,7 +469,20 @@ export class Sim {
     }
     this.render()
 
-    this.sound.update(this.ac, dtReal, CAMERAS[this.cameraMode] === 'cockpit')
+    const inside = CAMERAS[this.cameraMode] === 'cockpit'
+    /* The barrier, in both directions. The physics step raises the flag on the
+       frame it happens, so this fires once rather than every frame the
+       aeroplane spends above Mach 1. The airframe shudders through the
+       transonic whichever way it is going, which is what the shock crossing
+       the wing actually does to it. */
+    if (this.ac.wentSupersonic || this.ac.wentSubsonic) {
+      this.sound.sonicBoom(inside)
+      this.shake = Math.max(this.shake, inside ? 0.34 : 0.20)
+      this.onEvent({ type: 'mach', up: !!this.ac.wentSupersonic })
+      this.ac.wentSupersonic = false
+      this.ac.wentSubsonic = false
+    }
+    this.sound.update(this.ac, dtReal, inside)
 
     const euler = qToEuler(this.ac.q)
     this.hud.update(this.ac, { euler }, dtReal)

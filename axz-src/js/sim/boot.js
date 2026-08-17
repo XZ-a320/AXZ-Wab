@@ -75,6 +75,8 @@ export async function boot(cfg) {
       pushLog(L.assistLabel + ' ' + (ev.on ? L.on : L.off), 'info')
     } else if (ev.type === 'timescale') {
       pushLog(L.timeLabel + ' ' + ev.value + '×', 'info')
+    } else if (ev.type === 'mach') {
+      pushLog(ev.up ? L.machUp : L.machDown, 'good')
     } else if (ev.type === 'paused') {
       stage.setAttribute('data-paused', String(ev.paused))
       pushLog(ev.paused ? L.paused : L.resumed, 'info')

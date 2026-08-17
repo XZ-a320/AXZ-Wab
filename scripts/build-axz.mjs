@@ -1115,6 +1115,12 @@ function simPage(c, lang) {
       flapSet: t.flapSet, engine: t.engine, shape: t.shape,
       thrustAB: t.thrustAB || 0, mmo: t.mmo, ceiling: t.ceiling,
       tailStrikeDeg: t.tailStrikeDeg, lowVis: !!t.lowVis, cargo: !!t.cargo,
+      track: t.track,
+      /* How each type FEELS, and the reason it is three published numbers
+         rather than a hand-tuned constant: the maximum roll rate, the
+         certification limit load factor that sets the speed it is quoted at,
+         and how far the aerodynamic centre runs aft through the transonic. */
+      rollRate: t.rollRate, nLimit: t.nLimit, acShift: t.acShift,
       warnPack: t.warnPack || '',
       name: t.axz ? c.fleet[id].name : t.name,
       reg: t.axz ? c.fleet[id].reg : t.reg,
@@ -1137,6 +1143,7 @@ function simPage(c, lang) {
     fullscreen: S.fullscreenButton,
     flapsDown: S.touch.flapsDown, flapsUp: S.touch.flapsUp, view: S.touch.view,
     pause: S.actions.pause,
+    machUp: S.machUp, machDown: S.machDown,
     keyboard: S.keyboard, gamepad: S.gamepad,
   }
   const bands = LG.bands.map(b => b.remark)
@@ -1157,18 +1164,19 @@ function simPage(c, lang) {
   const scOpts = ['takeoff', 'runway', 'approach', 'cruise'].map(k =>
     `<option value="${esc(k)}"${k === 'takeoff' ? ' selected' : ''}>${esc(S.scenarios[k])}</option>`).join('')
 
-  /* Conditions. Midday and a 250/8 breeze are what the engine used to hold as
-     constants, so those are the defaults and nothing changes for a reader who
-     never touches them. */
+  /* Conditions. Midday and STILL AIR, because the first thing anyone flies
+     here should not be a crosswind landing they did not ask for. The wind was
+     on for everybody at 250/8 with gusts, which is a fair day and a poor
+     default. Everything is one press away in the row below. */
   const todOpts = ['dawn', 'noon', 'dusk', 'night'].map(k =>
     `<option value="${esc(k)}"${k === 'noon' ? ' selected' : ''}>${esc(S.times[k])}</option>`).join('')
   // Eight points, named the way a METAR names them: the direction it comes FROM.
   const wdOpts = [0, 45, 90, 135, 180, 225, 250, 270, 315].map(d =>
     `<option value="${d}"${d === 250 ? ' selected' : ''}>${String(d).padStart(3, '0')}°</option>`).join('')
   const wsOpts = [0, 5, 8, 15, 25, 35].map(v =>
-    `<option value="${v}"${v === 8 ? ' selected' : ''}>${v === 0 ? esc(S.windCalm) : v + ' kt'}</option>`).join('')
+    `<option value="${v}"${v === 0 ? ' selected' : ''}>${v === 0 ? esc(S.windCalm) : v + ' kt'}</option>`).join('')
   const tbOpts = [['none', 0], ['light', 0.35], ['moderate', 0.7], ['severe', 1]].map(([k, v]) =>
-    `<option value="${v}"${k === 'light' ? ' selected' : ''}>${esc(S.turbLevels[k])}</option>`).join('')
+    `<option value="${v}"${k === 'none' ? ' selected' : ''}>${esc(S.turbLevels[k])}</option>`).join('')
 
   const ctlRows = S.controls.map(r => `<tr>
     <th scope="row">${P(r.a)}</th>
@@ -1346,6 +1354,9 @@ function simPage(c, lang) {
 
   <h2>${esc(S.reheatTitle)}</h2>
   <p class="prose">${P(S.reheatBody)}</p>
+
+  <h2>${esc(S.machTitle)}</h2>
+  <p class="prose">${P(S.machBody)}</p>
 
   <h2>${esc(S.crashTitle)}</h2>
   <p class="prose">${P(S.crashBody)}</p>

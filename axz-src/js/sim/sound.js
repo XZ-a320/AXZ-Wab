@@ -414,6 +414,51 @@ export class Sound {
     o.start(t); o.stop(t + 0.45)
   }
 
+  /* --- Sonic boom ---------------------------------------------------------
+     Not a bang. An N-wave: the bow shock arrives, the pressure drops below
+     ambient behind it, and the tail shock brings it back — which the ear hears
+     as two cracks about a tenth of a second apart with a hollow between them.
+     Every recording of one is a double, and a single thump is the thing that
+     makes a simulator sound wrong.
+
+     From inside you never hear your own. The shock cone trails behind the
+     aeroplane and the cockpit is ahead of it, so this plays quietly on the
+     outside cameras and is nearly silent in the flight deck — which is itself
+     the most surprising true thing about going supersonic. */
+  sonicBoom(inside) {
+    if (!this.ready || !this.enabled) return
+    const ctx = this.ctx, t = ctx.currentTime
+    const level = inside ? 0.10 : 1
+    const crack = (at, gain) => {
+      const src = ctx.createBufferSource()
+      src.buffer = this.noise
+      const hp = ctx.createBiquadFilter()
+      hp.type = 'highpass'; hp.frequency.value = 90
+      const lp = ctx.createBiquadFilter()
+      lp.type = 'lowpass'
+      lp.frequency.setValueAtTime(7000, at)
+      lp.frequency.exponentialRampToValueAtTime(220, at + 0.22)
+      const g = ctx.createGain()
+      g.gain.setValueAtTime(0, at)
+      g.gain.linearRampToValueAtTime(gain * level, at + 0.004)
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.30)
+      src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(this.master)
+      src.start(at, Math.random() * 2, 0.4)
+      // The pressure step under each crack, which is what you feel.
+      const o = ctx.createOscillator(), og = ctx.createGain()
+      o.type = 'sine'
+      o.frequency.setValueAtTime(62, at)
+      o.frequency.exponentialRampToValueAtTime(21, at + 0.26)
+      og.gain.setValueAtTime(0, at)
+      og.gain.linearRampToValueAtTime(0.7 * gain * level, at + 0.008)
+      og.gain.exponentialRampToValueAtTime(0.0001, at + 0.34)
+      o.connect(og); og.connect(this.master)
+      o.start(at); o.stop(at + 0.36)
+    }
+    crack(t, 0.85)
+    crack(t + 0.11, 0.62)
+  }
+
   /** Servo whine for gear and flaps. */
   servo(up) {
     if (!this.ready || !this.enabled) return
@@ -493,6 +538,11 @@ export class Sound {
     const n1 = clamp(ac.thrustLag, 0, 1)
     const ab = ac.abFrac || 0
     const inside = cameraInside ? 1 : 0
+    /* Past Mach 1 the aeroplane is ahead of its own shock cone, so from the
+       flight deck the engines go quiet and only the boundary layer is left.
+       Going through the barrier the cabin gets QUIETER, which is what every
+       Concorde passenger remembers and no simulator ever models. */
+    const supers = clamp(((ac.mach || 0) - 0.98) / 0.08, 0, 1)
     // Exhaust opens upward with thrust; that sweep IS the sound of spooling.
     this.eng.jetLP.frequency.setTargetAtTime(v.exhaust[0] + n1 * (v.exhaust[1] - v.exhaust[0]), t, tc)
     this.eng.jetG.gain.setTargetAtTime(v.exhaustG[0] + n1 * (v.exhaustG[1] - v.exhaustG[0]) + v.hiss * n1, t, tc)
@@ -513,13 +563,14 @@ export class Sound {
     } else if (this.eng.abG.gain.value > 0.0001) {
       this.eng.abG.gain.setTargetAtTime(0, t, 0.05)
     }
-    const engVol = (0.12 + n1 * 0.55 + ab * 0.30) * (inside ? 0.6 : 1)
+    const engVol = (0.12 + n1 * 0.55 + ab * 0.30) * (inside ? 0.6 * (1 - 0.72 * supers) : 1)
     this.eng.out.gain.setTargetAtTime(ac.crashed ? 0 : engVol, t, 0.15)
 
     // Airflow rises with indicated airspeed and with anything hanging out in it.
     const kt = ac.ias * 1.943844
     const drag = ac.gearPos * 0.35 + (ac.flapDeg / 40) * 0.3 + ac.spoilers * 0.3
-    const airVol = clamp((kt - 40) / 320, 0, 1) * (0.22 + drag * 0.5) * (inside ? 0.7 : 1)
+    const airVol = clamp((kt - 40) / 320, 0, 1) * (0.22 + drag * 0.5) *
+      (inside ? 0.7 * (1 - 0.45 * supers) : 1)
     this.air.out.gain.setTargetAtTime(airVol, t, tc)
     this.air.filter.frequency.setTargetAtTime(380 + kt * 5.5, t, tc)
 

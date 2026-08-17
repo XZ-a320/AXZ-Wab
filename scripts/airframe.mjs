@@ -331,47 +331,47 @@ export const SIM_TYPES = {
     name: 'Boeing 737-800', axz: true, reg: 'B-737X',
     len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2,
     mass: 65000, wingArea: 124.6, thrust: 121400, vne: 340, mmo: 0.82,
-    mdd: 0.78, waveDrag: 0.075, machInlet: 1.0,
+    mdd: 0.78, waveDrag: 0.082, machInlet: 1.0,
     shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 12500, tailStrikeDeg: 11, track: 5.72,
+    ceiling: 12500, tailStrikeDeg: 11, rollRate: 35, nLimit: 2.5, acShift: 0.16, track: 5.72,
   },
   'b-321x': {
     name: 'Airbus A321', axz: true, reg: 'B-321X',
     len: 44.51, span: 35.80, dia: 3.95, h: 11.76, engines: 2,
     mass: 71000, wingArea: 122.6, thrust: 143100, vne: 350, mmo: 0.82,
-    mdd: 0.78, waveDrag: 0.075, machInlet: 1.0,
+    mdd: 0.78, waveDrag: 0.095, machInlet: 1.0,
     shape: 'jet', flapSet: 'airbus', engine: 'turbofan',
     // Flight-deck alert voice. An Airbus gives the cricket and STALL.
     warnPack: 'airbus',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
     // The stretch is what makes an A321 strike its tail earlier than an A320.
-    ceiling: 11900, tailStrikeDeg: 9.7, track: 7.59,
+    ceiling: 11900, tailStrikeDeg: 9.7, rollRate: 25, nLimit: 2.5, acShift: 0.16, track: 7.59,
   },
   'b-1717': {
     name: 'Boeing 737-800', axz: true, reg: 'B-1717',
     len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2,
     mass: 65000, wingArea: 124.6, thrust: 121400, vne: 340, mmo: 0.82,
-    mdd: 0.78, waveDrag: 0.075, machInlet: 1.0,
+    mdd: 0.78, waveDrag: 0.082, machInlet: 1.0,
     shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 12500, tailStrikeDeg: 11, track: 5.72,
+    ceiling: 12500, tailStrikeDeg: 11, rollRate: 35, nLimit: 2.5, acShift: 0.16, track: 5.72,
   },
   'b-0001f': {
     name: 'Boeing 737-800BCF', axz: true, reg: 'B-0001F', cargo: true,
     len: 39.47, span: 35.79, dia: 3.76, h: 12.55, engines: 2,
     // A freighter is heavier for the same airframe, and it lands faster for it.
     mass: 71000, wingArea: 124.6, thrust: 121400, vne: 340, mmo: 0.82,
-    mdd: 0.78, waveDrag: 0.075, machInlet: 1.0,
+    mdd: 0.78, waveDrag: 0.082, machInlet: 1.0,
     shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 12500, tailStrikeDeg: 11, track: 5.72,
+    ceiling: 12500, tailStrikeDeg: 11, rollRate: 35, nLimit: 2.5, acShift: 0.16, track: 5.72,
   },
 
   /* --- Not AXZ aircraft. Simulator types only. --------------------------- */
@@ -379,23 +379,23 @@ export const SIM_TYPES = {
     name: 'Airbus A320', axz: false, reg: 'SIM-320',
     len: 37.57, span: 35.80, dia: 3.95, h: 11.76, engines: 2,
     mass: 62000, wingArea: 122.6, thrust: 120000, vne: 350, mmo: 0.82,
-    mdd: 0.78, waveDrag: 0.075, machInlet: 1.0,
+    mdd: 0.78, waveDrag: 0.095, machInlet: 1.0,
     shape: 'jet', flapSet: 'airbus', engine: 'turbofan',
     // Flight-deck alert voice. An Airbus gives the cricket and STALL.
     warnPack: 'airbus',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 11900, tailStrikeDeg: 13.5, track: 7.59,
+    ceiling: 11900, tailStrikeDeg: 13.5, rollRate: 25, nLimit: 2.5, acShift: 0.16, track: 7.59,
   },
   'b744': {
     name: 'Boeing 747-400', axz: false, reg: 'SIM-744',
     len: 70.66, span: 64.44, dia: 6.50, h: 19.41, engines: 4,
     mass: 250000, wingArea: 541.2, thrust: 252400, vne: 365, mmo: 0.92,
-    mdd: 0.86, waveDrag: 0.070, machInlet: 1.0,
+    mdd: 0.86, waveDrag: 0.060, machInlet: 1.0,
     shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 13700, tailStrikeDeg: 12, track: 11.0,
+    ceiling: 13700, tailStrikeDeg: 12, rollRate: 20, nLimit: 2.5, acShift: 0.17, track: 11.0,
     // The hump. Everything about how this aeroplane reads at a glance.
     upperDeck: true,
   },
@@ -403,12 +403,12 @@ export const SIM_TYPES = {
     name: 'Boeing 787-9', axz: false, reg: 'SIM-789',
     len: 62.81, span: 60.12, dia: 5.77, h: 17.02, engines: 2,
     mass: 180000, wingArea: 377, thrust: 320000, vne: 360, mmo: 0.90,
-    mdd: 0.86, waveDrag: 0.070, machInlet: 1.0,
+    mdd: 0.86, waveDrag: 0.062, machInlet: 1.0,
     shape: 'jet', flapSet: 'airliner', engine: 'turbofan',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.15, cd0: 0.021, oswald: 0.80, stallDeg: 15.5,
-    ceiling: 13100, tailStrikeDeg: 9.5, track: 9.79,
+    ceiling: 13100, tailStrikeDeg: 9.5, rollRate: 20, nLimit: 2.5, acShift: 0.16, track: 9.79,
     // Raked tips rather than a winglet, and a famously flexible wing.
     rakedTips: true, dihedral: 0.135,
   },
@@ -418,8 +418,8 @@ export const SIM_TYPES = {
     mass: 1050, wingArea: 16.2, thrust: 3400, vne: 163, mmo: 0.30,
     mdd: 0.55, waveDrag: 0.100, machInlet: 1.0,
     prop: true, shape: 'light', flapSet: 'light', engine: 'piston',
-    cl0: 0.15, cd0: 0.030, oswald: 0.75, stallDeg: 16.5,
-    ceiling: 4100, tailStrikeDeg: 16, track: 2.51,
+    cl0: 0.15, cd0: 0.037, oswald: 0.75, stallDeg: 16.5,
+    ceiling: 4100, tailStrikeDeg: 16, rollRate: 60, nLimit: 3.8, acShift: 0.02, track: 2.51,
     // High wing on a strut, fixed gear, and a propeller disc.
     highWing: true, fixedGear: true, strut: true,
   },
@@ -432,14 +432,14 @@ export const SIM_TYPES = {
     name: 'Aerospatiale/BAC Concorde', axz: false, reg: 'SIM-102',
     len: 61.66, span: 25.60, dia: 2.88, h: 12.20, engines: 4,
     mass: 111130, wingArea: 358.25, thrust: 139400, thrustAB: 169200,
-    vne: 530, mmo: 2.04, mdd: 0.93, waveDrag: 0.024, machInlet: 1.80,
+    vne: 530, mmo: 2.04, mdd: 0.93, waveDrag: 0.024, machInlet: 1.74,
     shape: 'delta', flapSet: 'none', engine: 'turbojet-reheat',
     // Flight-deck alert voice. An Airbus gives the cricket and STALL.
     warnPack: 'airbus',
     // A slender delta makes its lift out of leading-edge vortices, so it keeps
     // gaining CL long past the angle a swept wing would have let go at.
     cl0: 0.05, cd0: 0.0145, oswald: 0.62, stallDeg: 24,
-    ceiling: 18300, tailStrikeDeg: 13, track: 7.72, dihedral: 0.0,
+    ceiling: 18300, tailStrikeDeg: 13, rollRate: 15, nLimit: 2.5, acShift: 0.09, track: 7.72, dihedral: 0.0,
   },
   /* The corporate aeroplane. Engines on the aft fuselage and a T-tail, which
      is the whole silhouette, and a wing with no leading-edge device — which is
@@ -448,12 +448,12 @@ export const SIM_TYPES = {
     name: 'Gulfstream G650ER', axz: false, reg: 'SIM-650',
     len: 30.41, span: 30.36, dia: 2.90, h: 7.82, engines: 2,
     mass: 33566, wingArea: 119.2, thrust: 75200, vne: 340, mmo: 0.925,
-    mdd: 0.88, waveDrag: 0.070, machInlet: 1.0,
+    mdd: 0.88, waveDrag: 0.058, machInlet: 1.0,
     shape: 'bizjet', flapSet: 'bizjet', engine: 'turbofan-small',
     // Flight-deck alert voice. A Boeing says AIRSPEED LOW.
     warnPack: 'boeing',
     cl0: 0.12, cd0: 0.0175, oswald: 0.82, stallDeg: 13.5,
-    ceiling: 15545, tailStrikeDeg: 12, track: 3.63, dihedral: 0.055,
+    ceiling: 15545, tailStrikeDeg: 12, rollRate: 35, nLimit: 2.5, acShift: 0.15, track: 3.63, dihedral: 0.055,
   },
   /* The fighter. One F110-GE-129: 76.3 kN dry, 131 kN in reheat, against
      12 tonnes — which is more thrust than weight, and the reason this is the
@@ -462,10 +462,10 @@ export const SIM_TYPES = {
     name: 'Lockheed Martin F-16C', axz: false, reg: 'SIM-F16',
     len: 15.06, span: 9.96, dia: 1.60, h: 4.88, engines: 1,
     mass: 12000, wingArea: 27.87, thrust: 76300, thrustAB: 131000,
-    vne: 695, mmo: 2.05, mdd: 0.92, waveDrag: 0.032, machInlet: 1.70,
+    vne: 695, mmo: 2.05, mdd: 0.92, waveDrag: 0.032, machInlet: 1.65,
     shape: 'fighter', flapSet: 'fighter', engine: 'turbofan-ab',
     cl0: 0.05, cd0: 0.0195, oswald: 0.72, stallDeg: 21,
-    ceiling: 15240, tailStrikeDeg: 15, track: 2.36, dihedral: 0.0,
+    ceiling: 15240, tailStrikeDeg: 15, rollRate: 324, nLimit: 9.0, acShift: 0.11, track: 2.36, dihedral: 0.0,
     // No airline paint on a fighter, and no cabin windows to draw.
     lowVis: true,
   },

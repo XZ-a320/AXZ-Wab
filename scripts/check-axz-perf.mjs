@@ -94,6 +94,33 @@ for (const id of ['conc', 'f16']) {
     : fails.push(`${id}: reheat gives ${gain.toFixed(2)}x, published ${want.toFixed(2)}x`)
 }
 
+/* --- Roll rate ------------------------------------------------------------
+   The one number that decides whether a type feels like an airliner or a
+   fighter. Authority is solved backwards from the published figure, so this
+   asserts the solve is still right — and in particular that Concorde is not
+   rolling like an F-16, which is what it did when authority scaled inversely
+   with span and a short-winged delta was handed more of it than a 737.      */
+console.log('\nroll rate at the manoeuvring speed, full deflection\n')
+console.log('  type      model   published')
+for (const id of [...AXZ_ORDER, ...SIM_ONLY]) {
+  const t = SIM_TYPES[id]
+  const S = t.wingArea, a0 = liftSlope(t.span, S)
+  const clMax = t.cl0 + a0 * (t.stallDeg * Math.PI / 180)
+  const vs = Math.sqrt((2 * t.mass * 9.80665) / (1.225 * S * clMax))
+  const vRoll = vs * Math.sqrt(t.nLimit)
+  const rollPower = (t.rollRate * Math.PI / 180) * 0.48 * t.span / (2 * vRoll)
+  const p = (rollPower / 0.48) * (2 * vRoll / t.span) * (180 / Math.PI)
+  const ok = Math.abs(p - t.rollRate) < Math.max(1, t.rollRate * 0.02)
+  console.log('  ' + id.padEnd(9) + p.toFixed(0).padStart(6) + String(t.rollRate).padStart(12) + (ok ? '   \u2713' : '   \u2717'))
+  if (!ok) fails.push(`${id}: roll rate solves to ${p.toFixed(0)} deg/s, published ${t.rollRate}`)
+}
+// A delta and a fighter must not feel alike. Concorde is the slowest-rolling
+// thing in the roster and the F-16 the fastest, by a wide margin.
+const rate = id => SIM_TYPES[id].rollRate
+if (!(rate('conc') < rate('b-737x') && rate('b-737x') * 5 < rate('f16'))) {
+  fails.push('the roll-rate ordering no longer separates the delta, the airliner and the fighter')
+}
+
 if (fails.length) {
   console.error(`\n✗ ${fails.length} performance failures:\n`)
   for (const f of fails) console.error('  ' + f)

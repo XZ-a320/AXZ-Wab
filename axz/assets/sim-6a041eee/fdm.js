@@ -94,6 +94,33 @@ export function speedOfSound(altM) {
   return Math.sqrt(1.4 * 287.053 * T)
 }
 
+/**
+ * Lift-curve slope at a Mach number, from the incompressible value.
+ *
+ * Three regimes, and all three are things you can feel. Below the drag rise
+ * the wing gets MORE sensitive as it goes faster — Prandtl-Glauert, the
+ * 1/sqrt(1-M²) that also explains why the transonic is where the trouble
+ * starts. Through the transonic the shocks form and the slope collapses.
+ * Supersonically it settles at the thin-aerofoil result, 4/sqrt(M²-1), except
+ * that a low-aspect-ratio wing cannot exceed its own slender-body limit of
+ * pi·AR/2. At its own cruise that leaves Concorde at 2.28 against a subsonic
+ * 2.92, a fifth down, while the F-16 at Mach 2 is at 2.23 against 3.95, which
+ * is nearly half. The delta was shaped to hold its lift across the barrier and
+ * it does; the fighter was not and does not. That difference is most of why
+ * the two feel so unlike each other at speed, and it falls out of the aspect
+ * ratio rather than being typed in.
+ */
+export function liftSlopeAt(a0, AR, mach) {
+  const sup = Math.min(4 / Math.sqrt(Math.max(mach * mach - 1, 0.04)), Math.PI * AR / 2)
+  if (mach <= 0.75) return a0 / Math.sqrt(1 - mach * mach)
+  const peak = a0 / Math.sqrt(1 - 0.75 * 0.75)
+  if (mach >= 1.25) return sup
+  // Smoothstep from the transonic peak down to the supersonic value.
+  const t = (mach - 0.75) / 0.5
+  const k = t * t * (3 - 2 * t)
+  return peak + (sup - peak) * k
+}
+
 /** Everything the model needs about a type, derived from the fleet table. */
 export function makeConfig(spec) {
   /* Everything used to be derived from LENGTH with 737 constants, which was
@@ -144,6 +171,22 @@ export function makeConfig(spec) {
     piston: [4.0, 4.5],
   }
   const [spoolUp, spoolDown] = SPOOL[engine] || SPOOL.turbofan
+
+  /* Manoeuvring speed, which is where a type's published roll rate is quoted
+     and the speed above which full control deflection is limited rather than
+     available. It is not invented: VA is the clean stall speed times the root
+     of the certification limit load factor, and that load factor is a real
+     published number per category — 2.5 for transport, 3.8 for a normal
+     category single, 9 for a fighter. It is the whole reason an F-16 gets its
+     324 degrees a second at 396 knots and an airliner never does. */
+  const cl0 = spec.cl0 != null ? spec.cl0 : 0.15
+  const clA = spec.clAlpha || 5.2
+  const stallA = (spec.stallDeg != null ? spec.stallDeg : (spec.prop ? 16.5 : 15.5)) * DEG
+  const clMaxClean = Math.max(cl0 + clA * stallA, 0.4)
+  const vsClean = Math.sqrt((2 * mass * G) / (1.225 * S * clMaxClean))
+  const vRoll = vsClean * Math.sqrt(spec.nLimit || 2.5)
+  const rollRate = spec.rollRate || 30
+
   return {
     name: spec.name, S, b, c, mass, AR,
     maxThrust: dry,
@@ -176,11 +219,32 @@ export function makeConfig(spec) {
     cd0: spec.cd0 != null ? spec.cd0 : 0.021,
     oswald: spec.oswald || 0.80,
     clAlpha: spec.clAlpha || 5.2,
+    /* How far the aerodynamic centre travels aft through the transonic, as a
+       fraction of the mean chord. This is Mach tuck: the wing's centre of lift
+       moves back, the nose drops, and the faster it goes the harder it tucks.
+       It is why Concorde pumped twenty tonnes of fuel aft on the way through
+       the barrier, and it is the single most characteristic thing about flying
+       a transport near its limit. */
+    acShift: spec.acShift != null ? spec.acShift : 0.16,
     stallAlpha: (spec.stallDeg != null ? spec.stallDeg : (spec.prop ? 16.5 : 15.5)) * DEG,
     /* A short wing rolls faster than a long one for the same aileron, and a
        fighter's roll rate is most of what makes it feel like a fighter. Scaled
        against the 737's span so the airliners keep exactly what they had. */
-    rollPower: 0.115 * Math.pow(35.79 / b, 0.55),
+    /* Roll authority, sized from the type's PUBLISHED maximum roll rate.
+       It used to scale inversely with span, which is dimensionally wrong and
+       gave exactly the complaint it deserved: Concorde's span is shorter than
+       a 737's, so the formula handed a 111-tonne delta more roll authority
+       than a narrowbody and it rolled like a fighter. What sets roll rate is
+       the balance between aileron power and roll damping, and solving that
+       balance backwards from the real rate is one line:
+
+           p_steady = (Cl_da / -Cl_p) * (2V / b)
+
+       so Cl_da is whatever makes p_steady come out at the published figure at
+       the manoeuvring speed. A 737 rolls at 35 degrees a second, Concorde at
+       15, an F-16 at 324, and now they do. */
+    rollPower: (rollRate * DEG) * 0.48 * b / (2 * vRoll),
+    vRoll,
   }
 }
 
@@ -196,9 +260,13 @@ export function makeConfig(spec) {
    model runs at 120 and 240 Hz.                                            */
 export class Wind {
   constructor() {
+    /* Still air by default. Eight knots from 250 with gusts is a fair day and
+       it was on for everybody the moment they pressed Start, which means the
+       first thing anyone ever flew here was a crosswind landing they had not
+       asked for. The wind controls are on the page; this is where they begin. */
     this.dirDeg = 250          // direction the wind comes FROM
-    this.speedKt = 8
-    this.gust = 0.35           // 0..1, how lively
+    this.speedKt = 0
+    this.gust = 0              // 0..1, how lively
     this.t = 0
     this.cur = { x: 0, y: 0, z: 0 }
   }
@@ -413,7 +481,8 @@ export class Aircraft {
 
   /* --- Aerodynamics ------------------------------------------------------ */
   liftCoef(alpha, dCL, stallAlpha) {
-    const cl0 = this.cfg.cl0, a = this.cfg.clAlpha
+    // The compressible slope at the Mach number the aeroplane is actually at.
+    const cl0 = this.cfg.cl0, a = this.clAlphaNow || this.cfg.clAlpha
     const linear = cl0 + dCL + a * alpha
     const mag = Math.abs(alpha)
     if (mag <= stallAlpha) return linear
@@ -468,6 +537,22 @@ export class Aircraft {
     const qbar = 0.5 * rho * V * V
     const stallAlpha = cfg.stallAlpha + flap.dStall * DEG
 
+    /* Mach first, because compressibility now reaches the lift itself and not
+       just the drag. Crossing the barrier is a real event in here: the slope
+       collapses, the aerodynamic centre runs aft and tucks the nose, and the
+       controls go heavy, all from this one number. */
+    const mach = V / speedOfSound(Math.max(this.pos.y, 0))
+    const machPrev = this.mach || 0
+    this.mach = mach
+    this.clAlphaNow = liftSlopeAt(cfg.clAlpha, cfg.AR, mach)
+    /* The frame the aeroplane goes through Mach 1, in either direction, so the
+       boom and the shock cloud have something to fire on. With hysteresis:
+       accelerating through the transonic the Mach number hunts either side of
+       1.00 for a second or two as the drag rise bites, and a bare comparison
+       fired the boom twice going out and twice coming back. */
+    if (!this.supersonic && mach >= 1.02) { this.supersonic = true; this.wentSupersonic = true }
+    else if (this.supersonic && mach < 0.98) { this.supersonic = false; this.wentSubsonic = true }
+
     // Ground effect: within a span of the surface the induced drag falls away
     // and the wing floats. This is why a greaser is hard.
     const hb = clamp(this.agl / cfg.b, 0, 1.2)
@@ -478,13 +563,12 @@ export class Aircraft {
        the lift of a tumbling object, which is nearly none, so it falls instead
        of gliding serenely on to its destination. */
     if (this.crashed) CL *= 0.12
+    this.CL = CL                        // the tuck term needs it
     const CD0 = cfg.cd0 + flap.dCD + this.gearPos * 0.019 + this.spoilers * 0.055
     const kInd = 1 / (Math.PI * cfg.oswald * cfg.AR)
-    const mach = V / speedOfSound(Math.max(this.pos.y, 0))
     const CD = CD0 + waveDrag(cfg, mach) + kInd * CL * CL * ge
     const CY = -0.90 * this.beta
 
-    this.mach = mach
     this.stalling = Math.abs(this.alpha) > stallAlpha && V > 12
     this.overspeed = this.ias * 1.943844 > cfg.vne || mach > cfg.mmo ||
       (this.flap > 0 && this.ias * 1.943844 > flap.vfe)
@@ -597,10 +681,31 @@ export class Aircraft {
     // a million newton-metres. 1.45 cleared that by so much that the aeroplane
     // rotated at fifteen degrees a second; 0.88 rotates at about four, which is
     // what the real one does.
-    let Cm = 0.045 - 1.25 * this.alpha + 0.88 * elev - 30 * (qRate * cfg.c / (2 * Vs))
-    // Roll authority scales with the span, so the fighter rolls like a fighter
-    // and the 747 still rolls like a 747.
-    let Cl = cfg.rollPower * this.ctl.aileron - 0.105 * this.beta - 0.48 * (pRate * cfg.b / (2 * Vs))
+    /* Control effectiveness follows the lift-curve slope, so a surface loses
+       authority through the transonic exactly as the wing does. Everything
+       supersonic in here is that one ratio. */
+    const slope = this.clAlphaNow || cfg.clAlpha
+    const auth = clamp(slope / cfg.clAlpha, 0.45, 1.35)
+
+    let Cm = 0.045 - 1.25 * this.alpha + 0.88 * elev * auth - 30 * (qRate * cfg.c / (2 * Vs))
+
+    /* MACH TUCK. The aerodynamic centre moves aft through the transonic, so
+       the lift it already has starts pitching the nose down, and it does it
+       harder the faster you go. The nose-down moment is the shift times the
+       lift coefficient — straight out of the definition of the aerodynamic
+       centre, not a curve fitted to feel right. */
+    const mach = this.mach || 0
+    if (mach > cfg.mdd) {
+      const tuck = clamp((mach - cfg.mdd) / (1.10 - cfg.mdd), 0, 1)
+      Cm -= cfg.acShift * tuck * (this.CL || 0)
+    }
+
+    /* Roll. Full authority up to the manoeuvring speed and a constant rate
+       above it, which is what an aeroplane actually does: the surfaces are
+       rate-limited and the airframe is load-limited, so going faster past VA
+       does not buy a faster roll. */
+    const rollAuth = cfg.rollPower * Math.min(1, cfg.vRoll / Math.max(V, 20)) * auth
+    let Cl = rollAuth * this.ctl.aileron - 0.105 * this.beta - 0.48 * (pRate * cfg.b / (2 * Vs))
     let Cn = 0.128 * this.beta + 0.085 * this.ctl.rudder - 0.16 * (rRate * cfg.b / (2 * Vs))
       - 0.022 * this.ctl.aileron        // adverse yaw
 
