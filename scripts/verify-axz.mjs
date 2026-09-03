@@ -987,6 +987,99 @@ console.log('\nmotion')
   }
 }
 
+/* 2m. The hangar. The 3D viewer is a dynamic import that starts when the
+      stage scrolls into view, with Three.js from a CDN through an import
+      map, so this needs the network. What it asserts: the roster is the
+      fleet table's numbers, every pick draws, the motion toggle really
+      stops the rotors, and the standalone H145 page carries the same code. */
+console.log('\nhangar')
+{
+  // A fresh context: an earlier check leaves the motion toggle wherever it
+  // left it, and that setting is remembered in localStorage.
+  const hctx = await browser.newContext()
+  const page = await hctx.newPage()
+  const cdn = []
+  page.on('request', r => { if (/cdn\.jsdelivr\.net\/npm\/three@/.test(r.url())) cdn.push(r.url()) })
+  // No other document loads a byte of Three.js.
+  await page.goto(BASE + '/axz/sim/', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/axz/', { waitUntil: 'networkidle' })
+  cdn.length === 0 ? ok('no page but the hangar fetches Three.js') : bad(`Three.js fetched outside the hangar: ${cdn[0]}`)
+  await page.goto(BASE + '/axz/hangar/', { waitUntil: 'networkidle' })
+  const roster = JSON.parse(await page.getAttribute('[data-hangar-stage]', 'data-hangar-roster'))
+  roster['b-737x'] && roster['b-737x'].len === 39.47 && roster['b-321x'].len === 44.51 && roster.h145 && roster.h145.span === 11
+    ? ok("the hangar roster carries the fleet table's dimensions (737-800 39.47 m, A321 44.51 m, H145 rotor 11.00 m)")
+    : bad('hangar roster dimensions drifted from the fleet table')
+  const picks = await page.$$eval('[data-hangar-pick]', bs => bs.map(b => b.getAttribute('data-hangar-pick')))
+  picks.length === 7 ? ok(`seven aircraft to pick from: ${picks.join(' ')}`) : bad(`${picks.length} picks, expected 7`)
+
+  await page.evaluate(() => document.querySelector('[data-hangar-stage]').scrollIntoView())
+  const ran = await page.waitForSelector('[data-hangar-stage][data-hangar-state="running"]', { timeout: 45000 }).then(() => true).catch(() => false)
+  if (!ran) {
+    bad(`the hangar did not start: state=${await page.getAttribute('[data-hangar-stage]', 'data-hangar-state')} status="${await page.textContent('[data-hangar-status]')}" (needs the network for Three.js)`)
+  } else {
+    ok('the hangar starts once the stage scrolls into view')
+    cdn.some(u => /three@0\.\d+\.\d+\/build\/three\.module\.js/.test(u)) ? ok('Three.js comes from the pinned CDN build') : bad(`Three.js URL not pinned: ${cdn.join(' ')}`)
+    const canvas = await page.$('canvas.hangar-canvas')
+    canvas ? ok('a canvas is mounted') : bad('no canvas mounted')
+    const label = canvas && await canvas.getAttribute('aria-label')
+    label && label.includes('H145') ? ok(`the canvas is labelled: "${label}"`) : bad(`canvas label wrong: ${label}`)
+
+    // Every pick draws something with the right number of parts.
+    let drawn = 0
+    for (const id of picks) {
+      await page.click(`[data-hangar-pick="${id}"]`)
+      await page.waitForTimeout(120)
+      const n = await page.evaluate(() => { let n = 0; window.__axzHangar.viewer.current.traverse(o => { if (o.isMesh) n++ }); return n })
+      const pressed = await page.getAttribute(`[data-hangar-pick="${id}"]`, 'aria-pressed')
+      const shown = await page.textContent('[data-hangar-field="type"]')
+      if (n > 20 && pressed === 'true' && shown.trim() === roster[id].name) drawn++
+      else bad(`${id}: ${n} meshes, aria-pressed=${pressed}, readout "${shown.trim()}"`)
+    }
+    drawn === picks.length ? ok(`all ${drawn} aircraft build, press their button and fill the readout`) : bad(`${drawn}/${picks.length} aircraft drew correctly`)
+
+    // Dimensions in the readout are the roster's, formatted, not retyped.
+    await page.click('[data-hangar-pick="b-321x"]')
+    await page.waitForTimeout(100)
+    const len = await page.textContent('[data-hangar-field="length"]')
+    len.trim() === '44.51 m' ? ok('the readout prints the A321 at 44.51 m') : bad(`A321 readout length "${len.trim()}"`)
+
+    // Motion off must stop the rotors, not just hide them.
+    await page.click('[data-hangar-pick="h145"]')
+    await page.waitForTimeout(600)
+    const turning = () => page.evaluate(async () => {
+      const r = window.__axzHangar.viewer.current.getObjectByName('mainRotor')
+      const a = r.rotation.y; await new Promise(f => setTimeout(f, 300)); return r.rotation.y !== a
+    })
+    ;(await turning()) ? ok('the main rotor turns with motion on') : bad('the main rotor does not turn')
+    await page.click('[data-motion-toggle]')
+    await page.waitForTimeout(3200)   // spool-down
+    !(await turning()) ? ok('the motion toggle stops the rotor (after spool-down)') : bad('the rotor kept turning with motion off')
+    await page.click('[data-motion-toggle]')
+
+    // Keyboard: the picks are buttons, the canvas is focusable.
+    const focusable = await page.evaluate(() => { const c = document.querySelector('canvas.hangar-canvas'); c.focus(); return document.activeElement === c })
+    focusable ? ok('the canvas takes keyboard focus') : bad('the canvas cannot be focused')
+  }
+  await page.close()
+
+  // The standalone page is the same model code, so it must draw the same aircraft.
+  const solo = await hctx.newPage()
+  await solo.goto(BASE + '/axz/hangar/h145.html', { waitUntil: 'networkidle' })
+  const soloOk = await solo.waitForFunction(() => window.__axzHangar && window.__axzHangar.viewer.current, null, { timeout: 45000 }).then(() => true).catch(() => false)
+  if (soloOk) {
+    const meshes = await solo.evaluate(() => { let n = 0; window.__axzHangar.viewer.current.traverse(o => { if (o.isMesh) n++ }); return n })
+    meshes > 40 ? ok(`the standalone H145 page draws the helicopter (${meshes} meshes)`) : bad(`standalone page drew ${meshes} meshes`)
+    const blades = await solo.evaluate(() => window.__axzHangar.viewer.current.getObjectByName('mainRotor').children.filter(c => c.isGroup).length)
+    blades === 4 ? ok('four main rotor blades') : bad(`${blades} main rotor blade arms`)
+    const fan = await solo.evaluate(() => window.__axzHangar.viewer.current.getObjectByName('tailRotor').children.length - 1)
+    fan === 10 ? ok('ten Fenestron blades') : bad(`${fan} Fenestron blades`)
+    const inline = await solo.evaluate(() => [...document.scripts].some(s => !s.src && s.type === 'module' && s.textContent.includes('function createHangar') && s.textContent.includes('function createViewer')))
+    inline ? ok('the standalone page inlines the model library and the viewer') : bad('the standalone page does not inline the hangar code')
+  } else bad('the standalone H145 page did not draw (needs the network for Three.js)')
+  await solo.close()
+  await hctx.close()
+}
+
 await browser.close()
 console.log(fails.length ? `\n✗ ${fails.length} failure(s)` : '\n✓ all functional checks pass')
 process.exit(fails.length ? 1 : 0)

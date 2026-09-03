@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>签派台 — 小泽航空</title>
-<meta name="description" content="选一条航段、挑一架飞机，这里会出一份放行单。上面的数字没有一个是编的：航路、巡航高度、航线距离、飞行时间都是本站已经写在航线那一节里的，平均地速是距离除以时间反推出来的，算式在下面写着。">
+<title>机库 — 小泽航空</title>
+<meta name="description" content="把机队推进机库里，绕着看。四架小泽的飞机，按公布尺寸建模，和机队那一节、飞行模拟用的是同一张表；旁边停着三位客人：一架 H145 直升机、一架 747-400 和一架协和。全部几何，都是页面打开时在代码里现算的，没有模型文件，没有贴图：机身是一串截面放样出来的曲面，机翼是一串翼型放样出来的，涂装是顶点颜色。">
 
-<link rel="canonical" href="https://xiaobrook.com/axz/dispatch/">
-<link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/dispatch/">
-<link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/dispatch/">
-<link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/dispatch/">
-<meta property="og:title" content="签派台 — 小泽航空">
-<meta property="og:description" content="选一条航段、挑一架飞机，这里会出一份放行单。上面的数字没有一个是编的：航路、巡航高度、航线距离、飞行时间都是本站已经写在航线那一节里的，平均地速是距离除以时间反推出来的，算式在下面写着。">
+<link rel="canonical" href="https://xiaobrook.com/axz/hangar/">
+<link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/hangar/">
+<link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/hangar/">
+<link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/hangar/">
+<meta property="og:title" content="机库 — 小泽航空">
+<meta property="og:description" content="把机队推进机库里，绕着看。四架小泽的飞机，按公布尺寸建模，和机队那一节、飞行模拟用的是同一张表；旁边停着三位客人：一架 H145 直升机、一架 747-400 和一架协和。全部几何，都是页面打开时在代码里现算的，没有模型文件，没有贴图：机身是一串截面放样出来的曲面，机翼是一串翼型放样出来的，涂装是顶点颜色。">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="zh_CN">
 <link rel="icon" href="/axz/favicon.svg" type="image/svg+xml">
@@ -19,7 +19,7 @@
 <link rel="preload" as="font" type="font/woff2" href="/axz/fonts/axz-mono-400.6fc3e157.woff2" crossorigin>
 <style>@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-400-zh.21d2a338.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-700-zh.78b96dc0.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Serif";src:url("/axz/fonts/axz-serif-400-zh.193bc21f.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-400.6fc3e157.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-600.4d4d2e8c.woff2") format("woff2");font-weight:600;font-style:normal;font-display:swap;}</style>
 <link rel="stylesheet" href="/axz/assets/axz.550dbaf9.css">
-
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 </head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -74,12 +74,12 @@
       <img class="mark mark--light" src="/axz/img/wordmark-light.webp" alt="" aria-hidden="true" width="114" height="74">
       <img class="mark mark--dark" src="/axz/img/wordmark-dark.webp" alt="" aria-hidden="true" width="114" height="74">
     </a>
-    <nav class="nav" aria-label="主导航"><a href="/axz/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>首页</span></a><a href="/axz/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>留言区</span></a><a href="/axz/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>飞行日志</span></a><a href="/axz/dispatch/" aria-current="page"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>签派台</span></a><a href="/axz/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>飞行模拟</span></a><a href="/axz/hangar/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>机库</span></a><a href="/axz/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>无障碍声明</span></a></nav>
+    <nav class="nav" aria-label="主导航"><a href="/axz/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>首页</span></a><a href="/axz/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>留言区</span></a><a href="/axz/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>飞行日志</span></a><a href="/axz/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>签派台</span></a><a href="/axz/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>飞行模拟</span></a><a href="/axz/hangar/" aria-current="page"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>机库</span></a><a href="/axz/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>无障碍声明</span></a></nav>
     <div class="controls">
       <div class="lang">
-        <a lang="zh-Hans" hreflang="zh-Hans" href="/axz/dispatch/" aria-current="page"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-cn"/></svg><span>中文</span></a>
+        <a lang="zh-Hans" hreflang="zh-Hans" href="/axz/hangar/" aria-current="page"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-cn"/></svg><span>中文</span></a>
         <span class="lang__sep" aria-hidden="true">/</span>
-        <a lang="en" hreflang="en" href="/axz/en/dispatch/"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-us"/></svg><span>English</span></a>
+        <a lang="en" hreflang="en" href="/axz/en/hangar/"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-us"/></svg><span>English</span></a>
       </div>
       <button class="ctrl-btn ctrl-btn--icon" type="button" data-theme-toggle aria-pressed="false"
         data-label-day="昼" data-label-night="夜">
@@ -97,114 +97,59 @@
 <main id="main">
 
 <section class="sector wrap">
-  <h1>签派台</h1>
-  <p class="record__meta">Air Xiao Ze (AXZ) · 签派</p>
-  <p class="prose">选一条航段、挑一架飞机，这里会出一份放行单。上面的数字没有一个是编的：航路、巡航高度、航线距离、飞行时间都是本站已经写在航线那一节里的，平均地速是距离除以时间反推出来的，算式在下面写着。</p>
+  <h1>机库</h1>
+  <p class="record__meta">Air Xiao Ze (AXZ) · 机库</p>
+  <p class="prose">把机队推进机库里，绕着看。四架小泽的飞机，按公布尺寸建模，和机队那一节、飞行模拟用的是同一张表；旁边停着三位客人：一架 H145 直升机、一架 747-400 和一架协和。全部几何，都是页面打开时在代码里现算的，没有模型文件，没有贴图：机身是一串截面放样出来的曲面，机翼是一串翼型放样出来的，涂装是顶点颜色。</p>
 
-  <div class="disp" data-dispatch
-       data-legs="{&quot;AXZ001&quot;:{&quot;flight&quot;:&quot;AXZ001&quot;,&quot;route&quot;:&quot;KSFO SID OSI V25 SAPID T259 SANTY STAR KSNS&quot;,&quot;dir&quot;:&quot;去程&quot;,&quot;sector&quot;:&quot;KSFO - KSNS&quot;,&quot;level&quot;:&quot;1,676米（5,500英尺）&quot;,&quot;distance&quot;:&quot;约110公里&quot;,&quot;block&quot;:&quot;约30分钟&quot;,&quot;speed&quot;:&quot;220 公里/小时&quot;},&quot;AXZ002&quot;:{&quot;flight&quot;:&quot;AXZ002&quot;,&quot;route&quot;:&quot;KSNS SID SNS V111 BSR STAR KSFO&quot;,&quot;dir&quot;:&quot;返程&quot;,&quot;sector&quot;:&quot;KSNS - KSFO&quot;,&quot;level&quot;:&quot;1,676米（5,500英尺）&quot;,&quot;distance&quot;:&quot;约110公里&quot;,&quot;block&quot;:&quot;约30分钟&quot;,&quot;speed&quot;:&quot;220 公里/小时&quot;},&quot;AXZ003&quot;:{&quot;flight&quot;:&quot;AXZ003&quot;,&quot;route&quot;:&quot;ZSPD SID SASAN R343 ESBAG STAR ZSNJ&quot;,&quot;dir&quot;:&quot;去程&quot;,&quot;sector&quot;:&quot;ZSPD - ZSNJ&quot;,&quot;level&quot;:&quot;9,500米（31100英尺）&quot;,&quot;distance&quot;:&quot;约280公里&quot;,&quot;block&quot;:&quot;约50分钟&quot;,&quot;speed&quot;:&quot;336 公里/小时&quot;},&quot;AXZ004&quot;:{&quot;flight&quot;:&quot;AXZ004&quot;,&quot;route&quot;:&quot;ZSNJ SID ESBAG R343 SASAN STAR ZSPD&quot;,&quot;dir&quot;:&quot;返程&quot;,&quot;sector&quot;:&quot;ZSNJ - ZSPD&quot;,&quot;level&quot;:&quot;9,500米（31100英尺）&quot;,&quot;distance&quot;:&quot;约280公里&quot;,&quot;block&quot;:&quot;约50分钟&quot;,&quot;speed&quot;:&quot;336 公里/小时&quot;}}"
-       data-ac="{&quot;b-737x&quot;:{&quot;reg&quot;:&quot;B-737X&quot;,&quot;name&quot;:&quot;波音 737-800&quot;},&quot;b-321x&quot;:{&quot;reg&quot;:&quot;B-321X&quot;,&quot;name&quot;:&quot;空客 A321&quot;},&quot;b-1717&quot;:{&quot;reg&quot;:&quot;B-1717&quot;,&quot;name&quot;:&quot;波音 737-800 (MC联动)&quot;},&quot;b-0001f&quot;:{&quot;reg&quot;:&quot;B-0001F&quot;,&quot;name&quot;:&quot;波音 737-800BCF&quot;}}"
-       data-issued-label="签派时间">
-    <div class="disp-controls">
-      <div class="field">
-        <label for="disp-leg">航段</label>
-        <select id="disp-leg" data-disp-leg><option value="AXZ001">AXZ001 · 去程 · KSFO-KSNS</option><option value="AXZ002">AXZ002 · 返程 · KSFO-KSNS</option><option value="AXZ003">AXZ003 · 去程 · ZSPD-ZSNJ</option><option value="AXZ004">AXZ004 · 返程 · ZSPD-ZSNJ</option></select>
-      </div>
-      <div class="field">
-        <label for="disp-ac">执飞飞机</label>
-        <select id="disp-ac" data-disp-ac><option value="b-737x">B-737X · 波音 737-800</option><option value="b-321x">B-321X · 空客 A321</option><option value="b-1717">B-1717 · 波音 737-800 (MC联动)</option><option value="b-0001f">B-0001F · 波音 737-800BCF</option></select>
-      </div>
+  <div class="hangar" data-hangar-stage
+       data-hangar-src="/axz/assets/hangar-a1a900d7/boot.js"
+       data-hangar-initial="h145"
+       data-hangar-labels="{&quot;loading&quot;:&quot;正在载入机库…&quot;,&quot;unsupported&quot;:&quot;你的浏览器没有可用的 WebGL，机库打不开。下面的尺寸表照常能看。&quot;,&quot;failed&quot;:&quot;机库载入失败。下面的尺寸表照常能看。&quot;,&quot;canvas&quot;:&quot;三维模型&quot;}"
+       data-hangar-roster="{&quot;h145&quot;:{&quot;id&quot;:&quot;h145&quot;,&quot;kind&quot;:&quot;h145&quot;,&quot;name&quot;:&quot;Airbus H145&quot;,&quot;reg&quot;:&quot;&quot;,&quot;axz&quot;:false,&quot;len&quot;:13.64,&quot;span&quot;:11,&quot;dia&quot;:2,&quot;h&quot;:3.95,&quot;engines&quot;:2,&quot;mass&quot;:3800,&quot;note&quot;:&quot;空客直升机 H145：双发轻型直升机，四桨叶无轴承主旋翼，涵道尾桨。这一架按救援构型画：黄身红腹，右侧绞车，机头下方探照灯。它不是小泽航空的飞机，是机库里的客人。&quot;},&quot;b-737x&quot;:{&quot;id&quot;:&quot;b-737x&quot;,&quot;kind&quot;:&quot;airliner&quot;,&quot;name&quot;:&quot;波音 737-800&quot;,&quot;reg&quot;:&quot;B-737X&quot;,&quot;axz&quot;:true,&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;mass&quot;:65000,&quot;wingArea&quot;:124.6,&quot;track&quot;:5.72,&quot;winglet&quot;:&quot;blended&quot;,&quot;livery&quot;:&quot;axz&quot;,&quot;dorsal&quot;:true,&quot;engineNote&quot;:&quot;2 × CFM56-7B&quot;,&quot;note&quot;:&quot;小泽的第一架飞机。融合式翼梢小翼，CFM56 那种扁底短舱，背鳍。涂装是小泽的白身青腹。&quot;},&quot;b-321x&quot;:{&quot;id&quot;:&quot;b-321x&quot;,&quot;kind&quot;:&quot;airliner&quot;,&quot;name&quot;:&quot;空客 A321&quot;,&quot;reg&quot;:&quot;B-321X&quot;,&quot;axz&quot;:true,&quot;len&quot;:44.51,&quot;span&quot;:35.8,&quot;dia&quot;:3.95,&quot;h&quot;:11.76,&quot;engines&quot;:2,&quot;mass&quot;:71000,&quot;wingArea&quot;:122.6,&quot;track&quot;:7.59,&quot;winglet&quot;:&quot;sharklet&quot;,&quot;livery&quot;:&quot;axz&quot;,&quot;dorsal&quot;:false,&quot;engineNote&quot;:&quot;2 × IAE V2500&quot;,&quot;sweepDeg&quot;:25,&quot;stabSpan&quot;:0.35,&quot;note&quot;:&quot;比 737-800 长五米，翼展几乎一样。鲨鳍小翼，两对翼上应急出口，没有背鳍。&quot;},&quot;b-1717&quot;:{&quot;id&quot;:&quot;b-1717&quot;,&quot;kind&quot;:&quot;airliner&quot;,&quot;name&quot;:&quot;波音 737-800 (MC联动)&quot;,&quot;reg&quot;:&quot;B-1717&quot;,&quot;axz&quot;:true,&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;mass&quot;:65000,&quot;wingArea&quot;:124.6,&quot;track&quot;:5.72,&quot;winglet&quot;:&quot;blended&quot;,&quot;livery&quot;:&quot;minecraft&quot;,&quot;dorsal&quot;:true,&quot;engineNote&quot;:&quot;2 × CFM56-7B&quot;,&quot;note&quot;:&quot;Minecraft 联动机，草方块涂装：草皮在上，泥土在中，石头在下，半米一格。发誓永不退涂。&quot;},&quot;b-0001f&quot;:{&quot;id&quot;:&quot;b-0001f&quot;,&quot;kind&quot;:&quot;airliner&quot;,&quot;name&quot;:&quot;波音 737-800BCF&quot;,&quot;reg&quot;:&quot;B-0001F&quot;,&quot;axz&quot;:true,&quot;len&quot;:39.47,&quot;span&quot;:35.79,&quot;dia&quot;:3.76,&quot;h&quot;:12.55,&quot;engines&quot;:2,&quot;mass&quot;:71000,&quot;wingArea&quot;:124.6,&quot;track&quot;:5.72,&quot;winglet&quot;:&quot;blended&quot;,&quot;livery&quot;:&quot;plain&quot;,&quot;dorsal&quot;:true,&quot;cargo&quot;:true,&quot;engineNote&quot;:&quot;2 × CFM56-7B&quot;,&quot;note&quot;:&quot;货机构型：没有客舱窗，左前方一扇大货舱门，向上开。&quot;},&quot;b744&quot;:{&quot;id&quot;:&quot;b744&quot;,&quot;kind&quot;:&quot;airliner&quot;,&quot;name&quot;:&quot;Boeing 747-400&quot;,&quot;reg&quot;:&quot;SIM-744&quot;,&quot;axz&quot;:false,&quot;len&quot;:70.66,&quot;span&quot;:64.44,&quot;dia&quot;:6.5,&quot;h&quot;:19.41,&quot;engines&quot;:4,&quot;mass&quot;:250000,&quot;wingArea&quot;:541.2,&quot;track&quot;:11,&quot;winglet&quot;:&quot;canted&quot;,&quot;livery&quot;:&quot;heavy&quot;,&quot;dorsal&quot;:true,&quot;upperDeck&quot;:true,&quot;engineNote&quot;:&quot;4 × CF6-80C2&quot;,&quot;sweepDeg&quot;:37,&quot;upperDeg&quot;:20,&quot;stabSpan&quot;:0.35,&quot;nacelle&quot;:2.7,&quot;dihedralDeg&quot;:7,&quot;clear&quot;:2.2,&quot;note&quot;:&quot;本站头条那张照片里的机型。上层客舱的驼峰，四台发动机，十六个主轮。&quot;},&quot;conc&quot;:{&quot;id&quot;:&quot;conc&quot;,&quot;kind&quot;:&quot;concorde&quot;,&quot;name&quot;:&quot;Aerospatiale/BAC Concorde&quot;,&quot;reg&quot;:&quot;SIM-102&quot;,&quot;axz&quot;:false,&quot;len&quot;:61.66,&quot;span&quot;:25.6,&quot;dia&quot;:2.88,&quot;h&quot;:12.2,&quot;engines&quot;:4,&quot;mass&quot;:111130,&quot;wingArea&quot;:358.25,&quot;track&quot;:7.72,&quot;livery&quot;:&quot;plain&quot;,&quot;engineNote&quot;:&quot;4 × Olympus 593&quot;,&quot;note&quot;:&quot;S 形前缘的三角翼，下垂机头，四台奥林巴斯发动机，装在翼下两个方盒子里。起落架很高，因为落地迎角大。&quot;}}">
+    <div class="hangar-picker" role="group" aria-label="选择飞机"><button class="btn hangar-pick" type="button" data-hangar-pick="h145" aria-pressed="true">Airbus H145<span class="ros-tag">机库客人</span></button><button class="btn hangar-pick" type="button" data-hangar-pick="b-737x" aria-pressed="false">波音 737-800 <span class="code">B-737X</span><span class="ros-tag is-own">小泽航空</span></button><button class="btn hangar-pick" type="button" data-hangar-pick="b-321x" aria-pressed="false">空客 A321 <span class="code">B-321X</span><span class="ros-tag is-own">小泽航空</span></button><button class="btn hangar-pick" type="button" data-hangar-pick="b-1717" aria-pressed="false">波音 737-800 (MC联动) <span class="code">B-1717</span><span class="ros-tag is-own">小泽航空</span></button><button class="btn hangar-pick" type="button" data-hangar-pick="b-0001f" aria-pressed="false">波音 737-800BCF <span class="code">B-0001F</span><span class="ros-tag is-own">小泽航空</span></button><button class="btn hangar-pick" type="button" data-hangar-pick="b744" aria-pressed="false">Boeing 747-400 <span class="code">SIM-744</span><span class="ros-tag">机库客人</span></button><button class="btn hangar-pick" type="button" data-hangar-pick="conc" aria-pressed="false">Aerospatiale/BAC Concorde <span class="code">SIM-102</span><span class="ros-tag">机库客人</span></button></div>
+    <p class="status" role="status" data-hangar-status></p>
+    <div class="hangar-stage" data-hangar-mount>
+      <noscript><p class="hangar-nojs">你的浏览器没有可用的 WebGL，机库打不开。下面的尺寸表照常能看。</p></noscript>
     </div>
-    <p class="prose">下面这份放行单会随着上面的选择一起变。</p>
-
-    <figure class="release" data-disp-release>
-      <div class="release__head">
-        <span>飞行放行单</span>
-        <span class="release__code code" data-disp-flight>AXZ001</span>
-      </div>
-      <dl class="release__body">
-        <dt>航班号</dt><dd class="code" data-disp-f="flight">AXZ001</dd>
-        <dt>机型</dt><dd data-disp-a="name">波音 737-800</dd>
-        <dt>注册号</dt><dd class="code" data-disp-a="reg">B-737X</dd>
-        <dt>航段</dt><dd class="code" data-disp-f="sector">KSFO - KSNS</dd>
-        <dt>飞行航路</dt><dd class="route-string" data-disp-f="route">KSFO SID OSI V25 SAPID T259 SANTY STAR KSNS</dd>
-        <dt>巡航高度</dt><dd class="code" data-disp-f="level">1,676米（5,500英尺）</dd>
-        <dt>航线距离</dt><dd data-disp-f="distance">约110公里</dd>
-        <dt>预计飞行时间</dt><dd data-disp-f="block">约30分钟</dd>
-        <dt>平均地速</dt><dd class="code" data-disp-f="speed">220 公里/小时</dd>
-        <dt>签派时间</dt><dd class="code" data-disp-issued>出单时填写</dd>
-      </dl>
-    </figure>
-
-    <p class="btn-row">
-      <button class="btn" type="button" data-disp-download><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-drop"/></svg>下载放行单</button>
-    </p>
-    <p class="record__meta">存成一个纯文本文件，不上传到任何地方。</p>
+    <p class="record__meta">拖动旋转，滚轮缩放，右键或双指平移，键盘方向键也能平移。旋翼和风扇跟着页面右上角的动画开关走。</p>
+    <div class="sim-grid hangar-readout"><div class="sim-cell">
+    <span class="sim-cell__k">机型</span>
+    <span class="sim-cell__v code" data-hangar-field="type">Airbus H145</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">注册号</span>
+    <span class="sim-cell__v code" data-hangar-field="reg">—</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">全长</span>
+    <span class="sim-cell__v code" data-hangar-field="length">13.64 m</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">翼展 / 旋翼直径</span>
+    <span class="sim-cell__v code" data-hangar-field="span">11.00 m</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">全高</span>
+    <span class="sim-cell__v code" data-hangar-field="height">3.95 m</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">发动机</span>
+    <span class="sim-cell__v code" data-hangar-field="engines">2</span>
+  </div><div class="sim-cell">
+    <span class="sim-cell__k">质量</span>
+    <span class="sim-cell__v code" data-hangar-field="mass">3.80 t</span>
+  </div></div>
+    <p class="prose hangar-desc" data-hangar-desc>空客直升机 H145：双发轻型直升机，四桨叶无轴承主旋翼，涵道尾桨。这一架按救援构型画：黄身红腹，右侧绞车，机头下方探照灯。它不是小泽航空的飞机，是机库里的客人。</p>
   </div>
 
-  <p class="notice notice--quiet">没有脚本的时候，四个航班的放行单内容在上面的航线那一节里都能查到。</p>
-
-  <h2>这些数字是怎么来的</h2>
-  <p class="prose">平均地速 = 航线距离 ÷ 飞行时间。两条航段各算一次：</p>
-  <ul class="record__events"><li class="code">KSFO ↔ KSNS：110 公里 ÷ 0.5 小时 = 220 公里/小时</li><li class="code">ZSPD ↔ ZSNJ：280 公里 ÷ 0.833 小时 = 336 公里/小时</li></ul>
-  <p class="prose">本站不给油量。算油要知道全重、风和备降场，这三样这里一个都没有，编一个数字出来不如不写。要正经的放行单请用 SimBrief。</p>
-</section>
-
-<section class="sector wrap" data-landing
-  data-no-flare="一直没拉平。" data-too-high="拉早了，飘了一段才接地。" data-too-late="拉晚了。">
-  <h2>落地评分</h2>
-  <p class="prose">一架 737 在最后进近上。到了该拉平的高度按一下，看看接地的时候垂直速度是多少。评语按机队档案里现成的说法给。</p>
-
-  <div class="lg" hidden data-lg-game>
-    <!-- viewBox is cropped to the band the aeroplane actually uses. At the full
-         0-200 height half the frame was empty sky and the aircraft read as a
-         speck once the figure stretched across the measure. -->
-    <svg class="lg-view" viewBox="0 40 640 156" role="img" aria-label="一架 737 在最后进近上。到了该拉平的高度按一下，看看接地的时候垂直速度是多少。评语按机队档案里现成的说法给。" focusable="false">
-      <line class="lg-ground" x1="0" y1="170" x2="640" y2="170"/>
-      <rect class="lg-rwy" x="180" y="167" width="420" height="6"/>
-      <g data-lg-ship><g transform="scale(1.6)">
-        <path class="lg-ship" d="M-16 0 L10 0 L18 -3 L10 3 Z"/><path class="lg-ship" d="M-4 0 l-6 -9 l4 0 l9 9 Z"/><path class="lg-ship" d="M-4 0 l-6 9 l4 0 l9 -9 Z"/><path class="lg-ship" d="M-15 0 l-3 -6 l2 0 l4 6 Z"/>
-      </g></g>
-    </svg>
-    <p class="lg-readout">
-      <span class="lg-readout__k">无线电高度</span>
-      <span class="lg-readout__v code" data-lg-alt>—</span>
-    </p>
-    <p class="btn-row">
-      <button class="btn" type="button" data-lg-start data-again="再来一次">开始进近</button>
-      <button class="btn" type="button" data-lg-flare hidden>拉平</button>
-    </p>
-    <p class="record__meta">按空格键，或者点上面的按钮。</p>
-    <div class="lg-result" role="status" data-lg-result></div>
-  </div>
-
-  <h3 class="record__label">评分标准</h3>
-  <p class="prose">不玩这个小游戏也能看：下面就是全部的评分档位。</p>
-  <table class="bd lg-table">
-    <thead><tr><th scope="col">接地垂直速度 (英尺/分钟)</th><th scope="col">备注</th></tr></thead>
-    <tbody><tr>
-    <td class="code">60 以内</td>
-    <td class="lg-remark">跑道按摩师</td>
-  </tr><tr>
-    <td class="code">61 到 200</td>
-    <td class="lg-remark">落地风格稳健</td>
-  </tr><tr>
-    <td class="code">201 到 400</td>
-    <td class="lg-remark">跑道震动器</td>
-  </tr><tr>
-    <td class="code">400 以上</td>
-    <td class="lg-remark">重着陆</td>
-  </tr></tbody>
-  </table>
+  <h2>模型是怎么来的</h2>
+  <p class="prose">没有模型文件。每一架都是页面打开时，用 Three.js 从公布尺寸现算出来的：机身，是十来个超椭圆截面，用样条连成的一张曲面；机翼、尾翼和桨叶，是翼型沿展向放样的；舷窗按 508 毫米一个的真实间距，贴在算出来的蒙皮上。四架小泽飞机的长度、翼展、全高、翼面积和轮距，取自和机队页、模拟器同一份数据；H145、747 和协和，用的是厂家公布的数字。Three.js 从 CDN 载入，机库滚到视野里才开始下载。</p>
 
   <p class="btn-row btn-row--foot">
-    <a class="btn" href="/axz/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg>返回首页</a>
+    <a class="btn" href="/axz/hangar/h145.html" hreflang="en"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg>单独打开 H145</a>
+    <a class="btn" href="/axz/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg>飞行模拟</a>
+    <a class="btn" href="/axz/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg>回到首页</a>
   </p>
 </section>
 </main>
 <footer class="foot">
   <div class="wrap">
-    <nav class="foot__nav" aria-label="页脚导航"><a href="/axz/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>首页</span></a><a href="/axz/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>留言区</span></a><a href="/axz/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>飞行日志</span></a><a href="/axz/dispatch/" aria-current="page"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>签派台</span></a><a href="/axz/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>飞行模拟</span></a><a href="/axz/hangar/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>机库</span></a><a href="/axz/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>无障碍声明</span></a></nav>
+    <nav class="foot__nav" aria-label="页脚导航"><a href="/axz/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>首页</span></a><a href="/axz/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>留言区</span></a><a href="/axz/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>飞行日志</span></a><a href="/axz/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>签派台</span></a><a href="/axz/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>飞行模拟</span></a><a href="/axz/hangar/" aria-current="page"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>机库</span></a><a href="/axz/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>无障碍声明</span></a></nav>
     <p>小泽航空 <span lang="en">Air Xiao Ze</span> (AXZ) © 2026</p>
     <p>虚拟航司 仅用于模拟飞行</p>
     <p class="foot__credit">机型俯视图：Julien.scavini，取自维基共享资源，CC BY-SA 3.0，本站做了裁切与重新上色。 <a href="https://commons.wikimedia.org/wiki/File:Boeing_737-800_v1.0.png" rel="license noopener noreferrer" target="_blank">在新窗口打开</a></p>

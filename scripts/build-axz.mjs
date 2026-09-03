@@ -14,6 +14,7 @@ import { createHash } from 'node:crypto'
 import {
   airframe, sideview, TYPES, scaleBase,
   SIM_TYPES, AXZ_ORDER, SIM_ONLY, FLAP_SETS, liftSlope, speedsFor,
+  ROTORCRAFT, HANGAR_ORDER, HANGAR_FLAGS,
 } from './airframe.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -87,12 +88,12 @@ const cssBundle = ['tokens', 'base', 'ledger', 'plate', 'pages', 'panels']
   .map(f => readFileSync(join(SRC, 'css', `${f}.css`), 'utf8')).join('\n')
 // Each file is wrapped in its own block and terminated, so one file can never
 // be parsed as a call on the previous file's trailing expression.
-const jsBundle = ['site', 'axzlog', 'panels', 'simload']
+const jsBundle = ['site', 'axzlog', 'panels', 'simload', 'hangarload']
   .map(f => `;(function(){\n${readFileSync(join(SRC, 'js', `${f}.js`), 'utf8')}\n})();`).join('\n')
 
 // Guard the same failure inside a single file: an IIFE that follows another
 // with no separating semicolon parses cleanly and throws at runtime.
-for (const f of ['site', 'axzlog', 'panels', 'simload']) {
+for (const f of ['site', 'axzlog', 'panels', 'simload', 'hangarload']) {
   const src = readFileSync(join(SRC, 'js', `${f}.js`), 'utf8')
   if (/\}\)\(\)\s*(?:\/\*[\s\S]*?\*\/)?\s*\(function/.test(src)) {
     console.error(`✗ ${f}.js: an IIFE follows another with no separating semicolon — this throws at runtime`)
@@ -121,6 +122,24 @@ mkdirSync(join(OUT, 'assets', simDir), { recursive: true })
 SIM_FILES.forEach((f, i) => writeFileSync(join(OUT, 'assets', simDir, `${f}.js`), simSources[i]))
 const SIM_ENTRY = `${BASE}/assets/${simDir}/boot.js`
 const simBytes = simSources.reduce((n, s) => n + Buffer.byteLength(s), 0)
+
+/* --- Hangar ---------------------------------------------------------------
+   The 3D fleet viewer. Same arrangement as the simulator: ES modules in a
+   directory that carries the hash. Three.js itself comes from a CDN through
+   an import map, pinned to one version, and only the hangar page carries the
+   map — no other document loads a byte of it. */
+const HANGAR_FILES = ['models', 'viewer', 'boot']
+const hangarSources = HANGAR_FILES.map(f => readFileSync(join(SRC, 'js', 'hangar', `${f}.js`), 'utf8'))
+const hangarDir = `hangar-${hash(hangarSources.join('\n'))}`
+mkdirSync(join(OUT, 'assets', hangarDir), { recursive: true })
+HANGAR_FILES.forEach((f, i) => writeFileSync(join(OUT, 'assets', hangarDir, `${f}.js`), hangarSources[i]))
+const HANGAR_ENTRY = `${BASE}/assets/${hangarDir}/boot.js`
+const THREE_VERSION = '0.170.0'
+const THREE_CDN = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}`
+const IMPORT_MAP = `<script type="importmap">${JSON.stringify({ imports: {
+  three: `${THREE_CDN}/build/three.module.js`,
+  'three/addons/': `${THREE_CDN}/examples/jsm/`,
+} })}</script>`
 
 /* --- Warning audio --------------------------------------------------------
    The five alerts the airline's owner supplied, cut to one repeat cycle each
@@ -241,6 +260,7 @@ const PAGES = [
   { key: 'logbook', zhPath: 'logbook', enPath: 'en/logbook' },
   { key: 'dispatch', zhPath: 'dispatch', enPath: 'en/dispatch' },
   { key: 'sim', zhPath: 'sim', enPath: 'en/sim' },
+  { key: 'hangar', zhPath: 'hangar', enPath: 'en/hangar' },
   { key: 'accessibility', zhPath: 'accessibility', enPath: 'en/accessibility' },
   { key: 'aprilfools', zhPath: 'aprilfools', enPath: 'en/aprilfools' },
 ]
@@ -251,13 +271,13 @@ const urlFor = (key, lang) => {
 }
 
 /* --- Shell ---------------------------------------------------------------- */
-function shell({ c, lang, key, title, desc, body, noindex = false }) {
+function shell({ c, lang, key, title, desc, body, noindex = false, head = '' }) {
   const other = lang === 'zh-Hans' ? 'en' : 'zh-Hans'
   const otherCat = lang === 'zh-Hans' ? en : zh
   const P = s => parts(s, lang)
 
-  const NAV_ICON = { home: 'i-home', guestbook: 'i-guestbook', logbook: 'i-logbook', dispatch: 'i-dispatch', sim: 'i-fleet', accessibility: 'i-a11y' }
-  const nav = ['home', 'guestbook', 'logbook', 'dispatch', 'sim', 'accessibility'].map(k =>
+  const NAV_ICON = { home: 'i-home', guestbook: 'i-guestbook', logbook: 'i-logbook', dispatch: 'i-dispatch', sim: 'i-fleet', hangar: 'i-hangar', accessibility: 'i-a11y' }
+  const nav = ['home', 'guestbook', 'logbook', 'dispatch', 'sim', 'hangar', 'accessibility'].map(k =>
     `<a href="${urlFor(k, lang)}"${k === key ? ' aria-current="page"' : ''}>${icon(NAV_ICON[k])}<span>${P(c.nav[k])}</span></a>`
   ).join('')
 
@@ -281,6 +301,7 @@ ${noindex ? '<meta name="robots" content="noindex, nofollow">' : ''}
 ${preloads(lang)}
 <style>${fontFace(lang)}</style>
 <link rel="stylesheet" href="${BASE}/assets/${cssName}">
+${head}
 </head>
 <body>
 ${sprite}
@@ -1427,6 +1448,83 @@ function simPage(c, lang) {
   return shell({ c, lang, key: 'sim', title: `${S.title} — ${c.meta.siteName}`, desc: S.intro, body })
 }
 
+/* --- Hangar -----------------------------------------------------------------
+   The roster handed to the viewer is built from the SAME rows the simulator
+   flies and the fleet page draws, plus a helicopter and the drawing flags a
+   3D model needs and a flight model does not. Names for the airline's four
+   come from the catalogue, so they read the same as everywhere else. */
+function hangarRoster(c) {
+  const roster = {}
+  for (const id of HANGAR_ORDER) {
+    const t = SIM_TYPES[id] || ROTORCRAFT[id]
+    if (!t) continue
+    const flags = HANGAR_FLAGS[id] || {}
+    roster[id] = {
+      id, kind: flags.kind || t.kind || 'airliner',
+      name: t.axz ? c.fleet[id].name : t.name,
+      reg: t.axz ? c.fleet[id].reg : (t.reg || ''),
+      axz: !!t.axz,
+      len: t.len, span: t.span, dia: t.dia, h: t.h, engines: t.engines,
+      mass: t.mass, wingArea: t.wingArea, track: t.track,
+      ...flags,
+      note: c.hangar.notes[id] || '',
+    }
+  }
+  return roster
+}
+
+function hangarPage(c, lang) {
+  const P = s => parts(s, lang), H = c.hangar
+  const roster = hangarRoster(c)
+  const labels = { loading: H.loading, unsupported: H.unsupported, failed: H.failed, canvas: H.canvas }
+  const picks = HANGAR_ORDER.filter(id => roster[id]).map((id, i) => {
+    const t = roster[id]
+    return `<button class="btn hangar-pick" type="button" data-hangar-pick="${id}" aria-pressed="${i === 0 ? 'true' : 'false'}">${P(t.name)}${t.reg ? ` <span class="code">${esc(t.reg)}</span>` : ''}<span class="ros-tag${t.axz ? ' is-own' : ''}">${P(t.axz ? H.tagOwn : H.tagGuest)}</span></button>`
+  }).join('')
+  const first = roster[HANGAR_ORDER[0]]
+  const fields = ['type', 'reg', 'length', 'span', 'height', 'engines', 'mass']
+  const initial = {
+    type: first.name, reg: first.reg || '—', length: `${first.len.toFixed(2)} m`, span: `${first.span.toFixed(2)} m`,
+    height: `${first.h.toFixed(2)} m`, engines: first.engineNote || String(first.engines),
+    mass: first.mass ? `${(first.mass / 1000).toFixed(first.mass < 10000 ? 2 : 0)} t` : '—',
+  }
+  const cells = fields.map(k => `<div class="sim-cell">
+    <span class="sim-cell__k">${esc(H.fields[k])}</span>
+    <span class="sim-cell__v code" data-hangar-field="${k}">${esc(initial[k])}</span>
+  </div>`).join('')
+  const body = `
+<section class="sector wrap">
+  <h1>${P(H.title)}</h1>
+  <p class="record__meta">${esc(H.headerSub)}</p>
+  <p class="prose">${P(H.intro)}</p>
+
+  <div class="hangar" data-hangar-stage
+       data-hangar-src="${esc(HANGAR_ENTRY)}"
+       data-hangar-initial="${esc(HANGAR_ORDER[0])}"
+       data-hangar-labels="${esc(JSON.stringify(labels))}"
+       data-hangar-roster="${esc(JSON.stringify(roster))}">
+    <div class="hangar-picker" role="group" aria-label="${esc(H.pickLabel)}">${picks}</div>
+    <p class="status" role="status" data-hangar-status></p>
+    <div class="hangar-stage" data-hangar-mount>
+      <noscript><p class="hangar-nojs">${P(H.unsupported)}</p></noscript>
+    </div>
+    <p class="record__meta">${P(H.hint)}</p>
+    <div class="sim-grid hangar-readout">${cells}</div>
+    <p class="prose hangar-desc" data-hangar-desc>${P(first.note)}</p>
+  </div>
+
+  <h2>${esc(H.aboutTitle)}</h2>
+  <p class="prose">${P(H.aboutBody)}</p>
+
+  <p class="btn-row btn-row--foot">
+    <a class="btn" href="${BASE}/hangar/h145.html" hreflang="en">${icon('i-hangar')}${esc(H.standalone)}</a>
+    <a class="btn" href="${urlFor('sim', lang)}">${icon('i-fleet')}${esc(c.sim.title)}</a>
+    <a class="btn" href="${urlFor('home', lang)}">${icon('i-home')}${esc(H.backHome)}</a>
+  </p>
+</section>`
+  return shell({ c, lang, key: 'hangar', title: `${H.title} — ${c.meta.siteName}`, desc: H.intro, body, head: IMPORT_MAP })
+}
+
 /* --- Accessibility -------------------------------------------------------- */
 function a11y(c, lang) {
   const P = s => parts(s, lang), A = c.accessibility
@@ -1494,7 +1592,7 @@ function aprilfools(c, lang) {
 }
 
 /* --- Emit ----------------------------------------------------------------- */
-const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, sim: simPage, accessibility: a11y, aprilfools }
+const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, sim: simPage, hangar: hangarPage, accessibility: a11y, aprilfools }
 let count = 0
 for (const p of PAGES) {
   for (const [lang, cat, sub] of [['zh-Hans', zh, p.zhPath], ['en', en, p.enPath]]) {
@@ -1503,6 +1601,123 @@ for (const p of PAGES) {
     writeFileSync(join(dir, 'index.html'), RENDER[p.key](cat, lang))
     count++
   }
+}
+
+/* --- The H145 on its own ----------------------------------------------------
+   One self-contained HTML file: the model library and the viewer inlined, and
+   Three.js from the CDN through the same pinned import map. It is the same
+   code the hangar runs, so the two cannot drift; the page just has no site
+   chrome around it. */
+{
+  const strip = src => src.replace(/^export /gm, '')
+  const h145 = ROTORCRAFT.h145
+  const page = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Airbus H145 — a procedural Three.js model · Air Xiao Ze</title>
+<meta name="description" content="An interactive Airbus H145 helicopter built entirely from Three.js primitives and lofted geometry: no model files, no textures. Orbit, zoom and pan; the rotors turn.">
+<link rel="canonical" href="https://xiaobrook.com${BASE}/hangar/h145.html">
+<link rel="icon" href="${BASE}/favicon.svg" type="image/svg+xml">
+<meta name="color-scheme" content="dark light">
+${IMPORT_MAP}
+<style>
+  :root { color-scheme: dark; --ink: #e9e5dc; --ink-2: #a8b0b9; --paper: #0b0d10; --line: #2b3138; --cyan: #00a2e8; --focus: #7cc4ff; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--paper); color: var(--ink); font: 15px/1.45 Archivo, "Noto Sans SC", system-ui, sans-serif; overflow: hidden; }
+  #stage { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+  canvas:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+  .panel { position: fixed; inset-inline-start: 16px; inset-block-start: 16px; max-width: min(360px, calc(100vw - 32px));
+    padding: 14px 16px; background: rgba(11, 13, 16, .72); border: 1px solid var(--line); backdrop-filter: blur(6px); }
+  h1 { margin: 0 0 2px; font-size: 20px; letter-spacing: .01em; }
+  .sub { margin: 0 0 10px; color: var(--ink-2); font-size: 13px; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 12px; font-size: 13px; }
+  dt { color: var(--ink-2); } dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  button { font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 1px solid var(--ink-2); padding: 8px 12px; min-height: 40px; cursor: pointer; }
+  button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .hint { position: fixed; inset-inline: 16px; inset-block-end: 14px; color: var(--ink-2); font-size: 12px; text-align: center; }
+  .hint p { margin: 0; }
+  .status { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; color: var(--ink-2); pointer-events: none; }
+  .status[hidden] { display: none; }
+  a { color: var(--cyan); }
+  @media (prefers-reduced-motion: reduce) { .panel { backdrop-filter: none; } }
+</style>
+</head>
+<body>
+<main id="stage" aria-label="Model viewer"></main>
+<p class="status" id="status" role="status">Loading Three.js…</p>
+<aside class="panel" aria-labelledby="t">
+  <h1 id="t">Airbus H145</h1>
+  <p class="sub">Procedural Three.js model · Air Xiao Ze hangar</p>
+  <dl>
+    <dt>Length</dt><dd>${h145.len.toFixed(2)} m, rotors turning</dd>
+    <dt>Rotor</dt><dd>${h145.span.toFixed(2)} m, four blades</dd>
+    <dt>Height</dt><dd>${h145.h.toFixed(2)} m</dd>
+    <dt>Engines</dt><dd>${h145.engineNote}</dd>
+    <dt>Tail</dt><dd>Fenestron, 1.00 m, ten blades</dd>
+  </dl>
+  <div class="row">
+    <button type="button" id="rotors" aria-pressed="true">Rotors</button>
+    <button type="button" id="theme" aria-pressed="true">Night</button>
+    <button type="button" id="reset">Reset view</button>
+  </div>
+</aside>
+<footer class="hint"><p>Drag to orbit · scroll to zoom · right-drag or two fingers to pan · arrow keys pan. <a href="${BASE}/hangar/">Back to the hangar</a></p></footer>
+<script type="module">
+import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+
+${strip(hangarSources[0])}
+
+${strip(hangarSources[1])}
+
+const stage = document.getElementById('stage')
+const status = document.getElementById('status')
+const canvas = document.createElement('canvas')
+canvas.tabIndex = 0
+canvas.setAttribute('role', 'img')
+canvas.setAttribute('aria-label', '3D model: Airbus H145 in rescue configuration')
+stage.appendChild(canvas)
+
+let rotors = !matchMedia('(prefers-reduced-motion: reduce)').matches
+let night = true
+const rotorBtn = document.getElementById('rotors')
+const themeBtn = document.getElementById('theme')
+rotorBtn.setAttribute('aria-pressed', String(rotors))
+
+let viewer
+try {
+  const hangar = createHangar(THREE)
+  viewer = createViewer(THREE, { OrbitControls, RoomEnvironment }, hangar, {
+    el: stage, canvas, theme: () => (night ? 'night' : 'day'), motionOn: () => rotors,
+  })
+  viewer.show(${JSON.stringify({ ...h145, kind: 'h145' })})
+  status.hidden = true
+  window.__axzHangar = { viewer }
+} catch (e) {
+  status.textContent = 'This browser has no WebGL available, so the model cannot be drawn.'
+  console.error(e)
+}
+rotorBtn.addEventListener('click', () => { rotors = !rotors; rotorBtn.setAttribute('aria-pressed', String(rotors)) })
+themeBtn.addEventListener('click', () => {
+  night = !night
+  themeBtn.setAttribute('aria-pressed', String(night))
+  themeBtn.textContent = night ? 'Night' : 'Day'
+  document.documentElement.style.colorScheme = night ? 'dark' : 'light'
+  if (viewer) viewer.applyTheme()
+})
+document.getElementById('reset').addEventListener('click', () => { if (viewer && viewer.current) viewer.show(${JSON.stringify({ ...h145, kind: 'h145' })}) })
+</script>
+</body>
+</html>
+`
+  writeFileSync(join(OUT, 'hangar', 'h145.html'), page)
 }
 
 // Favicon — the wordmark's own cyan, the first favicon this project has had.

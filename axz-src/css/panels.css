@@ -863,3 +863,44 @@
 @media (max-width: 900px) {
   .sim-roster { display: block; overflow-x: auto; }
 }
+
+/* --- Hangar ----------------------------------------------------------------
+   The 3D stage. Same frame as the simulator's, so the two read as one family
+   of instruments; the picker is a row of the site's own buttons, one pressed. */
+.hangar { margin-block: var(--s-4) var(--s-6); }
+.hangar-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  margin-block-end: var(--s-2);
+}
+.hangar-pick[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.hangar-pick .ros-tag { margin-inline-start: var(--s-1); }
+.hangar-pick[aria-pressed="true"] .ros-tag { border-color: currentColor; color: inherit; }
+.hangar-stage {
+  position: relative;
+  height: min(64vh, 600px);
+  min-height: 320px;
+  border: 1px solid var(--rule-struct);
+  background: var(--paper-2);
+  margin-block: var(--s-3);
+  overflow: hidden;
+  touch-action: none;
+}
+.hangar-canvas { display: block; width: 100%; height: 100%; outline: none; }
+.hangar-canvas:focus-visible { outline: 3px solid var(--focus-outer); outline-offset: -3px; }
+.hangar-nojs {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  padding: var(--s-3);
+  text-align: center;
+  color: var(--ink-2);
+}
+.hangar-readout { margin-block-start: var(--s-2); }
+.hangar-desc { margin-block-start: var(--s-2); }

@@ -22,6 +22,7 @@
     "accessibility": "Accessibility",
     "dispatch": "Dispatch",
     "sim": "Simulator",
+    "hangar": "Hangar",
     "skip": "Skip to main content",
     "themeDay": "Day",
     "themeNight": "Night",
@@ -889,6 +890,42 @@
     },
     "failTitle": "Failures",
     "failBody": "The failure rate setting decides how often the aeroplane breaks by itself. On None it never does, and the only way to break one is to fly it badly, which is where this started. Above that it is a Poisson process: the probability in any step is the rate times the step, and High is roughly one failure an hour, which is far worse than any real aeroplane and is exactly the point. What breaks is weighted by how much of the aeroplane each system is: engines, hydraulics, electrics, gear, flaps, pitot. Every one of them changes something you can feel. An engine out costs thrust and adds a yawing moment you have to hold off with rudder. Losing one of four costs a quarter; losing the only one you have makes a glider; and an outboard engine is harder to hold than an inboard because the arm is longer. With the hydraulics gone the gear and flaps stay exactly where they were, which is nothing on the ground and is the flight you remember if it happens clean on approach. A blocked pitot does not read zero, it freezes at the last thing it saw: the aerodynamics still run on the real speed and only the gauge is wrong, which is the classic failure and the classic killer. Overstress and overspeed break things too. Past the limit load factor damage accumulates, past 1.5 times it the airframe comes apart, and twelve seconds above Vne costs the hydraulics."
+  },
+  "hangar": {
+    "title": "Hangar",
+    "docTitle": "Hangar - Air Xiao Ze",
+    "headerSub": "Air Xiao Ze (AXZ) · Hangar",
+    "intro": "The fleet, rolled into a hangar you can walk around. The four Air Xiao Ze aircraft are modelled from their published dimensions, the same table the fleet section and the simulator use, and three guests are parked alongside: an H145 helicopter, a 747-400 and Concorde. Every surface is computed in code when the page opens. No model files, no textures: a fuselage is a run of cross-sections lofted into a skin, a wing is a run of airfoils, a livery is vertex colour.",
+    "pickLabel": "Choose an aircraft",
+    "tagOwn": "Air Xiao Ze",
+    "tagGuest": "Hangar guest",
+    "loading": "Loading the hangar…",
+    "unsupported": "Your browser has no WebGL available, so the hangar cannot open. The dimensions below still read as normal.",
+    "failed": "The hangar failed to load. The dimensions below still read as normal.",
+    "canvas": "3D model",
+    "hint": "Drag to orbit, scroll to zoom, right-drag or two fingers to pan; the arrow keys pan too. The rotors and fans follow the animation switch in the top bar.",
+    "fields": {
+      "type": "Type",
+      "reg": "Registration",
+      "length": "Length",
+      "span": "Span / rotor diameter",
+      "height": "Height",
+      "engines": "Engines",
+      "mass": "Mass"
+    },
+    "notes": {
+      "h145": "Airbus H145: a twin-engine light helicopter with a four-blade bearingless main rotor and a Fenestron shrouded tail rotor. This one is drawn in rescue configuration: yellow over red, a hoist on the starboard side, a searchlight under the nose. Not an Air Xiao Ze aircraft; a guest in the hangar.",
+      "b-737x": "Air Xiao Ze's first aircraft. Blended winglets, the flat-bottomed CFM56 nacelles, a dorsal fin. The livery is the airline's white over cyan.",
+      "b-321x": "Five metres longer than the 737-800 on nearly the same span. Sharklets, two pairs of overwing exits, no dorsal fin.",
+      "b-1717": "The Minecraft collaboration aircraft, in grass-block livery: turf on top, dirt in the middle, stone underneath, one block per half metre. It swore it would never lose its paint.",
+      "b-0001f": "Freighter configuration: no cabin windows, and one large main-deck cargo door forward on the port side, hinged at the top.",
+      "b744": "The type in the photograph at the top of the home page. The upper-deck hump, four engines, sixteen main wheels.",
+      "conc": "An ogee delta wing, a drooping nose, four Olympus engines in two boxes under the wing. The landing gear is tall because the landing attitude is steep."
+    },
+    "aboutTitle": "Where the models come from",
+    "aboutBody": "There are no model files. Each aircraft is computed with Three.js from published dimensions when the page opens: the fuselage is a dozen superellipse cross-sections joined by a spline into one surface, the wings, tail and blades are airfoils lofted along the span, and the cabin windows are laid onto the computed skin at the real 508 mm pitch. For the four Air Xiao Ze aircraft the length, span, height, wing area and track come from the same data as the fleet page and the simulator; the H145, the 747 and Concorde use the manufacturers' figures. Three.js loads from a CDN, and the download starts only once the hangar scrolls into view.",
+    "standalone": "Open the H145 on its own",
+    "backHome": "Back to home"
   },
   "aprilfools": {
     "date": "April 1, 2026",

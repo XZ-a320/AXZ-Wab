@@ -7,8 +7,9 @@ const AXE = readFileSync('/Users/brookxiao/New/Xiao/Website/node_modules/axe-cor
 const BASE = 'http://localhost:4788'
 
 const PAGES = [
-  '/axz/', '/axz/guestbook/', '/axz/logbook/', '/axz/dispatch/', '/axz/sim/', '/axz/accessibility/', '/axz/aprilfools/',
-  '/axz/en/', '/axz/en/guestbook/', '/axz/en/logbook/', '/axz/en/dispatch/', '/axz/en/sim/', '/axz/en/accessibility/', '/axz/en/aprilfools/',
+  '/axz/', '/axz/guestbook/', '/axz/logbook/', '/axz/dispatch/', '/axz/sim/', '/axz/hangar/', '/axz/accessibility/', '/axz/aprilfools/',
+  '/axz/en/', '/axz/en/guestbook/', '/axz/en/logbook/', '/axz/en/dispatch/', '/axz/en/sim/', '/axz/en/hangar/', '/axz/en/accessibility/', '/axz/en/aprilfools/',
+  '/axz/hangar/h145.html',
 ]
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']

@@ -551,3 +551,28 @@ export function speedsFor(t) {
   const vs = Math.sqrt((2 * t.mass * G) / (1.225 * t.wingArea * CLmax))
   return { clAlpha: a, CLmax, vsKt: vs * 1.943844, vrefKt: vs * 1.3 * 1.943844 }
 }
+
+/* --- Hangar ------------------------------------------------------------------
+   The 3D hangar shows the airline's own four at true scale next to three
+   guests: the helicopter the hangar was built around, and the two aeroplanes
+   that most people can name from a silhouette. Dimensions are the published
+   ones; for the aeroplanes they are the SAME rows as SIM_TYPES, so the hangar,
+   the fleet table and the simulator cannot disagree. */
+export const ROTORCRAFT = {
+  h145: {
+    name: 'Airbus H145', kind: 'h145', axz: false, reg: '',
+    // Length rotors turning, main rotor diameter, height to the top of the fin.
+    len: 13.64, span: 11.00, dia: 2.00, h: 3.95, engines: 2,
+    mass: 3800, engineNote: '2 × Safran Arriel 2E',
+  },
+}
+export const HANGAR_ORDER = ['h145', 'b-737x', 'b-321x', 'b-1717', 'b-0001f', 'b744', 'conc']
+/* Per-type drawing flags the hangar needs and the flight model does not. */
+export const HANGAR_FLAGS = {
+  'b-737x':  { winglet: 'blended', livery: 'axz', dorsal: true, engineNote: '2 × CFM56-7B' },
+  'b-321x':  { winglet: 'sharklet', livery: 'axz', dorsal: false, engineNote: '2 × IAE V2500', sweepDeg: 25, stabSpan: 0.35 },
+  'b-1717':  { winglet: 'blended', livery: 'minecraft', dorsal: true, engineNote: '2 × CFM56-7B' },
+  'b-0001f': { winglet: 'blended', livery: 'plain', dorsal: true, cargo: true, engineNote: '2 × CFM56-7B' },
+  'b744':    { winglet: 'canted', livery: 'heavy', dorsal: true, upperDeck: true, engineNote: '4 × CF6-80C2', sweepDeg: 37, upperDeg: 20, stabSpan: 0.35, nacelle: 2.7, dihedralDeg: 7, clear: 2.2 },
+  'conc':    { kind: 'concorde', livery: 'plain', engineNote: '4 × Olympus 593' },
+}
