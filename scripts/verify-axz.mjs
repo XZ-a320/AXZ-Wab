@@ -463,12 +463,12 @@ console.log('\nlanding score')
       the whole reference is server-rendered either way, the aeroplane the
       engine flies is dimensioned from the fleet table rather than a second
       copy of it, and the landing bands are the dispatch desk's own. */
-console.log('\nflight simulator')
+console.log('\nflight simulator 1.0 (archive)')
 {
   const page = await ctx.newPage()
   const asked = []
   page.on('request', r => { if (/assets\/sim-/.test(r.url())) asked.push(r.url()) })
-  await page.goto(BASE + '/axz/sim/', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/axz/sim/classic/', { waitUntil: 'networkidle' })
 
   asked.length === 0
     ? ok('the engine is not fetched until the reader asks for it')
@@ -516,7 +516,7 @@ console.log('\nflight simulator')
       window[key].prototype = Orig.prototype
     }
   })
-  await page.goto(BASE + '/axz/sim/', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/axz/sim/classic/', { waitUntil: 'networkidle' })
   const onLoad = await page.evaluate(() => window.__audioBuilt)
   onLoad === 0 ? ok('no audio context is created on page load') : bad(`${onLoad} audio contexts built before any gesture`)
 
@@ -789,7 +789,7 @@ console.log('\nflight simulator')
 {
   const c2 = await browser.newContext({ javaScriptEnabled: false })
   const page = await c2.newPage()
-  await page.goto(BASE + '/axz/sim/', { waitUntil: 'domcontentloaded' })
+  await page.goto(BASE + '/axz/sim/classic/', { waitUntil: 'domcontentloaded' })
   const rows = await page.$$eval('.sim-keys tbody tr', rs => rs.length)
   const bandRows = await page.$$eval('.lg-table tbody tr', rs => rs.length)
   const panelHidden = !(await page.isVisible('[data-sim-panel]'))
@@ -987,6 +987,265 @@ console.log('\nmotion')
   }
 }
 
+/* 2n. Simulator 2.0. The Three.js engine on /axz/sim/, with the 1.0 checks
+      repeated against it — dimensioned from the fleet table, nothing
+      underground, every system behaviour, every type holding an approach —
+      plus the things 2.0 added: flaps that travel, an autopilot that holds,
+      reversers that only work on the ground, fuel that burns, a wet runway
+      that stops later, weather that reaches the aeroplane, six cameras and a
+      scorecard. Three.js comes from the CDN, so this needs the network. */
+console.log('\nsimulator 2.0')
+{
+  const c3 = await browser.newContext()
+  const page = await c3.newPage()
+  await page.addInitScript(() => {
+    window.__audioBuilt = 0
+    for (const key of ['AudioContext', 'webkitAudioContext']) {
+      const Orig = window[key]
+      if (!Orig) continue
+      window[key] = function (...a) { window.__audioBuilt++; return new Orig(...a) }
+      window[key].prototype = Orig.prototype
+    }
+  })
+  const asked = []
+  page.on('request', r => { if (/assets\/sim2-|three@/.test(r.url())) asked.push(r.url()) })
+  await page.goto(BASE + '/axz/sim/', { waitUntil: 'networkidle' })
+  asked.length === 0 ? ok('2.0: neither the engine nor Three.js is fetched until the reader asks') : bad(`2.0 downloaded on page load: ${asked[0]}`)
+  const ver = await page.getAttribute('[data-sim-stage]', 'data-sim-version')
+  ver === '2.0' ? ok('/axz/sim/ is the 2.0 engine') : bad(`/axz/sim/ carries version ${ver}`)
+  const keys = await page.$$eval('.sim-keys tbody tr', rs => rs.length)
+  keys >= 15 ? ok(`the control reference includes the 2.0 keys (${keys} rows)`) : bad(`${keys} control rows, expected 15+`)
+  const wx = await page.$$eval('[data-sim-weather] option', os => os.map(o => o.value))
+  JSON.stringify(wx) === JSON.stringify(['clear', 'scattered', 'overcast', 'rain']) ? ok('four weathers to choose from') : bad(`weather options ${JSON.stringify(wx)}`)
+  const classic = await page.$eval('a[href$="/sim/classic/"]', a => a.textContent.trim()).catch(() => null)
+  classic ? ok(`the 1.0 archive is linked: "${classic}"`) : bad('no link to the 1.0 archive')
+  const fleet = JSON.parse(await page.getAttribute('[data-sim-stage]', 'data-sim-fleet'))
+  Math.abs(fleet['b-737x'].len - 39.47) < 0.01 && Math.abs(fleet['b-321x'].len - 44.51) < 0.01 && fleet.b52.gearLayout === 'bicycle'
+    ? ok('2.0 is dimensioned from the fleet table and carries the drawing flags')
+    : bad('2.0 fleet rows drifted')
+
+  await page.click('[data-sim-start]')
+  const started = await page.waitForFunction(() => window.__axzSimHandle && window.__axzSimHandle.sim, null, { timeout: 60000 }).then(() => true).catch(() => false)
+  if (!started) {
+    bad(`2.0 did not start: "${await page.textContent('[data-sim-status]')}" (needs the network for Three.js)`)
+  } else {
+    ok('2.0 starts from the press')
+    await page.waitForTimeout(1500)
+    const audio = await page.evaluate(() => window.__audioBuilt)
+    audio === 1 ? ok('2.0 builds exactly one audio context, from the start gesture') : bad(`${audio} audio contexts`)
+    const gfx = await page.evaluate(() => new Promise(res => {
+      const s = window.__axzSimHandle.sim, gl = s.gl, cv = s.canvas
+      const orig = s.render.bind(s)
+      let got = null
+      s.render = dt => {
+        orig(dt)
+        if (!got) {
+          const seen = new Set()
+          for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) {
+            const b = new Uint8Array(4)
+            gl.readPixels(Math.round(cv.width * (0.1 + i * 0.1)), Math.round(cv.height * (0.1 + j * 0.1)), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, b)
+            seen.add(b[0] + ',' + b[1] + ',' + b[2])
+          }
+          got = { distinct: seen.size, cascades: s.gfx.csm.lights.length, passes: s.gfx.composer.passes.length, log: !!s.gfx.renderer.capabilities.logarithmicDepthBuffer }
+          s.render = orig
+        }
+      }
+      setTimeout(() => res(got), 900)
+    }))
+    gfx && gfx.distinct >= 8 ? ok(`2.0 renders real content (${gfx.distinct} distinct colours sampled)`) : bad(`2.0 canvas nearly flat: ${gfx && gfx.distinct}`)
+    gfx && gfx.cascades === 4 && gfx.passes >= 5 ? ok(`four shadow cascades and a ${gfx.passes}-pass post chain, on a logarithmic depth buffer`) : bad(`gfx: ${JSON.stringify(gfx)}`)
+
+    const roster = JSON.parse(await page.getAttribute('[data-sim-stage]', 'data-sim-fleet'))
+    const types = roster._order || []
+    types.length === 15 ? ok(`${types.length} types are selectable in 2.0`) : bad(`${types.length} types`)
+
+    const stance = await page.evaluate(async (ids) => {
+      const s = window.__axzSimHandle.sim
+      const base = document.querySelector('[data-sim-stage]').getAttribute('data-sim-src').replace('boot.js', '')
+      const W = await import(base + 'world.js')
+      const out = []
+      for (const id of ids) {
+        s.setAircraft(id); s.setScenario('runway')
+        const ac = s.ac
+        const ground = W.elevation(ac.pos.x, ac.pos.z)
+        out.push({ id, clear: +(ac.pos.y + ac.bodyMinY - ground).toFixed(3), drawn: +(ac.restHeight + ac.bodyMaxY).toFixed(2), specH: ac.spec.h, contacts: ac.contacts.length })
+      }
+      return out
+    }, types)
+    const buried = stance.filter(r => r.clear <= 0)
+    buried.length === 0 ? ok(`every 2.0 model clears the ground it is parked on (${Math.min(...stance.map(r => r.clear)).toFixed(2)} m at worst)`) : bad(`underground: ${buried.map(r => `${r.id} ${r.clear} m`).join(', ')}`)
+    const wrongHeight = stance.filter(r => r.drawn < r.specH * 0.9 || r.drawn > r.specH * 1.16)
+    wrongHeight.length === 0 ? ok('every 2.0 model stands at its published overall height') : bad(`height: ${wrongHeight.map(r => `${r.id} ${r.drawn} vs ${r.specH}`).join(', ')}`)
+    stance.every(r => r.contacts >= 4) ? ok('every model hands the flight model the wheels it was drawn with') : bad('a model has too few contacts')
+
+    const sysres = await page.evaluate(() => {
+      const s = window.__axzSimHandle.sim
+      const r = {}
+      s.setAircraft('c172'); s.setScenario('cruise')
+      r.cessnaFixed = s.ac.hasRetractableGear === false && s.ac.toggleGear() === false
+      s.setAircraft('b-737x'); s.setScenario('cruise')
+      r.jetRetracts = s.ac.toggleGear() === true
+      s.setAircraft('b744'); s.setScenario('cruise')
+      let ac = s.ac; ac.assist = false
+      ac.hurt('eng0', 1, 'wear')
+      r.engineOut = Math.abs(ac.engineFraction - 0.75) < 0.01
+      let yaw = 0
+      for (let i = 0; i < 240 * 10; i++) { ac.throttle = 1; ac.step(1 / 240); yaw = Math.max(yaw, Math.abs(ac.omega.y)) }
+      r.asymmetricYaw = yaw * 57.3 > 0.5
+      s.setAircraft('b-737x'); s.setScenario('approach')
+      ac = s.ac
+      ac.hurt('hyd', 1, 'wear')
+      r.hydLocksGear = ac.toggleGear() === false && ac.setFlap(0) === false
+      s.setAircraft('a320'); s.setScenario('cruise')
+      ac = s.ac
+      for (let i = 0; i < 60; i++) ac.step(1 / 240)
+      ac.hurt('pitot', 1, 'wear')
+      ac.throttle = 0
+      for (let i = 0; i < 240 * 40; i++) ac.step(1 / 240)
+      r.pitotFreezes = Math.abs(ac.ias - ac.iasTrue) > 4
+      s.setAircraft('b-737x'); s.setScenario('cruise')
+      ac = s.ac
+      ac.gLoad = ac.cfg.nLimit * 1.6
+      ac.updateSystems(1 / 240)
+      r.overstressBreaks = !!ac.structural
+      s.setScenario('cruise')
+      ac = s.ac; ac.failureRate = 0
+      let n = 0
+      for (let i = 0; i < 240 * 3600; i++) { ac.updateSystems(1 / 240); if (ac.newFailure) { n++; ac.newFailure = null } }
+      r.zeroRateIsQuiet = n === 0
+      return r
+    })
+    const sysBad = Object.keys(sysres).filter(k => !sysres[k])
+    sysBad.length === 0 ? ok('2.0 systems: fixed gear, engine-out yaw, hydraulics, pitot, overstress, rate zero — all as 1.0') : bad(`2.0 systems not holding: ${sysBad.join(', ')}`)
+
+    /* --- What 2.0 added ---------------------------------------------------- */
+    const two = await page.evaluate(async () => {
+      const s = window.__axzSimHandle.sim
+      const r = {}
+      // Flaps travel: a detent selected is not a detent reached. On the
+      // approach, at a speed the flaps may be extended at — selecting landing
+      // flap at cruise speed rightly breaks them, and that is a different test.
+      s.setAircraft('b-737x'); s.setScenario('approach')
+      let ac = s.ac
+      ac.flap = 0; ac.flapPos = 0
+      ac.setFlap(3)
+      for (let i = 0; i < 240; i++) ac.step(1 / 240)
+      r.flapTravelling = ac.flapPos > 0.05 && ac.flapPos < 2.9 && ac.flapMoving
+      for (let i = 0; i < 240 * 40; i++) ac.step(1 / 240)
+      r.flapArrives = Math.abs(ac.flapPos - 3) < 1e-6 && !ac.flapMoving
+      // Autopilot holds altitude and heading in still air.
+      s.setWeather({ speedKt: 0, gust: 0 })
+      s.setScenario('cruise'); ac = s.ac
+      const on = s.toggleAutopilot()
+      const alt0 = ac.ap.alt, hdg0 = ac.ap.hdg
+      for (let i = 0; i < 240 * 45; i++) { ac.wind.x = 0; ac.wind.y = 0; ac.wind.z = 0; ac.step(1 / 240) }
+      const e = (await import(document.querySelector('[data-sim-stage]').getAttribute('data-sim-src').replace('boot.js', '') + 'math.js')).qToEuler(ac.q)
+      const hdgNow = (e.heading * 57.29578 + 360) % 360
+      const dh = Math.abs(((hdgNow - hdg0 + 540) % 360) - 180)
+      r.apHolds = on && Math.abs(ac.pos.y - alt0) < 45 && dh < 4
+      r.apDetail = `${Math.round(ac.pos.y - alt0)} m, ${dh.toFixed(1)}°`
+      s.toggleAutopilot()
+      // Reversers only on the ground, only on a type that has them.
+      s.setScenario('cruise'); r.noReverseAirborne = s.toggleReverse() === false
+      s.setScenario('runway'); r.reverseOnGround = s.toggleReverse() === true && s.ac.reverse === true
+      s.toggleReverse()
+      s.setAircraft('f16'); s.setScenario('runway'); r.noReverseFighter = s.toggleReverse() === false
+      // Fuel burns and the aeroplane gets lighter.
+      s.setAircraft('b-737x'); s.setScenario('cruise'); ac = s.ac
+      const f0 = ac.fuel, m0 = ac.mass
+      ac.throttle = 1
+      for (let i = 0; i < 240 * 60; i++) ac.step(1 / 240)
+      r.fuelBurns = ac.fuel < f0 - 50 && ac.mass < m0 - 50 && Math.abs((f0 - ac.fuel) - (m0 - ac.mass)) < 1e-6
+      r.fuelDetail = `${Math.round(f0 - ac.fuel)} kg in a minute at full thrust`
+      // A wet runway stops later.
+      const stop = wet => {
+        s.setScenario('takeoff'); const a = s.ac
+        a.surfaceWet = wet
+        const d = { x: Math.sin(s.origin.rwy.hdg * Math.PI / 180), z: -Math.cos(s.origin.rwy.hdg * Math.PI / 180) }
+        a.vel = { x: d.x * 60, y: 0, z: d.z * 60 }
+        const x0 = a.pos.x, z0 = a.pos.z
+        for (let i = 0; i < 240 * 60; i++) { a.brakes = 1; a.throttle = 0; a.step(1 / 240); if (a.tas < 0.5) break }
+        return Math.hypot(a.pos.x - x0, a.pos.z - z0)
+      }
+      const dry = stop(0), wet = stop(1)
+      r.wetStopsLater = wet > dry * 1.3
+      r.stopDetail = `${Math.round(dry)} m dry, ${Math.round(wet)} m wet`
+      s.ac.surfaceWet = 0
+      // Weather reaches the aeroplane and the sky.
+      s.setWeather({ cover: 0.95, rain: 1 })
+      r.rainWetsRunway = s.ac.surfaceWet === 1 && s.clouds.cover === 0.95 && s.gfx.rain.visible === true
+      s.setWeather({ cover: 0.45, rain: 0 })
+      // Six cameras, all named.
+      const cams = []
+      for (let i = 0; i < 6; i++) { s.cameraMode = i; cams.push(s.readout().camera) }
+      s.cameraMode = 1
+      r.sixCameras = new Set(cams).size === 6 && cams.every(c => !!s.L.cameras[c])
+      // Landing lights and the buffet exist as state the loop reads.
+      r.lights = s.toggleLights() === true && s.landingLights === true
+      s.toggleLights()
+      // A scorecard on a landing at the destination.
+      s.setAircraft('b-737x'); s.setScenario('approach'); ac = s.ac
+      const events = []
+      const prev = s.onEvent; s.onEvent = ev => { events.push(ev); prev(ev) }
+      const ap = s.dest, R = ap.rwy
+      const dir = { x: Math.sin(R.hdg * Math.PI / 180), z: -Math.cos(R.hdg * Math.PI / 180) }
+      const u = -R.len / 2 + 250
+      ac.place(ap.x + dir.x * u, ap.elev + ac.restHeight + 2.0, ap.z + dir.z * u, R.hdg, ac.vrefMs() * 0.98, { gamma: -0.6 * Math.PI / 180, trimmed: true })
+      ac.gearDown = true; ac.gearPos = 1
+      for (let i = 0; i < 240 * 30 && s.mission.phase !== 'landed'; i++) { ac.throttle = 0.05; ac.step(1 / 240); s.checkEvents(1 / 240) }
+      s.onEvent = prev
+      const landing = events.find(ev => ev.type === 'landing' && ev.atDestination)
+      r.scorecard = !!landing && typeof landing.score === 'number' && landing.score >= 0 && landing.score <= 100 && /^[ABCD]$/.test(landing.grade) && typeof landing.zoneM === 'number'
+      r.scoreDetail = landing ? `${landing.fpm} ft/min, zone ${landing.zoneM} m, Vref${landing.dSpeedKt >= 0 ? '+' : ''}${landing.dSpeedKt}, ${landing.score}/100 ${landing.grade}` : 'no landing event'
+      s.setScenario('takeoff')
+      return r
+    })
+    two.flapTravelling && two.flapArrives ? ok('flaps travel to the detent rather than snapping there') : bad(`flap travel: ${two.flapTravelling}/${two.flapArrives}`)
+    two.apHolds ? ok(`the autopilot holds altitude and heading for 45 s (${two.apDetail})`) : bad(`autopilot drifted: ${two.apDetail}`)
+    two.noReverseAirborne && two.reverseOnGround && two.noReverseFighter ? ok('reversers: on the ground only, and never on a fighter') : bad(`reverse: ${JSON.stringify([two.noReverseAirborne, two.reverseOnGround, two.noReverseFighter])}`)
+    two.fuelBurns ? ok(`fuel burns and comes off the mass (${two.fuelDetail})`) : bad(`fuel: ${two.fuelDetail}`)
+    two.wetStopsLater ? ok(`a wet runway stops later (${two.stopDetail})`) : bad(`wet runway: ${two.stopDetail}`)
+    two.rainWetsRunway ? ok('rain wets the runway, thickens the deck and falls in the picture') : bad('weather did not reach the aeroplane')
+    two.sixCameras ? ok('six cameras, every one labelled') : bad('camera set wrong')
+    two.lights ? ok('landing lights toggle') : bad('landing lights did not toggle')
+    two.scorecard ? ok(`a landing at the destination is scored (${two.scoreDetail})`) : bad(`scorecard: ${two.scoreDetail}`)
+
+    const flown = await page.evaluate(async (ids) => {
+      const s = window.__axzSimHandle.sim
+      const out = []
+      for (const id of ids) {
+        s.setAircraft(id); s.setScenario('approach')
+        const ac = s.ac
+        // One step so the readout reflects the placement, not the last aeroplane.
+        ac.step(1 / 240)
+        const a0 = s.readout()
+        for (let i = 0; i < 240 * 6; i++) { const w = s.wind.sample(Math.max(ac.radioAlt || 0, 0), 1 / 240); ac.wind.x = w.x; ac.wind.y = w.y; ac.wind.z = w.z; ac.step(1 / 240) }
+        const a1 = s.readout()
+        out.push({ id, ias: Math.round(a1.ias), vs: Math.round(a1.vs), alpha: Math.abs(s.ac.alpha * 57.3), held: Math.abs(a1.ias - a0.ias) < 12 && Math.abs(a1.vs) < 1500 && Math.abs(s.ac.alpha * 57.3) < 20 })
+      }
+      return out
+    }, types)
+    const departed = flown.filter(f => !f.held)
+    departed.length === 0 ? ok(`all ${flown.length} types hold a trimmed approach in 2.0`) : bad(`2.0 departed: ${departed.map(d => d.id + ' ias=' + d.ias + ' vs=' + d.vs).join(', ')}`)
+
+    await page.evaluate(() => { const s = window.__axzSimHandle.sim; s.setAircraft('b-737x'); s.setScenario('takeoff'); document.querySelector('.sim-canvas').focus() })
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+    const pausedAttr = await page.getAttribute('[data-sim-stage]', 'data-paused')
+    pausedAttr === 'true' ? ok('Escape pauses 2.0') : bad(`Escape did not pause 2.0 (data-paused=${pausedAttr})`)
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(200)
+    await page.click('[data-sim-action="autopilot"]').catch(() => {})
+    const apBtn = await page.getAttribute('[data-sim-action="autopilot"]', 'aria-pressed')
+    apBtn === 'false' ? ok('the autopilot button refuses on the ground and says so') : bad(`autopilot button on the ground: aria-pressed=${apBtn}`)
+    await page.click('[data-sim-action="lights"]')
+    await page.waitForTimeout(150)
+    const ltBtn = await page.getAttribute('[data-sim-action="lights"]', 'aria-pressed')
+    ltBtn === 'true' ? ok('the landing-lights button reports its state') : bad(`lights button: ${ltBtn}`)
+  }
+  await page.close(); await c3.close()
+}
+
 /* 2m. The hangar. The 3D viewer is a dynamic import that starts when the
       stage scrolls into view, with Three.js from a CDN through an import
       map, so this needs the network. What it asserts: the roster is the
@@ -1001,7 +1260,7 @@ console.log('\nhangar')
   const cdn = []
   page.on('request', r => { if (/cdn\.jsdelivr\.net\/npm\/three@/.test(r.url())) cdn.push(r.url()) })
   // No other document loads a byte of Three.js.
-  await page.goto(BASE + '/axz/sim/', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/axz/sim/classic/', { waitUntil: 'networkidle' })
   await page.goto(BASE + '/axz/', { waitUntil: 'networkidle' })
   cdn.length === 0 ? ok('no page but the hangar fetches Three.js') : bad(`Three.js fetched outside the hangar: ${cdn[0]}`)
   await page.goto(BASE + '/axz/hangar/', { waitUntil: 'networkidle' })

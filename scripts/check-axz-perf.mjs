@@ -21,8 +21,12 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = join(HERE, '..', 'axz')
-const dir = readdirSync(join(OUT, 'assets')).find(d => d.startsWith('sim-'))
+// Both engines: 1.0 on the archive page and 2.0, whose fuel model starts every
+// type at the same published mass and whose thrust must reach the same speeds.
+const which = process.env.AXZ_SIM || 'sim-'
+const dir = readdirSync(join(OUT, 'assets')).find(d => d.startsWith(which))
 if (!dir) { console.error('✗ no built simulator bundle; run build-axz.mjs first'); process.exit(1) }
+console.log(`engine: ${dir}`)
 
 const F = await import(join(OUT, 'assets', dir, 'fdm.js'))
 const { SIM_TYPES, AXZ_ORDER, SIM_ONLY, FLAP_SETS, liftSlope } = await import(join(HERE, 'airframe.mjs'))

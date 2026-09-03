@@ -50,6 +50,16 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/sim/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/sim/"/>
   </url>
+  <url><loc>https://xiaobrook.com/axz/sim/classic/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/sim/classic/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/sim/classic/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/sim/classic/"/>
+  </url>
+  <url><loc>https://xiaobrook.com/axz/en/sim/classic/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/sim/classic/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/sim/classic/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/sim/classic/"/>
+  </url>
   <url><loc>https://xiaobrook.com/axz/hangar/</loc>
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/hangar/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/hangar/"/>

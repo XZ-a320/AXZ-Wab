@@ -2040,3 +2040,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .hangar-readout { margin-block-start: var(--s-2); }
 .hangar-desc { margin-block-start: var(--s-2); }
+
+/* --- Simulator versions -----------------------------------------------------
+   2.0 is the simulator; 1.0 is kept whole on its own page. The note is the
+   site's own notice, and the link between them sits inside it. */
+.sim-version { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-3); align-items: baseline; }
+.sim-version a { color: var(--cyan-ink); }

@@ -694,7 +694,11 @@
       "flight": "Flight",
       "wind": "Wind",
       "papi": "PAPI",
-      "mach": "Mach number"
+      "mach": "Mach number",
+      "fuel": "Fuel",
+      "n1": "N1",
+      "gs": "Ground speed",
+      "autopilot": "Autopilot"
     },
     "units": {
       "kt": "kt",
@@ -733,7 +737,9 @@
       "cockpit": "Cockpit",
       "chase": "Chase",
       "external": "Orbit",
-      "tower": "Tower"
+      "tower": "Tower",
+      "wing": "Wing",
+      "flyby": "Fly-by"
     },
     "phases": {
       "takeoff": "Take-off",
@@ -747,7 +753,9 @@
       "reset": "Restart",
       "camera": "View",
       "assist": "Assist",
-      "sound": "Sound"
+      "sound": "Sound",
+      "autopilot": "Autopilot",
+      "lights": "Landing lights"
     },
     "logTitle": "Flight events",
     "logEmpty": "Nothing yet.",
@@ -840,7 +848,8 @@
       "windDir": "Wind from",
       "windSpeed": "Wind speed",
       "turbulence": "Turbulence",
-      "failure": "Failure rate"
+      "failure": "Failure rate",
+      "weather": "Weather"
     },
     "times": {
       "dawn": "Dawn",
@@ -881,15 +890,53 @@
       "elec": "ELEC",
       "gear": "GEAR",
       "flap": "FLAP",
-      "pitot": "PITOT"
+      "pitot": "PITOT",
+      "fuel": "Fuel"
     },
     "failWhy": {
       "wear": "FAIL",
       "overstress": "OVERSTRESS",
-      "overspeed": "OVERSPEED"
+      "overspeed": "OVERSPEED",
+      "exhausted": "exhausted"
     },
     "failTitle": "Failures",
-    "failBody": "The failure rate setting decides how often the aeroplane breaks by itself. On None it never does, and the only way to break one is to fly it badly, which is where this started. Above that it is a Poisson process: the probability in any step is the rate times the step, and High is roughly one failure an hour, which is far worse than any real aeroplane and is exactly the point. What breaks is weighted by how much of the aeroplane each system is: engines, hydraulics, electrics, gear, flaps, pitot. Every one of them changes something you can feel. An engine out costs thrust and adds a yawing moment you have to hold off with rudder. Losing one of four costs a quarter; losing the only one you have makes a glider; and an outboard engine is harder to hold than an inboard because the arm is longer. With the hydraulics gone the gear and flaps stay exactly where they were, which is nothing on the ground and is the flight you remember if it happens clean on approach. A blocked pitot does not read zero, it freezes at the last thing it saw: the aerodynamics still run on the real speed and only the gauge is wrong, which is the classic failure and the classic killer. Overstress and overspeed break things too. Past the limit load factor damage accumulates, past 1.5 times it the airframe comes apart, and twelve seconds above Vne costs the hydraulics."
+    "failBody": "The failure rate setting decides how often the aeroplane breaks by itself. On None it never does, and the only way to break one is to fly it badly, which is where this started. Above that it is a Poisson process: the probability in any step is the rate times the step, and High is roughly one failure an hour, which is far worse than any real aeroplane and is exactly the point. What breaks is weighted by how much of the aeroplane each system is: engines, hydraulics, electrics, gear, flaps, pitot. Every one of them changes something you can feel. An engine out costs thrust and adds a yawing moment you have to hold off with rudder. Losing one of four costs a quarter; losing the only one you have makes a glider; and an outboard engine is harder to hold than an inboard because the arm is longer. With the hydraulics gone the gear and flaps stay exactly where they were, which is nothing on the ground and is the flight you remember if it happens clean on approach. A blocked pitot does not read zero, it freezes at the last thing it saw: the aerodynamics still run on the real speed and only the gauge is wrong, which is the classic failure and the classic killer. Overstress and overspeed break things too. Past the limit load factor damage accumulates, past 1.5 times it the airframe comes apart, and twelve seconds above Vne costs the hydraulics.",
+    "controls2": [
+      {
+        "a": "Autopilot (hold altitude and heading)",
+        "k": "H",
+        "p": "D-pad right"
+      },
+      {
+        "a": "Landing lights",
+        "k": "L",
+        "p": "D-pad left"
+      },
+      {
+        "a": "Reverse thrust (on the ground, on types that have it)",
+        "k": "T",
+        "p": "None"
+      }
+    ],
+    "weathers": {
+      "clear": "Clear",
+      "scattered": "Scattered",
+      "overcast": "Overcast",
+      "rain": "Rain"
+    },
+    "score": {
+      "zone": "touchdown",
+      "total": "score"
+    },
+    "autopilotLabel": "Autopilot",
+    "lightsLabel": "Landing lights",
+    "reverseLabel": "Reverse",
+    "v2Title": "What 2.0 changes",
+    "v2Body": "The picture is Three.js now: a sky with real atmospheric scattering and a sun, cascaded shadows that follow the camera, a sea that reflects, runway, approach and city lights that come on at night, cloud decks, rain and bloom. The aircraft are the hangar's models, built from their published dimensions, with gear, fans, propellers and burners that move. In the air, flaps travel to their setting rather than snapping there, the spoilers deploy themselves on touchdown, there is reverse thrust, fuel burns off and lightens the aeroplane, a wet runway is slippery, the airframe buffets before a stall, and an autopilot holds altitude and heading. A landing is scored on five things: sink rate, centreline, touchdown point, speed and bank. Version 1.0 is kept as it was, on its own page.",
+    "classicTitle": "Simulator 1.0 (archive)",
+    "classicNote": "This is the 1.0 archive, kept exactly as it was.",
+    "classicLink": "Open the 1.0 archive",
+    "currentLink": "Back to 2.0"
   },
   "hangar": {
     "title": "Hangar",

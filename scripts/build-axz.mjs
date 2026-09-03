@@ -123,6 +123,23 @@ SIM_FILES.forEach((f, i) => writeFileSync(join(OUT, 'assets', simDir, `${f}.js`)
 const SIM_ENTRY = `${BASE}/assets/${simDir}/boot.js`
 const simBytes = simSources.reduce((n, s) => n + Buffer.byteLength(s), 0)
 
+/* --- Simulator 2.0 ----------------------------------------------------------
+   Its own engine directory. The files it changed live in js/sim2/; the ones
+   it did not are copied in from js/sim/ so 1.0 stays exactly the 1.0 that
+   ships on the archive page. The model library is the hangar's, copied in
+   as models.js, so the aeroplane you fly is the aeroplane the hangar shows. */
+const SIM2_OWN = ['scene', 'aircraft', 'main', 'boot', 'fdm', 'input', 'world']
+const SIM2_SHARED = ['math', 'tex', 'sound', 'particles', 'hud', 'mobile']
+const sim2Files = [
+  ...SIM2_OWN.map(f => [f, readFileSync(join(SRC, 'js', 'sim2', `${f}.js`), 'utf8')]),
+  ...SIM2_SHARED.map(f => [f, readFileSync(join(SRC, 'js', 'sim', `${f}.js`), 'utf8')]),
+  ['models', readFileSync(join(SRC, 'js', 'hangar', 'models.js'), 'utf8')],
+]
+const sim2Dir = `sim2-${hash(sim2Files.map(f => f[1]).join('\n'))}`
+mkdirSync(join(OUT, 'assets', sim2Dir), { recursive: true })
+for (const [f, src] of sim2Files) writeFileSync(join(OUT, 'assets', sim2Dir, `${f}.js`), src)
+const SIM2_ENTRY = `${BASE}/assets/${sim2Dir}/boot.js`
+
 /* --- Hangar ---------------------------------------------------------------
    The 3D fleet viewer. Same arrangement as the simulator: ES modules in a
    directory that carries the hash. Three.js itself comes from a CDN through
@@ -260,6 +277,7 @@ const PAGES = [
   { key: 'logbook', zhPath: 'logbook', enPath: 'en/logbook' },
   { key: 'dispatch', zhPath: 'dispatch', enPath: 'en/dispatch' },
   { key: 'sim', zhPath: 'sim', enPath: 'en/sim' },
+  { key: 'simclassic', zhPath: 'sim/classic', enPath: 'en/sim/classic' },
   { key: 'hangar', zhPath: 'hangar', enPath: 'en/hangar' },
   { key: 'accessibility', zhPath: 'accessibility', enPath: 'en/accessibility' },
   { key: 'aprilfools', zhPath: 'aprilfools', enPath: 'en/aprilfools' },
@@ -1109,8 +1127,9 @@ function dispatchPage(c, lang) {
    The aircraft table handed to the engine is the SAME one that draws the plan
    views in sector 02. The thing you fly is dimensioned from the figures the
    fleet page publishes.                                                      */
-function simPage(c, lang) {
+function simPage(c, lang, version = '2.0') {
   const P = s => parts(s, lang), S = c.sim, LG = c.landing
+  const v2 = version !== 'classic'
   /* The simulator's roster is NOT the airline's fleet. AXZ operates four
      aircraft; the other four are types the simulator can fly, and the page
      says which is which. Names for the AXZ four come from the catalogue so
@@ -1148,6 +1167,8 @@ function simPage(c, lang) {
       name: t.axz ? c.fleet[id].name : t.name,
       reg: t.axz ? c.fleet[id].reg : t.reg,
       axz: !!t.axz,
+      // 2.0 draws the hangar's models, which need the drawing flags too.
+      ...(v2 ? (HANGAR_FLAGS[id] || {}) : {}),
     }
   }
   fleet._order = order
@@ -1169,6 +1190,7 @@ function simPage(c, lang) {
     machUp: S.machUp, machDown: S.machDown,
     sysNames: S.sysNames, failWhy: S.failWhy,
     keyboard: S.keyboard, gamepad: S.gamepad,
+    score: S.score, autopilotLabel: S.autopilotLabel, lightsLabel: S.lightsLabel, reverseLabel: S.reverseLabel,
   }
   const bands = LG.bands.map(b => b.remark)
 
@@ -1216,7 +1238,10 @@ function simPage(c, lang) {
   const tbOpts = [['none', 0], ['light', 0.35], ['moderate', 0.7], ['severe', 1]].map(([k, v]) =>
     `<option value="${v}"${k === 'none' ? ' selected' : ''}>${esc(S.turbLevels[k])}</option>`).join('')
 
-  const ctlRows = S.controls.map(r => `<tr>
+  const wxOpts = ['clear', 'scattered', 'overcast', 'rain'].map(k =>
+    `<option value="${esc(k)}"${k === 'scattered' ? ' selected' : ''}>${esc(S.weathers[k])}</option>`).join('')
+
+  const ctlRows = (v2 ? [...S.controls, ...(S.controls2 || [])] : S.controls).map(r => `<tr>
     <th scope="row">${P(r.a)}</th>
     <td class="code">${esc(r.k)}</td>
     <td class="code">${esc(r.p)}</td>
@@ -1255,8 +1280,11 @@ function simPage(c, lang) {
     </tr>`
   }).join('')
 
-  const fieldOrder = ['flight', 'ias', 'mach', 'alt', 'agl', 'vs', 'hdg', 'wind', 'papi',
-    'dist', 'dest', 'camera', 'time', 'assist', 'input', 'fps']
+  const fieldOrder = v2
+    ? ['flight', 'ias', 'gs', 'mach', 'alt', 'agl', 'vs', 'hdg', 'n1', 'fuel', 'wind', 'papi',
+      'dist', 'dest', 'camera', 'autopilot', 'time', 'assist', 'input', 'fps']
+    : ['flight', 'ias', 'mach', 'alt', 'agl', 'vs', 'hdg', 'wind', 'papi',
+      'dist', 'dest', 'camera', 'time', 'assist', 'input', 'fps']
   const fieldCells = fieldOrder.map(k => `<div class="sim-cell">
     <span class="sim-cell__k">${esc(S.fields[k])}</span>
     <span class="sim-cell__v code" data-sim-field="${k}">—</span>
@@ -1267,14 +1295,19 @@ function simPage(c, lang) {
     <td class="lg-remark">${parts(b.remark, lang)}</td>
   </tr>`).join('')
 
+  const versionNote = v2
+    ? `<p class="notice notice--quiet sim-version"><span>${esc(S.v2Title)}</span><a href="${urlFor('simclassic', lang)}">${esc(S.classicLink)}</a></p>`
+    : `<p class="notice sim-version"><span>${esc(S.classicNote)}</span><a href="${urlFor('sim', lang)}">${esc(S.currentLink)}</a></p>`
   const body = `
 <section class="sector wrap">
-  <h1>${P(S.title)}</h1>
+  <h1>${P(v2 ? S.title : S.classicTitle)}</h1>
   <p class="record__meta">${esc(S.headerSub)}</p>
   <p class="prose">${P(S.intro)}</p>
+  ${v2 ? `<p class="prose">${P(S.v2Body)}</p>` : ''}
+  ${versionNote}
 
-  <div class="sim" data-sim-stage
-       data-sim-src="${esc(SIM_ENTRY)}"
+  <div class="sim" data-sim-stage data-sim-version="${v2 ? '2.0' : '1.0'}"
+       data-sim-src="${esc(v2 ? SIM2_ENTRY : SIM_ENTRY)}"
        data-sim-labels="${esc(JSON.stringify(labels))}"
        data-sim-fleet="${esc(JSON.stringify(fleet))}"
        data-sim-flaps="${esc(JSON.stringify(FLAP_SETS))}"
@@ -1319,6 +1352,10 @@ function simPage(c, lang) {
         <label for="sim-fr">${esc(S.setup.failure)}</label>
         <select id="sim-fr" data-sim-failrate>${frOpts}</select>
       </div>
+      ${v2 ? `<div class="field">
+        <label for="sim-wx">${esc(S.setup.weather)}</label>
+        <select id="sim-wx" data-sim-weather>${wxOpts}</select>
+      </div>` : ''}
     </div>
     </div>
     <p class="btn-row">
@@ -1336,15 +1373,15 @@ function simPage(c, lang) {
 
     <div class="sim-panel" data-sim-panel hidden>
       <div class="sim-bar">
-        ${['pause', 'reset', 'camera', 'assist', 'sound'].map(a =>
+        ${(v2 ? ['pause', 'reset', 'camera', 'assist', 'autopilot', 'lights', 'sound'] : ['pause', 'reset', 'camera', 'assist', 'sound']).map(a =>
     `<button class="btn sim-tog" type="button" data-sim-action="${a}"${
-      ['assist', 'sound'].includes(a) ? ' aria-pressed="true"' : ''
+      ['assist', 'sound'].includes(a) ? ' aria-pressed="true"' : ['autopilot', 'lights'].includes(a) ? ' aria-pressed="false"' : ''
     }>${esc(S.actions[a])}${
       /* Assist and Sound are STATES, and a button that only carries a verb
          cannot say which way it is set. The word rides in the corner so the
          setting is readable without pressing it to find out. */
-      ['assist', 'sound'].includes(a)
-        ? `<span class="sim-tog__st" data-sim-state="${a}">${esc(S.hud.on)}</span>` : ''
+      ['assist', 'sound', 'autopilot', 'lights'].includes(a)
+        ? `<span class="sim-tog__st" data-sim-state="${a}">${esc(['autopilot', 'lights'].includes(a) ? S.hud.off : S.hud.on)}</span>` : ''
     }</button>`).join('')}
       </div>
       <h2 class="record__label">${esc(S.readoutTitle)}</h2>
@@ -1445,7 +1482,11 @@ function simPage(c, lang) {
   </p>
 </section>`
 
-  return shell({ c, lang, key: 'sim', title: `${S.title} — ${c.meta.siteName}`, desc: S.intro, body })
+  return shell({
+    c, lang, key: v2 ? 'sim' : 'simclassic',
+    title: `${v2 ? S.title : S.classicTitle} — ${c.meta.siteName}`, desc: S.intro, body,
+    head: v2 ? IMPORT_MAP : '',
+  })
 }
 
 /* --- Hangar -----------------------------------------------------------------
@@ -1592,7 +1633,7 @@ function aprilfools(c, lang) {
 }
 
 /* --- Emit ----------------------------------------------------------------- */
-const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, sim: simPage, hangar: hangarPage, accessibility: a11y, aprilfools }
+const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, sim: simPage, simclassic: (c, lang) => simPage(c, lang, 'classic'), hangar: hangarPage, accessibility: a11y, aprilfools }
 let count = 0
 for (const p of PAGES) {
   for (const [lang, cat, sub] of [['zh-Hans', zh, p.zhPath], ['en', en, p.enPath]]) {

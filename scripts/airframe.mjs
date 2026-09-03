@@ -575,4 +575,8 @@ export const HANGAR_FLAGS = {
   'b-0001f': { winglet: 'blended', livery: 'plain', dorsal: true, cargo: true, engineNote: '2 × CFM56-7B' },
   'b744':    { winglet: 'canted', livery: 'heavy', dorsal: true, upperDeck: true, engineNote: '4 × CF6-80C2', sweepDeg: 37, upperDeg: 20, stabSpan: 0.35, nacelle: 2.7, dihedralDeg: 7, clear: 2.2 },
   'conc':    { kind: 'concorde', livery: 'plain', engineNote: '4 × Olympus 593' },
+  // Simulator-only types the hangar page does not list, but the simulator draws.
+  'a320':    { winglet: 'sharklet', livery: 'heavy', dorsal: false, stabSpan: 0.35 },
+  'b789':    { winglet: 'raked', livery: 'heavy', dorsal: true, dihedralDeg: 7, nacelle: 3.0, stabSpan: 0.36 },
+  'b52':     { highWing: true, gearLayout: 'bicycle', dihedralDeg: -2, winglet: 'none', nacelle: 1.4, clear: 1.9, dorsal: false, finSweepDeg: 30 },
 }
