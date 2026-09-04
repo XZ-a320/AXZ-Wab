@@ -57,6 +57,16 @@ export class AssetHub {
 
   get overBudget() { return this.transferred > this.budgetBytes }
 
+  /** The published model that flies as fleet type `type`, or null. Exterior
+      rows win over cockpit-only rows; the first fetched row in index order wins ties. */
+  modelFor(type, part = 'exterior') {
+    const all = this.index && this.index.assets ? Object.entries(this.index.assets) : []
+    const hits = all.filter(([, a]) => a.kind === 'model' && Array.isArray(a.types) && a.types.includes(type))
+    const withPart = hits.find(([, a]) => (a.part || '').includes(part))
+    const pick = withPart || (part === 'exterior' ? null : hits[0])
+    return pick ? { id: pick[0], ...pick[1] } : null
+  }
+
   credits() {
     const list = this.index && Array.isArray(this.index.credits) ? [...this.index.credits] : []
     return list.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))

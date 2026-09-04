@@ -1383,6 +1383,33 @@ console.log('\nsimulator 3.0')
         ? ok('the probe came from the assets origin with CORS') : bad(`probe response: ${png ? png.status() + ' ' + JSON.stringify(png.headers()) : 'none'}`)
       const line = await page.textContent('[data-sim-tier]')
       ;/3\.0/.test(line) && /MB/.test(line) ? ok(`tier line: "${line.trim()}"`) : bad(`tier line: "${line}"`)
+
+      /* Phase 1: the 737 is a sourced, rigged model. It stands on the wheels
+         it draws, its parts move when the flight model says so, and the
+         scene stays inside the draw budget. */
+      const rig = await page.evaluate(async () => {
+        const s = window.__axzSimHandle.sim, v = s.view, ac = s.ac
+        const base = document.querySelector('[data-sim-stage]').getAttribute('data-sim-src').replace('boot.js', '')
+        const W = await import(base + 'world.js')
+        const ground = W.elevation(ac.pos.x, ac.pos.z)
+        let meshes = 0; s.gfx.scene.traverse(o => { if (o.isMesh && o.visible) meshes++ })
+        let moved = 0
+        if (v.animated) {
+          const nodes = [...v.animated.keys()]
+          const before = nodes.map(n => ({ p: n.position.clone(), q: n.quaternion.clone() }))
+          const keep = { gearPos: ac.gearPos, ail: ac.ctl.aileron }
+          ac.gearPos = 0.3; ac.ctl.aileron = 1
+          v.update(ac, 1 / 60, { time: 0 })
+          nodes.forEach((n, i) => { if (n.position.distanceTo(before[i].p) > 1e-4 || n.quaternion.angleTo(before[i].q) > 1e-4) moved++ })
+          ac.gearPos = keep.gearPos; ac.ctl.aileron = keep.ail; v.update(ac, 1 / 60, { time: 0 })
+        }
+        return { id: s.aircraftId, rigged: !!v.rigged, legs: v.contacts.length, nose: v.contacts.filter(c => c.nose).length, rest: +v.restHeight.toFixed(2), clearance: +(ac.pos.y + v.bodyMinY - ground).toFixed(2), animated: v.animated ? v.animated.size : 0, moved, meshes, len: v.stats ? +v.stats.size[2].toFixed(1) : null }
+      })
+      rig.rigged ? ok(`${rig.id} flies as a sourced, rigged model (${rig.len} m long)`) : bad(`${rig.id} is not rigged: the hub had no model or the load failed`)
+      rig.legs === 3 && rig.nose === 1 ? ok(`three gear legs from the wheels it draws, one of them the nose`) : bad(`gear legs ${rig.legs}, nose ${rig.nose}`)
+      rig.rest > 2 && rig.rest < 6 && rig.clearance > 0 ? ok(`stands on its wheels: CG ${rig.rest} m up, belly ${rig.clearance} m clear`) : bad(`stance: rest ${rig.rest}, clearance ${rig.clearance}`)
+      rig.animated >= 50 && rig.moved >= 30 ? ok(`${rig.animated} rigged parts, ${rig.moved} of them move for gear and aileron`) : bad(`rig: ${rig.animated} parts, ${rig.moved} moved`)
+      rig.meshes <= 600 ? ok(`${rig.meshes} visible meshes, inside the 600 draw-call budget`) : bad(`${rig.meshes} visible meshes`)
     }
     await ctx.close()
 

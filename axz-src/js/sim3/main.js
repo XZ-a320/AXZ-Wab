@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AXZ sim 2.0 — scene, cameras, loop, mission.
+   AXZ sim 3.0 — scene, cameras, loop, mission.
 
    The 1.0 orchestrator with the renderer replaced and the game grown. The
    loop still runs the flight model on a FIXED 240 Hz step with an accumulator
@@ -24,6 +24,7 @@ import { Input, Gyro } from './input.js'
 import { HUD, navInfo } from './hud.js'
 import { Scene3D } from './scene.js'
 import { AircraftView } from './aircraft.js'
+import { RiggedAircraft } from './rigged.js'
 
 const CAMERAS = ['cockpit', 'chase', 'external', 'tower', 'wing', 'flyby']
 
@@ -37,6 +38,9 @@ export class Sim {
     this.onEvent = opts.onEvent || (() => {})
     this.THREE = opts.THREE
     this.hangar = opts.hangar
+    /* 3.0: sourced models, loaded by boot.js through the asset hub and kept
+       here by fleet id. A type without one flies the hangar's model. */
+    this.rigged = opts.rigged || new Map()
     setFlapSets(opts.flaps)
 
     this.canvas = document.createElement('canvas')
@@ -131,7 +135,8 @@ export class Sim {
     if (!spec) return
     this.aircraftId = id
     if (this.view) { this.gfx.scene.remove(this.view.root); this.view.dispose() }
-    const view = this.view = new AircraftView(this.THREE, this.hangar, spec)
+    const loaded = this.rigged.get(id)
+    const view = this.view = loaded ? new RiggedAircraft(this.THREE, loaded.gltf, spec, loaded.asset) : new AircraftView(this.THREE, this.hangar, spec)
     for (const m of view.materials) if (m.isMeshStandardMaterial) this.gfx.csm.setupMaterial(m)
     this.gfx.scene.add(view.root)
     const keep = this.ac ? { pos: this.ac.pos, vel: this.ac.vel, q: this.ac.q } : null

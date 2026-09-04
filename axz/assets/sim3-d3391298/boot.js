@@ -19,6 +19,7 @@ import { createHangar } from './models.js'
 import { Sim } from './main.js'
 import { MobileControls, isPhone } from './mobile.js'
 import { AssetHub } from './assets.js'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
 export async function boot(cfg) {
   const stage = cfg.stage
@@ -41,6 +42,27 @@ export async function boot(cfg) {
   const hub = new AssetHub({ origin })
   await hub.load()
 
+  /* Sourced models come down by fleet id, parsed once, kept for the Sim.
+     A type the hub has no model for flies the hangar's procedural one. */
+  const rigged = new Map()
+  const loader = new GLTFLoader()
+  async function preload(id) {
+    if (rigged.has(id) || !hub.online) return rigged.get(id) || null
+    const asset = hub.modelFor(id)
+    if (!asset) return null
+    try {
+      const buf = await hub.bytesOf(asset.id)
+      const gltf = await new Promise((res, rej) => loader.parse(buf, '', res, rej))
+      rigged.set(id, { gltf, asset })
+      return rigged.get(id)
+    } catch (err) {
+      if (window.console) console.warn('[axz-sim3] model', id, err)
+      return null
+    }
+  }
+  const firstId = cfg.aircraftId || cfg.fleet._order[0]
+  await preload(firstId)
+
   let sim
   try {
     const hangar = createHangar(THREE)
@@ -54,7 +76,7 @@ export async function boot(cfg) {
       aircraftId: cfg.aircraftId,
       scenario: cfg.scenario,
       assist: cfg.assist,
-      THREE, hangar,
+      THREE, hangar, rigged,
       addons: { CSM, Sky, EffectComposer, RenderPass, UnrealBloomPass, OutputPass, SMAAPass },
       onEvent: ev => handleEvent(ev),
     })
@@ -203,7 +225,12 @@ export async function boot(cfg) {
   if (flSel) flSel.addEventListener('change', () => { sim.setFlight(flSel.value); sim.setScenario(scSel ? scSel.value : sim.scenario); paintScenarios() })
   const acSel = stage.querySelector('[data-sim-aircraft]')
   const scSel = stage.querySelector('[data-sim-scenario]')
-  if (acSel) acSel.addEventListener('change', () => { sim.setAircraft(acSel.value); sim.setScenario(scSel ? scSel.value : sim.scenario) })
+  if (acSel) acSel.addEventListener('change', async () => {
+    const id = acSel.value
+    await preload(id)                       // the sourced model, if there is one, before the swap
+    if (acSel.value !== id) return          // the reader moved on while it loaded
+    sim.setAircraft(id); sim.setScenario(scSel ? scSel.value : sim.scenario)
+  })
   if (scSel) scSel.addEventListener('change', () => sim.setScenario(scSel.value))
 
   const todSel = stage.querySelector('[data-sim-time]')
@@ -300,7 +327,7 @@ export async function boot(cfg) {
     })
   }
 
-  window.__axzSimHandle = { sim, assets: hub, tier: 'v3' }
+  window.__axzSimHandle = { sim, assets: hub, tier: 'v3', rigged }
   sim.start()
   return {
     sim,

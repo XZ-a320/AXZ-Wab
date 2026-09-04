@@ -146,8 +146,8 @@ const SIM2_ENTRY = `${BASE}/assets/${sim2Dir}/boot.js`
    copied in, until a later phase replaces each one. The data it downloads
    lives in a separate repo on its own origin; the page carries that origin
    so the engine never guesses it. */
-const SIM3_OWN = ['boot', 'tier', 'assets']
-const SIM3_FROM_SIM2 = ['scene', 'aircraft', 'main', 'fdm', 'input', 'world']
+const SIM3_OWN = ['boot', 'tier', 'assets', 'rig', 'rigged', 'main']
+const SIM3_FROM_SIM2 = ['scene', 'aircraft', 'fdm', 'input', 'world']
 const sim3Files = [
   ...SIM3_OWN.map(f => [f, readFileSync(join(SRC, 'js', 'sim3', `${f}.js`), 'utf8')]),
   ...SIM3_FROM_SIM2.map(f => [f, readFileSync(join(SRC, 'js', 'sim2', `${f}.js`), 'utf8')]),

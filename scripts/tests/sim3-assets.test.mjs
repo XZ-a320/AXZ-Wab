@@ -69,3 +69,14 @@ test('credits() lists every row sorted by id, and is empty offline', async () =>
   await off.load()
   assert.deepEqual(off.credits(), [])
 })
+
+test('modelFor() finds the exterior for a fleet type and ignores cockpit-only rows for it', async () => {
+  const idx = { ...INDEX, assets: { ...INDEX.assets,
+    'b738-fg': { kind: 'model', url: 'models/b738-fg.x.glb', bytes: 1, types: ['b-737x', 'b-1717'], part: 'cockpit+exterior-fallback' },
+    'b738-cockpit': { kind: 'model', url: 'models/c.glb', bytes: 1, types: ['b-737x'], part: 'cockpit' } } }
+  const hub = new AssetHub({ origin: 'http://assets.test', fetchImpl: fakeFetch({ 'http://assets.test/index.json': JSON.stringify(idx) }) })
+  await hub.load()
+  assert.equal(hub.modelFor('b-1717').id, 'b738-fg')
+  assert.equal(hub.modelFor('b-737x', 'cockpit').id, 'b738-fg')
+  assert.equal(hub.modelFor('conc'), null)
+})
