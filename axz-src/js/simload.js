@@ -52,8 +52,25 @@
     startBtn.disabled = true
     status.textContent = labels.loading
 
-    import(src).then(function (mod) {
-      return mod.boot({
+    /* 3.0 pages carry a tier chooser. It is tiny, it runs BEFORE the engine
+       is fetched, and if this device belongs on 2.0 or 1.0 it goes there
+       now, engine unfetched, with the same hash so the reader lands on the
+       same panel. */
+    var tierSrc = stage.getAttribute('data-sim-tier-src')
+    var choose = tierSrc
+      ? import(tierSrc).then(function (T) {
+          var tier = T.chooseTier(T.probeEnvironment(window))
+          if (tier === 'v3') return src
+          var href = stage.getAttribute(tier === 'vintage' ? 'data-sim-vintage-href' : 'data-sim-classic-href')
+          window.location.href = href + window.location.hash
+          return null
+        })
+      : Promise.resolve(src)
+
+    choose.then(function (entry) {
+      if (!entry) return null
+      return import(entry).then(function (mod) {
+        return mod.boot({
         stage: stage,
         labels: labels,
         fleet: fleet,
@@ -62,8 +79,10 @@
         bands: bands,
         aircraftId: (stage.querySelector('[data-sim-aircraft]') || {}).value,
         scenario: (stage.querySelector('[data-sim-scenario]') || {}).value,
+        })
       })
     }).then(function (h) {
+      if (h === null) return
       if (h && h.error) {
         status.textContent = h.error === 'no-webgl' ? labels.unsupported : labels.failed
         status.setAttribute('data-kind', 'error')
