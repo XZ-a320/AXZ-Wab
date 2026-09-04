@@ -60,3 +60,11 @@ test('an unfetched row is licence-checked but not required on the page or in cre
   const bad = ccby({ id: 'later', fetched: false, license: 'CC-BY-NC-4.0' })
   assert.match(checkLicenses({ rows: [bad], credits: [], pages: [page] }).join('\n'), /later: licence CC-BY-NC-4.0 is not allowed/)
 })
+
+test('a GPL row (D16) needs title, source URL, authorUrl and a modification note', () => {
+  const gpl = row({ id: 'fg', license: 'GPL-2.0-or-later', title: 'FlightGear 737-800', source: 'https://sourceforge.net/p/flightgear/fgaddon/', authorUrl: 'https://sourceforge.net/p/flightgear/fgaddon/', modified: 'converted to glTF, published under the GPL in axz-assets' })
+  const pg = page + '<li>FlightGear 737-800 · Brook Xiao · GPL-2.0-or-later</li>'
+  assert.deepEqual(checkLicenses({ rows: [gpl], credits: [credit({ id: 'fg', license: 'GPL-2.0-or-later' })], pages: [pg] }), [])
+  const p = checkLicenses({ rows: [row({ id: 'fg', license: 'GPL-2.0-or-later', modified: '' })], credits: [credit({ id: 'fg' })], pages: [pg] })
+  assert.match(p.join('\n'), /fg: GPL row must say what was modified/)
+})

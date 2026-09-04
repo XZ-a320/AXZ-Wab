@@ -18,7 +18,7 @@ function fixture() {
 }
 
 test('ALLOWED is the spec allowlist', () => {
-  assert.deepEqual(ALLOWED, ['CC0-1.0', 'CC-BY-4.0', 'CC-BY-3.0', 'PDM', 'Copernicus', 'ODbL', 'purchased', 'authored', 'Apache-2.0', 'MIT'])
+  assert.deepEqual(ALLOWED, ['CC0-1.0', 'CC-BY-4.0', 'CC-BY-3.0', 'PDM', 'Copernicus', 'ODbL', 'purchased', 'authored', 'Apache-2.0', 'MIT', 'GPL-2.0-or-later', 'GPL-3.0-or-later'])
 })
 
 test('buildIndex publishes content-hashed files and an index with credits', () => {
@@ -66,4 +66,43 @@ test('a derived row is read from derived/, not raw/', () => {
     { id: 'conv', kind: 'model', file: 'models/conv/conv.glb', derived: true, source: 'https://x', license: 'GPL-2.0-or-later', author: 'y' }] }))
   const index = buildIndex(repo)
   assert.equal(index.assets.conv.bytes, 3); assert.ok(existsSync(join(repo, 'public', index.assets.conv.url)))
+})
+
+test('a model row carries its fleet types and part into the index', () => {
+  const repo = fixture()
+  mkdirSync(join(repo, 'derived', 'models', 'b738'), { recursive: true })
+  writeFileSync(join(repo, 'derived', 'models', 'b738', 'b738.glb'), Buffer.from('glb'))
+  writeFileSync(join(repo, 'manifests', 'phase-1.json'), JSON.stringify({ phase: '1', rows: [
+    { id: 'b738', kind: 'model', file: 'models/b738/b738.glb', derived: true, types: ['b-737x', 'b-1717'], part: 'exterior', source: 'https://x', license: 'GPL-2.0-or-later', author: 'y' }] }))
+  const index = buildIndex(repo)
+  assert.deepEqual(index.assets.b738.types, ['b-737x', 'b-1717']); assert.equal(index.assets.b738.part, 'exterior')
+})
+
+test('a derived row keeps the fetch tree hash as provenance and hashes the published file itself', () => {
+  const repo = fixture()
+  mkdirSync(join(repo, 'derived', 'models', 'd'), { recursive: true })
+  writeFileSync(join(repo, 'derived', 'models', 'd', 'd.glb'), Buffer.from('glb'))
+  writeFileSync(join(repo, 'manifests', 'phase-1.json'), JSON.stringify({ phase: '1', rows: [
+    { id: 'd', kind: 'model', file: 'models/d/d.glb', derived: true, sha256: 'a'.repeat(64), source: 'https://x', license: 'GPL-2.0-or-later', author: 'y' }] }))
+  const index = buildIndex(repo)
+  assert.equal(index.assets.d.sourceSha256, 'a'.repeat(64))
+  assert.equal(index.assets.d.sha256, createHash('sha256').update('glb').digest('hex'))
+})
+
+test('a publish:false row is credited but not served', () => {
+  const repo = fixture()
+  writeFileSync(join(repo, 'manifests', 'phase-1.json'), JSON.stringify({ phase: '1', rows: [
+    { id: 'tex', kind: 'texture', file: 'textures/tex/', publish: false, source: 'https://polyhaven.com/a/tex', license: 'CC0-1.0', author: 'Poly Haven' }] }))
+  const index = buildIndex(repo)
+  assert.equal(index.assets.tex, undefined)
+  assert.equal(index.credits.find(c => c.id === 'tex').published, false)
+})
+
+test('a derived row whose GLB is not built yet is credited and pending, not an error', () => {
+  const repo = fixture()
+  writeFileSync(join(repo, 'manifests', 'phase-4.json'), JSON.stringify({ phase: '4', rows: [
+    { id: 'later', kind: 'model', file: 'models/later/later.glb', derived: true, source: 'https://x', license: 'GPL-2.0-or-later', author: 'FlightGear later authors' }] }))
+  const index = buildIndex(repo)
+  assert.equal(index.assets.later, undefined); assert.deepEqual(index.pending, ['later (not built)'])
+  assert.equal(index.credits.find(c => c.id === 'later').published, false)
 })

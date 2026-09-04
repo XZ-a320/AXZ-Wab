@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, copyFi
 import { join, extname, basename } from 'node:path'
 import { createHash } from 'node:crypto'
 
-export const ALLOWED = ['CC0-1.0', 'CC-BY-4.0', 'CC-BY-3.0', 'PDM', 'Copernicus', 'ODbL', 'purchased', 'authored', 'Apache-2.0', 'MIT']
+export const ALLOWED = ['CC0-1.0', 'CC-BY-4.0', 'CC-BY-3.0', 'PDM', 'Copernicus', 'ODbL', 'purchased', 'authored', 'Apache-2.0', 'MIT', 'GPL-2.0-or-later', 'GPL-3.0-or-later']
 const KINDS = ['texture', 'model', 'decoder', 'terrain']
 
 export function readManifests(repo) {
@@ -35,13 +35,20 @@ export function buildIndex(repo, { origin = 'https://axz-assets.vercel.app', now
     /* An approved row whose bytes have not arrived yet is not an error: the
        manifest is written before the fetch. It is simply not published. */
     if (r.fetched === false) { skipped.push(r.id); continue }
+    /* An input to authoring (a CC0 texture set) is credited but never served. */
+    if (r.publish === false) { credits.push({ id: r.id, title: r.title || r.id, author: r.author, authorUrl: r.authorUrl || '', license: r.license, source: r.source, modified: r.modified || '', phase: r.phase, published: false }); continue }
     const src = join(r.derived ? join(repo, 'derived') : raw, r.file)
-    if (!existsSync(src)) throw new Error(`missing ${r.derived ? 'derived' : 'raw'} file for ${r.id}: ${r.file}`)
+    /* Fetched but not yet converted: credited (the bytes are here), listed as pending, not served. */
+    if (r.derived && !existsSync(src)) { credits.push({ id: r.id, title: r.title || r.id, author: r.author, authorUrl: r.authorUrl || '', license: r.license, source: r.source, modified: r.modified || '', phase: r.phase, published: false }); skipped.push(`${r.id} (not built)`); continue }
+    if (!existsSync(src)) throw new Error(`missing raw file for ${r.id}: ${r.file}`)
     const buf = readFileSync(src)
     const sha = createHash('sha256').update(buf).digest('hex')
-    if (r.sha256 && r.sha256 !== sha) throw new Error(`${r.id}: sha256 mismatch`)
+    /* A raw row's sha256 is the file itself and must match. A derived row's
+       sha256 is the provenance of what was fetched (a tree hash); the
+       published file is a different artefact and gets its own hash. */
+    if (!r.derived && r.sha256 && r.sha256 !== sha) throw new Error(`${r.id}: sha256 mismatch`)
     const ext = extname(r.file), name = basename(r.file, ext)
-    assets[r.id] = { kind: r.kind, url: `${r.kind}s/${name}.${sha.slice(0, 8)}${ext}`, bytes: buf.length, sha256: sha, license: r.license, author: r.author, source: r.source, _src: src }
+    assets[r.id] = { kind: r.kind, url: `${r.kind}s/${name}.${sha.slice(0, 8)}${ext}`, bytes: buf.length, sha256: sha, ...(r.derived && r.sha256 ? { sourceSha256: r.sha256 } : {}), license: r.license, author: r.author, source: r.source, ...(r.types ? { types: r.types } : {}), ...(r.part ? { part: r.part } : {}), _src: src }
     credits.push({ id: r.id, title: r.title || r.id, author: r.author, authorUrl: r.authorUrl || '', license: r.license, source: r.source, modified: r.modified || '', phase: r.phase })
   }
   // public/ is entirely generated: clear it, then write.

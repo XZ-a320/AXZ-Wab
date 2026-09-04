@@ -24,6 +24,15 @@ export function checkLicenses({ rows, credits, pages }) {
     if (r.fetched !== false && !creditIds.has(r.id)) problems.push(`${r.id}: not in credits.json`)
     /* CC BY is a contract: title, author, source link, licence, and what we
        changed. A row that cannot fill those in cannot be attributed. */
+    /* GPL (D16) carries the same duties as CC BY here, plus one: the modified
+       work is published under the GPL in the public assets repo, which the
+       `modified` note must say. */
+    if (/^GPL-/.test(r.license)) {
+      if (!r.title) problems.push(`${r.id}: GPL row has no title`)
+      if (!/^https?:\/\//.test(r.source || '')) problems.push(`${r.id}: GPL row source must be a URL`)
+      if (!/^https?:\/\//.test(r.authorUrl || '')) problems.push(`${r.id}: GPL row has no authorUrl`)
+      if (!r.modified) problems.push(`${r.id}: GPL row must say what was modified`)
+    }
     if (/^CC-BY/.test(r.license)) {
       if (!r.title) problems.push(`${r.id}: CC BY row has no title`)
       if (!/^https?:\/\//.test(r.source || '')) problems.push(`${r.id}: CC BY row source must be a URL`)

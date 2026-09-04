@@ -12,7 +12,7 @@
    No dependencies: FlightGear's PropertyList XML is plain nested tags.
    ========================================================================== */
 import { readFileSync, existsSync } from 'node:fs'
-import { join, dirname, basename, resolve } from 'node:path'
+import { join, dirname, basename, resolve, relative } from 'node:path'
 
 /* --- A minimal XML reader (tags, attributes, text, comments) -------------- */
 export function parseXml(text) {
@@ -143,7 +143,7 @@ export function buildRig(id, rootXml, packageRoot) {
   const props = new Set(); for (const p of parts) for (const a of p.animations) if (a.property) props.add(a.property)
   return {
     id, root: basename(rootXml), frame: 'FlightGear model frame: x aft, y starboard, z up, metres',
-    parts: parts.map(p => ({ xml: p.xml, ac: p.ac, glb: p.ac ? p.ac.replace(/\.ac$/i, '.glb') : null, dir: p.dir.replace(packageRoot, '').replace(/^\//, ''), placedBy: p.placedBy || null, offset: p.offset || null, animations: p.animations, other: p.other })),
+    parts: parts.map(p => ({ xml: p.xml, ac: p.ac, glb: p.ac ? p.ac.replace(/\.ac$/i, '.glb') : null, dir: relative(resolve(packageRoot), p.dir), placedBy: p.placedBy || null, offset: p.offset || null, animations: p.animations, other: p.other })),
     summary: { parts: parts.length, withGeometry: withAc.length, animations: anims, properties: [...props].sort() },
   }
 }
