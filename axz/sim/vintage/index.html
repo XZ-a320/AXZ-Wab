@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>飞行模拟 — 小泽航空</title>
+<title>飞行模拟 2.0（怀旧版） — 小泽航空</title>
 <meta name="description" content="在浏览器里飞小泽航空的两条航线。机型尺寸取自机队那一节的同一张表，航线、跑道朝向和巡航高度也都是本站已经写过的。气动是按系数算的：升力随迎角变，会失速，发动机推力有延迟，起落架是弹簧阻尼，落地轻重取决于你怎么拉平。">
 
-<link rel="canonical" href="https://xiaobrook.com/axz/sim/">
-<link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/sim/">
-<link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/sim/">
-<link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/sim/">
-<meta property="og:title" content="飞行模拟 — 小泽航空">
+<link rel="canonical" href="https://xiaobrook.com/axz/sim/vintage/">
+<link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com/axz/sim/vintage/">
+<link rel="alternate" hreflang="en" href="https://xiaobrook.com/axz/en/sim/vintage/">
+<link rel="alternate" hreflang="x-default" href="https://xiaobrook.com/axz/sim/vintage/">
+<meta property="og:title" content="飞行模拟 2.0（怀旧版） — 小泽航空">
 <meta property="og:description" content="在浏览器里飞小泽航空的两条航线。机型尺寸取自机队那一节的同一张表，航线、跑道朝向和巡航高度也都是本站已经写过的。气动是按系数算的：升力随迎角变，会失速，发动机推力有延迟，起落架是弹簧阻尼，落地轻重取决于你怎么拉平。">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="zh_CN">
@@ -74,12 +74,12 @@
       <img class="mark mark--light" src="/axz/img/wordmark-light.webp" alt="" aria-hidden="true" width="114" height="74">
       <img class="mark mark--dark" src="/axz/img/wordmark-dark.webp" alt="" aria-hidden="true" width="114" height="74">
     </a>
-    <nav class="nav" aria-label="主导航"><a href="/axz/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>首页</span></a><a href="/axz/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>留言区</span></a><a href="/axz/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>飞行日志</span></a><a href="/axz/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>签派台</span></a><a href="/axz/sim/" aria-current="page"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>飞行模拟</span></a><a href="/axz/hangar/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>机库</span></a><a href="/axz/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>无障碍声明</span></a></nav>
+    <nav class="nav" aria-label="主导航"><a href="/axz/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>首页</span></a><a href="/axz/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>留言区</span></a><a href="/axz/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>飞行日志</span></a><a href="/axz/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>签派台</span></a><a href="/axz/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>飞行模拟</span></a><a href="/axz/hangar/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>机库</span></a><a href="/axz/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>无障碍声明</span></a></nav>
     <div class="controls">
       <div class="lang">
-        <a lang="zh-Hans" hreflang="zh-Hans" href="/axz/sim/" aria-current="page"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-cn"/></svg><span>中文</span></a>
+        <a lang="zh-Hans" hreflang="zh-Hans" href="/axz/sim/vintage/" aria-current="page"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-cn"/></svg><span>中文</span></a>
         <span class="lang__sep" aria-hidden="true">/</span>
-        <a lang="en" hreflang="en" href="/axz/en/sim/"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-us"/></svg><span>English</span></a>
+        <a lang="en" hreflang="en" href="/axz/en/sim/vintage/"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-us"/></svg><span>English</span></a>
       </div>
       <button class="ctrl-btn ctrl-btn--icon" type="button" data-theme-toggle aria-pressed="false"
         data-label-day="昼" data-label-night="夜">
@@ -97,11 +97,11 @@
 <main id="main">
 
 <section class="sector wrap">
-  <h1>飞行模拟</h1>
+  <h1>飞行模拟 2.0（怀旧版）</h1>
   <p class="record__meta">Air Xiao Ze (AXZ) · 模拟</p>
   <p class="prose">在浏览器里飞小泽航空的两条航线。机型尺寸取自机队那一节的同一张表，航线、跑道朝向和巡航高度也都是本站已经写过的。气动是按系数算的：升力随迎角变，会失速，发动机推力有延迟，起落架是弹簧阻尼，落地轻重取决于你怎么拉平。</p>
   <p class="prose">画面换成了 Three.js：有大气散射的天空和太阳，跟着镜头走的级联阴影，会反光的海面，夜里会亮的跑道灯、进近灯和城市窗户，还有云层、雨和辉光。飞机是机库里那套模型，按公布尺寸建出来，起落架、风扇、螺旋桨和加力都会动。气动上，襟翼是慢慢放到位的，落地时扰流板自动弹出，有反推，燃油会烧掉让飞机变轻，湿跑道会滑，失速前有抖振，还加了保持高度航向的自动驾驶。落地有评分：下沉率、中线偏差、接地点、速度、坡度五项。1.0 版原样保留在存档页。</p>
-  <p class="notice notice--quiet sim-version"><span>2.0 版改了什么</span><a href="/axz/sim/classic/">打开 1.0 存档版</a><a href="/axz/sim/v3/">打开 3.0 预览版</a></p>
+  <p class="notice sim-version"><span>这是 2.0 怀旧版，原样保留，一行没改。</span><a href="/axz/sim/">回到 2.0</a><a href="/axz/sim/classic/">打开 1.0 存档版</a></p>
 
   <div class="sim" data-sim-stage data-sim-version="2.0"
        data-sim-src="/axz/assets/sim2-0c3fe106/boot.js"
@@ -556,7 +556,7 @@
 </main>
 <footer class="foot">
   <div class="wrap">
-    <nav class="foot__nav" aria-label="页脚导航"><a href="/axz/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>首页</span></a><a href="/axz/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>留言区</span></a><a href="/axz/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>飞行日志</span></a><a href="/axz/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>签派台</span></a><a href="/axz/sim/" aria-current="page"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>飞行模拟</span></a><a href="/axz/hangar/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>机库</span></a><a href="/axz/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>无障碍声明</span></a></nav>
+    <nav class="foot__nav" aria-label="页脚导航"><a href="/axz/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>首页</span></a><a href="/axz/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>留言区</span></a><a href="/axz/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>飞行日志</span></a><a href="/axz/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>签派台</span></a><a href="/axz/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>飞行模拟</span></a><a href="/axz/hangar/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>机库</span></a><a href="/axz/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>无障碍声明</span></a></nav>
     <p>小泽航空 <span lang="en">Air Xiao Ze</span> (AXZ) © 2026</p>
     <p>虚拟航司 仅用于模拟飞行</p>
     <p class="foot__credit">机型俯视图：Julien.scavini，取自维基共享资源，CC BY-SA 3.0，本站做了裁切与重新上色。 <a href="https://commons.wikimedia.org/wiki/File:Boeing_737-800_v1.0.png" rel="license noopener noreferrer" target="_blank">在新窗口打开</a></p>

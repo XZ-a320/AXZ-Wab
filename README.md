@@ -159,6 +159,17 @@
   的拷贝——构建每次清空输出目录，却从来没把示例日志放回去，所以「载入示例文件」
   那个按钮在任何一次全新构建后都是 404。
 
+## 2026-09-04 加的：模拟器 3.0 的地基
+
+3.0（`/axz/sim/v3/`，预览，noindex）：`axz-src/js/sim3/` 只有入口、分级选择器和
+素材库三个文件，其余引擎文件构建时从 `sim2/` 与 `sim/` 复制，所以画面还是 2.0 的。
+素材在独立仓库 `axz-assets`（与本仓库同级；`node scripts/assets/build-index.mjs`
+从 `manifests/` 与 `raw/` 生成 `public/`），每个文件先有清单行、再有字节，许可门
+`check-axz-licenses.mjs` 认的许可只有 CC0、CC-BY、公有领域、Copernicus、ODbL、
+已购买、自制。按下「开始」时先取 2 KB 的分级选择器：手机、低端 GPU 转到 2.0，
+没有 WebGL2 转到 1.0，都不会先下 3.0 引擎。2.0 原样保留在 `/axz/sim/vintage/`，
+1.0 在 `/axz/sim/classic/`；`/axz/sim/` 在 3.0 完工前仍是 2.0。
+
 ## 目录
 
 ```
@@ -180,17 +191,19 @@ node scripts/build-axz.mjs
 
 ## 校验
 
-五道关，全部要过：
+六道关，全部要过：
 
 ```bash
 node scripts/check-axz-content.mjs    # 原站每一句中文都还在
 node scripts/check-axz-contrast.mjs   # 29 组对比度实算，不用估值
 node scripts/check-axz-en.mjs         # 英文固定译法 + 结构对齐 + 外链地址不许翻译
-node scripts/axe-axz.mjs              # WCAG 2.2 AA，14 个页面 × 昼夜两套
+node scripts/axe-axz.mjs              # WCAG 2.2 AA，23 个文档 × 昼夜两套
 node scripts/verify-axz.mjs           # 键盘、判读台、网络图、时刻表、签派台、落地评分、飞行模拟、彩蛋页、双语接线
+node scripts/check-axz-licenses.mjs   # 3.0：每个下载素材的许可、作者、来源，以及页面上的署名
+node --test 'scripts/tests/*.test.mjs' # 3.0：分级选择器、素材库、索引构建、许可门
 ```
 
-后两道需要先起本地服务：`node .axz-serve.mjs`（端口 4788）。
+axe、verify、licenses 三道需要先起本地服务：`node .axz-serve.mjs`（端口 4788），verify 与 licenses 还要素材库：`node .axz-assets-serve.mjs`（端口 4790）。
 
 ## 几件不要动的事
 
