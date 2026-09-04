@@ -49,3 +49,21 @@ test('buildIndex refuses a sha256 that does not match the manifest', () => {
   writeFileSync(join(repo, 'manifests', 'phase-0.json'), JSON.stringify(m))
   assert.throws(() => buildIndex(repo), /probe: sha256 mismatch/)
 })
+
+test('an approved row that is not fetched yet is skipped and listed as pending', () => {
+  const repo = fixture()
+  writeFileSync(join(repo, 'manifests', 'phase-1.json'), JSON.stringify({ phase: '1', rows: [
+    { id: 'later', kind: 'model', file: 'models/later/later.glb', source: 'https://x', license: 'CC-BY-4.0', author: 'y', fetched: false }] }))
+  const index = buildIndex(repo)
+  assert.deepEqual(Object.keys(index.assets), ['probe']); assert.deepEqual(index.pending, ['later'])
+})
+
+test('a derived row is read from derived/, not raw/', () => {
+  const repo = fixture()
+  mkdirSync(join(repo, 'derived', 'models', 'conv'), { recursive: true })
+  writeFileSync(join(repo, 'derived', 'models', 'conv', 'conv.glb'), Buffer.from('glb'))
+  writeFileSync(join(repo, 'manifests', 'phase-1.json'), JSON.stringify({ phase: '1', rows: [
+    { id: 'conv', kind: 'model', file: 'models/conv/conv.glb', derived: true, source: 'https://x', license: 'GPL-2.0-or-later', author: 'y' }] }))
+  const index = buildIndex(repo)
+  assert.equal(index.assets.conv.bytes, 3); assert.ok(existsSync(join(repo, 'public', index.assets.conv.url)))
+})

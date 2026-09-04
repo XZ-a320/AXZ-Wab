@@ -28,11 +28,15 @@ export function buildIndex(repo, { origin = 'https://axz-assets.vercel.app', now
   const raw = join(repo, 'raw'), pub = join(repo, 'public')
   const rows = readManifests(repo)
   const assets = {}, credits = []
+  const skipped = []
   for (const r of rows) {
     if (!KINDS.includes(r.kind)) throw new Error(`${r.id}: unknown kind ${r.kind}`)
     if (assets[r.id]) throw new Error(`${r.id}: duplicate id (${r.manifest})`)
-    const src = join(raw, r.file)
-    if (!existsSync(src)) throw new Error(`missing raw file for ${r.id}: ${r.file}`)
+    /* An approved row whose bytes have not arrived yet is not an error: the
+       manifest is written before the fetch. It is simply not published. */
+    if (r.fetched === false) { skipped.push(r.id); continue }
+    const src = join(r.derived ? join(repo, 'derived') : raw, r.file)
+    if (!existsSync(src)) throw new Error(`missing ${r.derived ? 'derived' : 'raw'} file for ${r.id}: ${r.file}`)
     const buf = readFileSync(src)
     const sha = createHash('sha256').update(buf).digest('hex')
     if (r.sha256 && r.sha256 !== sha) throw new Error(`${r.id}: sha256 mismatch`)
@@ -48,7 +52,7 @@ export function buildIndex(repo, { origin = 'https://axz-assets.vercel.app', now
     copyFileSync(a._src, join(pub, a.url))
     delete a._src
   }
-  const index = { version: 1, builtAt: now, origin, assets, credits }
+  const index = { version: 1, builtAt: now, origin, assets, credits, pending: skipped }
   writeFileSync(join(pub, 'index.json'), JSON.stringify(index, null, 2) + '\n')
   writeFileSync(join(pub, 'credits.json'), JSON.stringify(credits, null, 2) + '\n')
   return index
@@ -59,5 +63,5 @@ if (process.argv[1] && import.meta.filename === process.argv[1]) {
   const index = buildIndex(repo, { origin: process.env.AXZ_ASSETS_ORIGIN || 'https://axz-assets.vercel.app' })
   const n = Object.keys(index.assets).length
   const bytes = Object.values(index.assets).reduce((s, a) => s + a.bytes, 0)
-  console.log(`✓ ${n} asset${n === 1 ? '' : 's'}, ${(bytes / 1024).toFixed(1)} KB → ${join(repo, 'public')}`)
+  console.log(`✓ ${n} asset${n === 1 ? '' : 's'}, ${(bytes / 1024).toFixed(1)} KB → ${join(repo, 'public')}${index.pending.length ? `  (${index.pending.length} approved row(s) not fetched yet: ${index.pending.join(', ')})` : ''}`)
 }

@@ -53,3 +53,10 @@ test('Apache-2.0 decoders and authored rows need no attribution URL', () => {
   const pg = page + '<li>draco · Google (Draco) · Apache-2.0</li>'
   assert.deepEqual(checkLicenses({ rows: [dec], credits: [credit({ id: 'draco' })], pages: [pg] }), [])
 })
+
+test('an unfetched row is licence-checked but not required on the page or in credits', () => {
+  const later = ccby({ id: 'later', fetched: false, author: 'Nobody Yet' })
+  assert.deepEqual(checkLicenses({ rows: [later], credits: [], pages: ['<p>no credits</p>'] }), [])
+  const bad = ccby({ id: 'later', fetched: false, license: 'CC-BY-NC-4.0' })
+  assert.match(checkLicenses({ rows: [bad], credits: [], pages: [page] }).join('\n'), /later: licence CC-BY-NC-4.0 is not allowed/)
+})
