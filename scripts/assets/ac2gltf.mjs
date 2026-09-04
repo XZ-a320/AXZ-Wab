@@ -122,7 +122,7 @@ function quatFromRot(r) {
 }
 
 /* --- glTF assembly -------------------------------------------------------- */
-export function toGltf(ac, { textureDir = null, generator = 'axz ac2gltf' } = {}) {
+export function toGltf(ac, { textureDir = null, textureRoot = null, generator = 'axz ac2gltf' } = {}) {
   const bin = []; let binLen = 0
   const bufferViews = [], accessors = [], images = [], textures = [], materials = [], meshes = [], nodes = []
   const imageIndex = new Map(), materialIndex = new Map()
@@ -134,13 +134,21 @@ export function toGltf(ac, { textureDir = null, generator = 'axz ac2gltf' } = {}
     if (withBounds) { const n = 3; const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]; for (let k = 0; k < arr.length; k += n) for (let c = 0; c < n; c++) { min[c] = Math.min(min[c], arr[k + c]); max[c] = Math.max(max[c], arr[k + c]) } a.min = min; a.max = max }
     accessors.push(a); return accessors.length - 1
   }
+  /* FlightGear keeps textures beside the .ac, or at the package's Models/
+     root while the .ac sits in a subfolder, or under Textures/. Look in the
+     .ac's folder, then each ancestor up to `textureRoot`, then Textures/. */
+  const dirsFor = () => {
+    const out = []
+    if (textureDir) { let d = textureDir; for (let k = 0; k < 6; k++) { out.push(d, join(d, 'Textures')); if (!textureRoot || d === textureRoot) break; const up = dirname(d); if (up === d) break; d = up } }
+    return out
+  }
   const imageFor = tex => {
     if (!tex) return null
     if (imageIndex.has(tex)) return imageIndex.get(tex)
     const ext = tex.toLowerCase().split('.').pop()
     const mime = ext === 'png' ? 'image/png' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : null
-    const path = textureDir ? join(textureDir, tex) : null
-    if (!mime || !path || !existsSync(path)) { warnings.push(`texture ${tex}: ${!mime ? 'format not embeddable' : 'file not found'}`); imageIndex.set(tex, null); return null }
+    const path = mime ? dirsFor().map(d => join(d, tex)).find(existsSync) : null
+    if (!mime || !path) { warnings.push(`texture ${tex}: ${!mime ? 'format not embeddable' : 'file not found'}`); imageIndex.set(tex, null); return null }
     images.push({ mimeType: mime, bufferView: pushView(readFileSync(path)), name: basename(tex) })
     textures.push({ source: images.length - 1, sampler: 0 })
     imageIndex.set(tex, textures.length - 1); return textures.length - 1
@@ -203,17 +211,19 @@ export function packGlb({ json, bin }) {
 
 export function convert(acPath, outPath, opts = {}) {
   const ac = parseAc(readFileSync(acPath, 'utf8'))
-  const g = toGltf(ac, { textureDir: dirname(acPath), ...opts })
+  const g = toGltf(ac, { textureDir: dirname(acPath), textureRoot: opts.textureRoot || null, ...opts })
   const glb = packGlb(g)
   writeFileSync(outPath, glb)
   return { bytes: glb.length, ...g.stats, warnings: g.warnings, materials: g.json.materials.length, textures: (g.json.textures || []).length }
 }
 
 if (process.argv[1] && import.meta.filename === process.argv[1]) {
-  const [inp, out] = process.argv.slice(2)
-  if (!inp) { console.error('usage: node scripts/assets/ac2gltf.mjs <model.ac> [out.glb]'); process.exit(2) }
+  const args = process.argv.slice(2).filter(a => !a.startsWith('--'))
+  const rootArg = process.argv.find(a => a.startsWith('--texture-root='))
+  const [inp, out] = args
+  if (!inp) { console.error('usage: node scripts/assets/ac2gltf.mjs <model.ac> [out.glb] [--texture-root=<dir>]'); process.exit(2) }
   const o = out || inp.replace(/\.ac$/i, '.glb')
-  const r = convert(inp, o)
+  const r = convert(inp, o, rootArg ? { textureRoot: rootArg.slice(15) } : {})
   console.log(`✓ ${basename(inp)} → ${basename(o)}: ${r.objects} objects, ${r.triangles.toLocaleString()} triangles, ${r.materials} materials, ${r.textures} textures, ${(r.bytes / 1048576).toFixed(2)} MB`)
   for (const w of r.warnings) console.log(`  ! ${w}`)
 }

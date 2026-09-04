@@ -2,6 +2,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { parseAc, buildMesh, toGltf, packGlb } from '../assets/ac2gltf.mjs'
 import { parseGlb, summarize } from '../assets/inspect-glb.mjs'
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { probePng } from '../assets/make-probe.mjs'
 
 const AC = `AC3Db
 MATERIAL "white" rgb 1 1 1  amb 0.2 0.2 0.2  emis 0 0 0  spec 0.5 0.5 0.5  shi 64  trans 0
@@ -79,4 +83,14 @@ test('toGltf keeps names and hierarchy, and a missing texture is a warning not a
   assert.equal(g.json.materials.find(m => m.alphaMode === 'BLEND').pbrMetallicRoughness.baseColorFactor[3], 0.5)
   const gear = g.json.nodes.find(n => n.name === 'gear'); assert.deepEqual(gear.translation, [1, 2, 3]); assert.equal(gear.children.length, 1)
   assert.match(g.warnings.join('\n'), /missing.png: file not found/)
+})
+
+test('a texture at the package root is found from a subfolder .ac when textureRoot is given', () => {
+  const root = mkdtempSync(join(tmpdir(), 'axz-tex-')); mkdirSync(join(root, 'Interior'))
+  writeFileSync(join(root, 'missing.png'), probePng(8))
+  const ac = parseAc(AC)
+  const found = toGltf(ac, { textureDir: join(root, 'Interior'), textureRoot: root })
+  assert.equal(found.warnings.length, 0); assert.equal((found.json.textures || []).length, 1)
+  const notFound = toGltf(ac, { textureDir: join(root, 'Interior') })
+  assert.equal(notFound.warnings.length, 1)
 })
