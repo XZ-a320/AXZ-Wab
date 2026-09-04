@@ -94,3 +94,15 @@ test('a texture at the package root is found from a subfolder .ac when textureRo
   const notFound = toGltf(ac, { textureDir: join(root, 'Interior') })
   assert.equal(notFound.warnings.length, 1)
 })
+
+test('blank lines between and inside objects are accepted', () => {
+  const spaced = AC.replace('OBJECT poly\nname "canopy"', '\n\nOBJECT poly\n\nname "canopy"')
+  const ac = parseAc(spaced)
+  assert.equal(ac.root.kids.length, 2); assert.equal(ac.root.kids[1].name, 'canopy')
+})
+
+test('a kids count that overstates the file ends cleanly with a warning', () => {
+  const over = AC.replace('OBJECT world\nkids 2', 'OBJECT world\nkids 3')
+  const ac = parseAc(over)
+  assert.equal(ac.root.kids.length, 2); assert.match(ac.warnings.join('\n'), /world: declared 3 kids, file ended after 2/)
+})

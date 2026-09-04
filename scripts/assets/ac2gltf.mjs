@@ -31,8 +31,11 @@ export function parseAc(text) {
     const sh = t.indexOf('shi'), tr = t.indexOf('trans')
     materials.push({ name: t[1], rgb: at('rgb') || [1, 1, 1], amb: at('amb'), emis: at('emis') || [0, 0, 0], spec: at('spec') || [0, 0, 0], shi: sh < 0 ? 0 : num(t[sh + 1]), trans: tr < 0 ? 0 : num(t[tr + 1]) })
   }
+  const warnings = []
   function object() {
-    const t = tok(next())
+    while (i < lines.length && !(peek() || '').trim()) next()      // blank lines between objects are legal
+    if (i >= lines.length) return null                              // a kids count that overstates the file: stop, do not invent
+    const t = tok(next() || '')
     if (t[0] !== 'OBJECT') throw new Error(`expected OBJECT at line ${i}, got "${t[0]}"`)
     const o = { type: t[1], name: '', texture: null, texrep: [1, 1], texoff: [0, 0], loc: [0, 0, 0], rot: null, crease: 45, verts: [], surfs: [], kids: [] }
     for (;;) {
@@ -40,6 +43,7 @@ export function parseAc(text) {
       if (line == null) return o
       const s = tok(line)
       const k = s[0]
+      if (k == null) continue                                     // blank line inside an object
       if (k === 'name') o.name = s[1] || ''
       else if (k === 'texture') o.texture = s[1] || null
       else if (k === 'texrep') o.texrep = [num(s[1]), num(s[2])]
@@ -62,13 +66,18 @@ export function parseAc(text) {
           o.surfs.push(surf)
         }
       }
-      else if (k === 'kids') { const n = parseInt(s[1]); for (let c = 0; c < n; c++) o.kids.push(object()); return o }
+      else if (k === 'kids') {
+        const n = parseInt(s[1])
+        for (let c = 0; c < n; c++) { const child = object(); if (!child) { warnings.push(`${o.name || o.type}: declared ${n} kids, file ended after ${c}`); break } o.kids.push(child) }
+        return o
+      }
       // url, data, subdiv, folded, locked, hidden: ignored
       else if (k === 'data') { const n = parseInt(s[1]); let got = 0; while (got < n && i < lines.length) got += next().length + 1 }
     }
   }
   const root = object()
-  return { materials, root }
+  if (!root) throw new Error('AC3D file has no objects')
+  return { materials, root, warnings }
 }
 
 /* --- Geometry ----------------------------------------------------------- */
@@ -214,7 +223,7 @@ export function convert(acPath, outPath, opts = {}) {
   const g = toGltf(ac, { textureDir: dirname(acPath), textureRoot: opts.textureRoot || null, ...opts })
   const glb = packGlb(g)
   writeFileSync(outPath, glb)
-  return { bytes: glb.length, ...g.stats, warnings: g.warnings, materials: g.json.materials.length, textures: (g.json.textures || []).length }
+  return { bytes: glb.length, ...g.stats, warnings: [...(ac.warnings || []), ...g.warnings], materials: g.json.materials.length, textures: (g.json.textures || []).length }
 }
 
 if (process.argv[1] && import.meta.filename === process.argv[1]) {

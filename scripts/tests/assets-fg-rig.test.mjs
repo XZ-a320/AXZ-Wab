@@ -70,3 +70,16 @@ test('buildRig walks includes, keeps offsets, and summarises properties', () => 
   const light = rig.parts.find(p => p.xml === 'Green.xml'); assert.deepEqual(light.offset, { x: 3.62, y: 17.03, z: 1.06, pitch: 0, roll: 0, heading: 0 }); assert.equal(light.placedBy, '737.xml')
   assert.equal(rig.parts.find(p => p.xml === 'NoseGear.xml').glb, 'nosegear.glb')
 })
+
+test('a PropertyList include= merges the included file, with local n-indexed models winning', () => {
+  const pkg = mkdtempSync(join(tmpdir(), 'axz-rig-inc-')); mkdirSync(join(pkg, 'Models'), { recursive: true })
+  writeFileSync(join(pkg, 'Models', 'common.xml'), `<PropertyList>
+    <model n="100"><path>Aircraft/x/Models/NoseGear.xml</path></model>
+    <animation><type>rotate</type><object-name>fan</object-name><property>n1</property><axis><x>1</x><y>0</y><z>0</z></axis></animation>
+  </PropertyList>`)
+  writeFileSync(join(pkg, 'Models', '738.xml'), `<PropertyList include="common.xml"><path>737.ac</path><model n="100"><offsets><x-m>-1</x-m><y-m>0</y-m><z-m>0</z-m></offsets></model></PropertyList>`)
+  writeFileSync(join(pkg, 'Models', 'NoseGear.xml'), GEAR)
+  const rig = buildRig('t', join(pkg, 'Models', '738.xml'), pkg)
+  assert.equal(rig.parts[0].ac, '737.ac'); assert.equal(rig.parts[0].animations.length, 1)
+  const gear = rig.parts.find(p => p.xml === 'NoseGear.xml'); assert.ok(gear); assert.equal(gear.offset.x, -1); assert.equal(gear.animations.length, 3)
+})

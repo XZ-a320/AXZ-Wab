@@ -83,12 +83,39 @@ export function resolveInclude(p, { xmlDir, packageRoot }) {
   return resolve(xmlDir, p)
 }
 
+export function mergePropertyLists(base, local) {
+  const merged = { name: 'PropertyList', attrs: {}, children: [], text: '' }
+  const key = c => `${c.name}#${c.attrs && c.attrs.n != null ? c.attrs.n : ''}`
+  const byKey = new Map()
+  for (const c of base.children) { const k = key(c); if (c.attrs && c.attrs.n != null) byKey.set(k, { ...c, children: [...c.children] }); merged.children.push(byKey.get(k) || c) }
+  for (const c of local.children) {
+    const k = key(c)
+    if (c.attrs && c.attrs.n != null && byKey.has(k)) {
+      const target = byKey.get(k)
+      for (const cc of c.children) { const j = target.children.findIndex(t => t.name === cc.name); if (j >= 0) target.children[j] = cc; else target.children.push(cc) }
+      if (c.text.trim()) target.text = c.text
+    } else merged.children.push(c)
+  }
+  return merged
+}
+
 export function readModelXml(xmlPath, { packageRoot, seen = new Set(), depth = 0 } = {}) {
   const abs = resolve(xmlPath)
   if (seen.has(abs) || depth > 8 || !existsSync(abs)) return []
   seen.add(abs)
   const doc = parseXml(readFileSync(abs, 'utf8'))
-  const pl = kid(doc, 'PropertyList') || doc
+  let pl = kid(doc, 'PropertyList') || doc
+  /* <PropertyList include="other.xml"> merges the other file underneath this
+     one: same-named children with the same n="…" index are one element,
+     the local file's fields winning. That is how 738.xml adds offsets to
+     the models 737-model-common.xml declares. */
+  if (pl.attrs && pl.attrs.include) {
+    const incPath = resolve(dirname(abs), pl.attrs.include)
+    if (existsSync(incPath)) {
+      const base = kid(parseXml(readFileSync(incPath, 'utf8')), 'PropertyList')
+      if (base) pl = mergePropertyLists(base, pl)
+    }
+  }
   const part = { xml: basename(abs), dir: dirname(abs), ac: txt(pl, 'path'), animations: [], other: {}, includes: [] }
   for (const a of kids(pl, 'animation')) {
     const an = readAnimation(a)
