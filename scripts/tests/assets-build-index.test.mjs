@@ -18,7 +18,7 @@ function fixture() {
 }
 
 test('ALLOWED is the spec allowlist', () => {
-  assert.deepEqual(ALLOWED, ['CC0-1.0', 'CC-BY-4.0', 'CC-BY-3.0', 'PDM', 'Copernicus', 'ODbL', 'purchased', 'authored'])
+  assert.deepEqual(ALLOWED, ['CC0-1.0', 'CC-BY-4.0', 'CC-BY-3.0', 'PDM', 'Copernicus', 'ODbL', 'purchased', 'authored', 'Apache-2.0', 'MIT'])
 })
 
 test('buildIndex publishes content-hashed files and an index with credits', () => {
@@ -32,7 +32,7 @@ test('buildIndex publishes content-hashed files and an index with credits', () =
   const onDisk = JSON.parse(readFileSync(join(repo, 'public', 'index.json'), 'utf8'))
   assert.deepEqual(onDisk, index)
   assert.deepEqual(JSON.parse(readFileSync(join(repo, 'public', 'credits.json'), 'utf8')),
-    [{ id: 'probe', author: 'Brook Xiao', license: 'authored', source: 'authored', phase: '0' }])
+    [{ id: 'probe', title: 'probe', author: 'Brook Xiao', authorUrl: '', license: 'authored', source: 'authored', modified: '', phase: '0' }])
 })
 
 test('buildIndex refuses a row whose raw file is missing', () => {

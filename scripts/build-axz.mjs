@@ -163,6 +163,20 @@ const ASSETS_ORIGIN = process.env.AXZ_ASSETS_ORIGIN || 'https://axz-assets.verce
 const ASSETS_REPO = process.env.AXZ_ASSETS || join(ROOT, '..', 'axz-assets')
 const CREDITS = existsSync(join(ASSETS_REPO, 'public', 'credits.json'))
   ? JSON.parse(readFileSync(join(ASSETS_REPO, 'public', 'credits.json'), 'utf8')) : []
+/* A CC BY notice is title, author, source, licence and what changed, each a
+   link where one exists. The same shape serves every other licence. */
+const LICENSE_URLS = {
+  'CC-BY-4.0': 'https://creativecommons.org/licenses/by/4.0/', 'CC-BY-3.0': 'https://creativecommons.org/licenses/by/3.0/',
+  'CC0-1.0': 'https://creativecommons.org/publicdomain/zero/1.0/', 'PDM': 'https://creativecommons.org/publicdomain/mark/1.0/',
+  'Apache-2.0': 'https://www.apache.org/licenses/LICENSE-2.0', 'MIT': 'https://opensource.org/license/mit',
+  'GPL-2.0-or-later': 'https://www.gnu.org/licenses/old-licenses/gpl-2.0.html', 'GPL-3.0-or-later': 'https://www.gnu.org/licenses/gpl-3.0.html',
+  'ODbL': 'https://opendatacommons.org/licenses/odbl/1-0/', 'Copernicus': 'https://sentinels.copernicus.eu/documents/247904/690755/Sentinel_Data_Legal_Notice',
+}
+const creditLine = cr => {
+  const link = (href, text) => /^https?:\/\//.test(href || '') ? `<a href="${esc(href)}" rel="noopener">${esc(text)}</a>` : esc(text)
+  const lic = link(LICENSE_URLS[cr.license], cr.license)
+  return `<li>${link(cr.source, cr.title || cr.id)} · ${link(cr.authorUrl, cr.author)} · ${lic}${cr.modified ? ` · ${esc(cr.modified)}` : ''}</li>`
+}
 
 /* --- Hangar ---------------------------------------------------------------
    The 3D fleet viewer. Same arrangement as the simulator: ES modules in a
@@ -1518,7 +1532,7 @@ function simPage(c, lang, version = '2.0') {
 
   ${v3 ? `<details class="prose sim-credits"><summary>${esc(S.creditsTitle)}</summary>${
     CREDITS.length
-      ? `<ul>${CREDITS.map(cr => `<li>${esc(cr.id)} · ${esc(cr.author)} · ${esc(cr.license)} · ${esc(cr.source)}</li>`).join('')}</ul>`
+      ? `<ul>${CREDITS.map(creditLine).join('')}</ul>`
       : `<p>${esc(S.creditsNone)}</p>`}</details>` : ''}
 
   <p class="btn-row btn-row--foot">

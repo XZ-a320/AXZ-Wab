@@ -22,6 +22,14 @@ export function checkLicenses({ rows, credits, pages }) {
     if (!r.source) problems.push(`${r.id}: no source`)
     if (!r.file) problems.push(`${r.id}: no file`)
     if (!creditIds.has(r.id)) problems.push(`${r.id}: not in credits.json`)
+    /* CC BY is a contract: title, author, source link, licence, and what we
+       changed. A row that cannot fill those in cannot be attributed. */
+    if (/^CC-BY/.test(r.license)) {
+      if (!r.title) problems.push(`${r.id}: CC BY row has no title`)
+      if (!/^https?:\/\//.test(r.source || '')) problems.push(`${r.id}: CC BY row source must be a URL`)
+      if (!/^https?:\/\//.test(r.authorUrl || '')) problems.push(`${r.id}: CC BY row has no authorUrl`)
+      if (!r.modified) problems.push(`${r.id}: CC BY row must say what was modified`)
+    }
     pages.forEach((html, i) => {
       if (r.author && !html.includes(r.author)) problems.push(`${r.id}: author "${r.author}" is not rendered on page ${i + 1}`)
     })

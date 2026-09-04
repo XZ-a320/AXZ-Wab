@@ -34,3 +34,22 @@ test('duplicate ids are a problem', () => {
   const p = checkLicenses({ rows: [row(), row({ manifest: 'phase-1.json' })], credits: [credit()], pages: [page] })
   assert.match(p.join('\n'), /probe: duplicate id/)
 })
+
+const ccby = (o = {}) => row({ id: 'wing', license: 'CC-BY-4.0', title: 'Wing', source: 'https://sketchfab.com/3d-models/wing-abc', authorUrl: 'https://sketchfab.com/someone', modified: 'repainted, rigged, Draco', ...o })
+const ccbyCredit = credit({ id: 'wing', license: 'CC-BY-4.0' })
+
+test('a complete CC BY row passes', () => {
+  assert.deepEqual(checkLicenses({ rows: [ccby()], credits: [ccbyCredit], pages: [page] }), [])
+})
+test('a CC BY row without title, source URL, authorUrl or a modification note is a problem', () => {
+  const p = checkLicenses({ rows: [ccby({ title: '', source: 'sketchfab', authorUrl: '', modified: '' })], credits: [ccbyCredit], pages: [page] })
+  assert.match(p.join('\n'), /wing: CC BY row has no title/)
+  assert.match(p.join('\n'), /wing: CC BY row source must be a URL/)
+  assert.match(p.join('\n'), /wing: CC BY row has no authorUrl/)
+  assert.match(p.join('\n'), /wing: CC BY row must say what was modified/)
+})
+test('Apache-2.0 decoders and authored rows need no attribution URL', () => {
+  const dec = row({ id: 'draco', kind: 'decoder', license: 'Apache-2.0', author: 'Google (Draco)', source: 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/draco_decoder.wasm', file: 'decoders/draco/draco_decoder.wasm' })
+  const pg = page + '<li>draco · Google (Draco) · Apache-2.0</li>'
+  assert.deepEqual(checkLicenses({ rows: [dec], credits: [credit({ id: 'draco' })], pages: [pg] }), [])
+})

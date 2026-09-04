@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, copyFi
 import { join, extname, basename } from 'node:path'
 import { createHash } from 'node:crypto'
 
-export const ALLOWED = ['CC0-1.0', 'CC-BY-4.0', 'CC-BY-3.0', 'PDM', 'Copernicus', 'ODbL', 'purchased', 'authored']
+export const ALLOWED = ['CC0-1.0', 'CC-BY-4.0', 'CC-BY-3.0', 'PDM', 'Copernicus', 'ODbL', 'purchased', 'authored', 'Apache-2.0', 'MIT']
 const KINDS = ['texture', 'model', 'decoder', 'terrain']
 
 export function readManifests(repo) {
@@ -38,7 +38,7 @@ export function buildIndex(repo, { origin = 'https://axz-assets.vercel.app', now
     if (r.sha256 && r.sha256 !== sha) throw new Error(`${r.id}: sha256 mismatch`)
     const ext = extname(r.file), name = basename(r.file, ext)
     assets[r.id] = { kind: r.kind, url: `${r.kind}s/${name}.${sha.slice(0, 8)}${ext}`, bytes: buf.length, sha256: sha, license: r.license, author: r.author, source: r.source, _src: src }
-    credits.push({ id: r.id, author: r.author, license: r.license, source: r.source, phase: r.phase })
+    credits.push({ id: r.id, title: r.title || r.id, author: r.author, authorUrl: r.authorUrl || '', license: r.license, source: r.source, modified: r.modified || '', phase: r.phase })
   }
   // public/ is entirely generated: clear it, then write.
   rmSync(pub, { recursive: true, force: true })
