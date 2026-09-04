@@ -169,6 +169,7 @@
 已购买、自制。按下「开始」时先取 2 KB 的分级选择器：手机、低端 GPU 转到 2.0，
 没有 WebGL2 转到 1.0，都不会先下 3.0 引擎。2.0 原样保留在 `/axz/sim/vintage/`，
 1.0 在 `/axz/sim/classic/`；`/axz/sim/` 在 3.0 完工前仍是 2.0。
+素材库部署后用 `node scripts/check-axz-assets-live.mjs https://<origin>` 从外部核对：索引可达、每个文件的大小与索引一致、CORS、缓存头。
 
 ## 目录
 
