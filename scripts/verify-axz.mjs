@@ -1339,6 +1339,73 @@ console.log('\nhangar')
   await hctx.close()
 }
 
+/* --- Simulator 3.0 (Phase 0) ------------------------------------------------
+   The preview page, the vintage page, the tier switch and the asset hub.
+   Needs BOTH local servers: the site on :4788 and the assets on :4790. */
+console.log('\nsimulator 3.0')
+{
+  const ASSETS = 'http://localhost:4790'
+  const alive = await fetch(ASSETS + '/index.json').then(r => r.ok).catch(() => false)
+  if (!alive) bad('assets server not running: node .axz-assets-serve.mjs (port 4790)')
+  else {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+    const page = await ctx.newPage()
+    const asked = []
+    page.on('request', r => { if (r.url().startsWith(ASSETS) || /assets\/sim3-|three@/.test(r.url())) asked.push(r.url()) })
+    await page.goto(BASE + '/axz/en/sim/v3/?assets=' + ASSETS, { waitUntil: 'networkidle' })
+    asked.length === 0 ? ok('3.0: neither the engine, Three.js nor the assets origin is fetched until the reader asks') : bad(`3.0 downloaded on page load: ${asked[0]}`)
+    const ver = await page.getAttribute('[data-sim-stage]', 'data-sim-version')
+    ver === '3.0' ? ok('/axz/en/sim/v3/ is the 3.0 engine') : bad(`v3 page carries version ${ver}`)
+    const robots = await page.$eval('meta[name="robots"]', m => m.content).catch(() => '')
+    ;/noindex/.test(robots) ? ok('the 3.0 preview is noindex') : bad(`3.0 preview robots meta: "${robots}"`)
+    for (const [sel, name] of [['a[href$="/sim/vintage/"]', 'vintage'], ['a[href$="/sim/classic/"]', 'classic']]) {
+      (await page.$(sel)) ? ok(`3.0 links to ${name}`) : bad(`3.0 has no link to ${name}`)
+    }
+    const credits = await page.$eval('.sim-credits', d => d.textContent).catch(() => '')
+    ;/uv-probe/.test(credits) && /authored/.test(credits) ? ok('the credits block names the probe, its author and its licence') : bad(`credits block: "${credits.slice(0, 80)}"`)
+
+    // The press: tier first, then the engine, then one texture through the hub.
+    const responses = []
+    page.on('response', r => { if (r.url().startsWith(ASSETS)) responses.push(r) })
+    await page.click('[data-sim-start]')
+    const started = await page.waitForFunction(() => window.__axzSimHandle && window.__axzSimHandle.sim, null, { timeout: 60000 }).then(() => true).catch(() => false)
+    if (!started) bad(`3.0 did not start: "${await page.textContent('[data-sim-status]')}"`)
+    else {
+      ok('3.0 starts from the press')
+      asked.some(u => /\/tier\.js/.test(u)) ? ok('the tier chooser was fetched on the press') : bad('tier.js was never fetched')
+      const h = await page.evaluate(() => ({ online: window.__axzSimHandle.assets.online, bytes: window.__axzSimHandle.assets.transferred, tier: window.__axzSimHandle.tier, probe: !!window.__axzSimHandle.sim.probeTexture }))
+      h.online ? ok('the asset hub is online') : bad('the asset hub reports offline')
+      h.bytes > 0 && h.bytes < 15 * 1024 * 1024 ? ok(`${(h.bytes / 1024).toFixed(1)} KB transferred, under the 15 MB first-interactive budget`) : bad(`transferred ${h.bytes} bytes`)
+      h.probe ? ok('the authored probe reached the GPU') : bad('no probe texture on the sim')
+      h.tier === 'v3' ? ok('handle reports tier v3') : bad(`handle tier ${h.tier}`)
+      const png = responses.find(r => /uv-probe\.[0-9a-f]{8}\.png$/.test(r.url()))
+      png && png.status() === 200 && (png.headers()['access-control-allow-origin'] === '*')
+        ? ok('the probe came from the assets origin with CORS') : bad(`probe response: ${png ? png.status() + ' ' + JSON.stringify(png.headers()) : 'none'}`)
+      const line = await page.textContent('[data-sim-tier]')
+      ;/3\.0/.test(line) && /MB/.test(line) ? ok(`tier line: "${line.trim()}"`) : bad(`tier line: "${line}"`)
+    }
+    await ctx.close()
+
+    // Vintage: same engine as /axz/sim/, and the place the tier switch sends a phone.
+    const c2 = await browser.newContext()
+    const p2 = await c2.newPage()
+    await p2.goto(BASE + '/axz/sim/', { waitUntil: 'networkidle' })
+    const srcCurrent = await p2.getAttribute('[data-sim-stage]', 'data-sim-src')
+    await p2.goto(BASE + '/axz/sim/vintage/', { waitUntil: 'networkidle' })
+    const srcVintage = await p2.getAttribute('[data-sim-stage]', 'data-sim-src')
+    srcCurrent === srcVintage && /sim2-/.test(srcVintage) ? ok('/axz/sim/vintage/ is the 2.0 engine, byte for byte the one at /axz/sim/') : bad(`vintage src ${srcVintage} vs current ${srcCurrent}`)
+    ;(await p2.$('a[href$="/sim/classic/"]')) && (await p2.$('a[href="/axz/sim/"]')) ? ok('vintage links to classic and back to the current engine') : bad('vintage page links missing')
+
+    const asked3 = []
+    p2.on('request', r => { if (/assets\/sim3-.*\/(boot|main|scene)\.js/.test(r.url())) asked3.push(r.url()) })
+    await p2.goto(BASE + '/axz/en/sim/v3/?tier=vintage', { waitUntil: 'networkidle' })
+    await Promise.all([p2.waitForURL(/\/axz\/en\/sim\/vintage\//, { timeout: 15000 }), p2.click('[data-sim-start]')]).then(
+      () => ok('?tier=vintage on the press lands on the vintage page'), () => bad('?tier=vintage did not redirect'))
+    asked3.length === 0 ? ok('the 3.0 engine was not fetched for a vintage device') : bad(`engine fetched before redirect: ${asked3[0]}`)
+    await c2.close()
+  }
+}
+
 await browser.close()
 console.log(fails.length ? `\n✗ ${fails.length} failure(s)` : '\n✓ all functional checks pass')
 process.exit(fails.length ? 1 : 0)
