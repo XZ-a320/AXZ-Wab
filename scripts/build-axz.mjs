@@ -140,6 +140,30 @@ mkdirSync(join(OUT, 'assets', sim2Dir), { recursive: true })
 for (const [f, src] of sim2Files) writeFileSync(join(OUT, 'assets', sim2Dir, `${f}.js`), src)
 const SIM2_ENTRY = `${BASE}/assets/${sim2Dir}/boot.js`
 
+/* --- Simulator 3.0 ----------------------------------------------------------
+   Same arrangement as 2.0. Phase 0 owns only the entry, the tier chooser and
+   the asset hub; the scene, aircraft, flight model and world are 2.0's,
+   copied in, until a later phase replaces each one. The data it downloads
+   lives in a separate repo on its own origin; the page carries that origin
+   so the engine never guesses it. */
+const SIM3_OWN = ['boot', 'tier', 'assets']
+const SIM3_FROM_SIM2 = ['scene', 'aircraft', 'main', 'fdm', 'input', 'world']
+const sim3Files = [
+  ...SIM3_OWN.map(f => [f, readFileSync(join(SRC, 'js', 'sim3', `${f}.js`), 'utf8')]),
+  ...SIM3_FROM_SIM2.map(f => [f, readFileSync(join(SRC, 'js', 'sim2', `${f}.js`), 'utf8')]),
+  ...SIM2_SHARED.map(f => [f, readFileSync(join(SRC, 'js', 'sim', `${f}.js`), 'utf8')]),
+  ['models', readFileSync(join(SRC, 'js', 'hangar', 'models.js'), 'utf8')],
+]
+const sim3Dir = `sim3-${hash(sim3Files.map(f => f[1]).join('\n'))}`
+mkdirSync(join(OUT, 'assets', sim3Dir), { recursive: true })
+for (const [f, src] of sim3Files) writeFileSync(join(OUT, 'assets', sim3Dir, `${f}.js`), src)
+const SIM3_ENTRY = `${BASE}/assets/${sim3Dir}/boot.js`
+const SIM3_TIER = `${BASE}/assets/${sim3Dir}/tier.js`
+const ASSETS_ORIGIN = process.env.AXZ_ASSETS_ORIGIN || 'https://axz-assets.vercel.app'
+const ASSETS_REPO = process.env.AXZ_ASSETS || join(ROOT, '..', 'axz-assets')
+const CREDITS = existsSync(join(ASSETS_REPO, 'public', 'credits.json'))
+  ? JSON.parse(readFileSync(join(ASSETS_REPO, 'public', 'credits.json'), 'utf8')) : []
+
 /* --- Hangar ---------------------------------------------------------------
    The 3D fleet viewer. Same arrangement as the simulator: ES modules in a
    directory that carries the hash. Three.js itself comes from a CDN through
@@ -278,6 +302,8 @@ const PAGES = [
   { key: 'dispatch', zhPath: 'dispatch', enPath: 'en/dispatch' },
   { key: 'sim', zhPath: 'sim', enPath: 'en/sim' },
   { key: 'simclassic', zhPath: 'sim/classic', enPath: 'en/sim/classic' },
+  { key: 'simvintage', zhPath: 'sim/vintage', enPath: 'en/sim/vintage' },
+  { key: 'sim3', zhPath: 'sim/v3', enPath: 'en/sim/v3' },
   { key: 'hangar', zhPath: 'hangar', enPath: 'en/hangar' },
   { key: 'accessibility', zhPath: 'accessibility', enPath: 'en/accessibility' },
   { key: 'aprilfools', zhPath: 'aprilfools', enPath: 'en/aprilfools' },
@@ -1129,7 +1155,10 @@ function dispatchPage(c, lang) {
    fleet page publishes.                                                      */
 function simPage(c, lang, version = '2.0') {
   const P = s => parts(s, lang), S = c.sim, LG = c.landing
-  const v2 = version !== 'classic'
+  const modern = version !== 'classic'          // 2.0, vintage and 3.0 share the 2.0 controls, weathers and flags
+  const v3 = version === '3.0'
+  const vintage = version === 'vintage'
+  const pageTitle = v3 ? S.v3Title : vintage ? S.vintageTitle : modern ? S.title : S.classicTitle
   /* The simulator's roster is NOT the airline's fleet. AXZ operates four
      aircraft; the other four are types the simulator can fly, and the page
      says which is which. Names for the AXZ four come from the catalogue so
@@ -1168,7 +1197,7 @@ function simPage(c, lang, version = '2.0') {
       reg: t.axz ? c.fleet[id].reg : t.reg,
       axz: !!t.axz,
       // 2.0 draws the hangar's models, which need the drawing flags too.
-      ...(v2 ? (HANGAR_FLAGS[id] || {}) : {}),
+      ...(modern ? (HANGAR_FLAGS[id] || {}) : {}),
     }
   }
   fleet._order = order
@@ -1191,6 +1220,7 @@ function simPage(c, lang, version = '2.0') {
     sysNames: S.sysNames, failWhy: S.failWhy,
     keyboard: S.keyboard, gamepad: S.gamepad,
     score: S.score, autopilotLabel: S.autopilotLabel, lightsLabel: S.lightsLabel, reverseLabel: S.reverseLabel,
+    ...(v3 ? { tierLabel: S.tierLabel, tiers: S.tiers, tierAuto: S.tierAuto, assetsLabel: S.assetsLabel, assetsOffline: S.assetsOffline } : {}),
   }
   const bands = LG.bands.map(b => b.remark)
 
@@ -1241,7 +1271,7 @@ function simPage(c, lang, version = '2.0') {
   const wxOpts = ['clear', 'scattered', 'overcast', 'rain'].map(k =>
     `<option value="${esc(k)}"${k === 'scattered' ? ' selected' : ''}>${esc(S.weathers[k])}</option>`).join('')
 
-  const ctlRows = (v2 ? [...S.controls, ...(S.controls2 || [])] : S.controls).map(r => `<tr>
+  const ctlRows = (modern ? [...S.controls, ...(S.controls2 || [])] : S.controls).map(r => `<tr>
     <th scope="row">${P(r.a)}</th>
     <td class="code">${esc(r.k)}</td>
     <td class="code">${esc(r.p)}</td>
@@ -1280,7 +1310,7 @@ function simPage(c, lang, version = '2.0') {
     </tr>`
   }).join('')
 
-  const fieldOrder = v2
+  const fieldOrder = modern
     ? ['flight', 'ias', 'gs', 'mach', 'alt', 'agl', 'vs', 'hdg', 'n1', 'fuel', 'wind', 'papi',
       'dist', 'dest', 'camera', 'autopilot', 'time', 'assist', 'input', 'fps']
     : ['flight', 'ias', 'mach', 'alt', 'agl', 'vs', 'hdg', 'wind', 'papi',
@@ -1295,19 +1325,28 @@ function simPage(c, lang, version = '2.0') {
     <td class="lg-remark">${parts(b.remark, lang)}</td>
   </tr>`).join('')
 
-  const versionNote = v2
-    ? `<p class="notice notice--quiet sim-version"><span>${esc(S.v2Title)}</span><a href="${urlFor('simclassic', lang)}">${esc(S.classicLink)}</a></p>`
-    : `<p class="notice sim-version"><span>${esc(S.classicNote)}</span><a href="${urlFor('sim', lang)}">${esc(S.currentLink)}</a></p>`
+  const link = (key, text) => `<a href="${urlFor(key, lang)}">${esc(text)}</a>`
+  const versionNote = v3
+    ? `<p class="notice sim-version"><span>${esc(S.v3Note)}</span>${link('simvintage', S.vintageLink)}${link('simclassic', S.classicLink)}</p>`
+    : vintage
+      ? `<p class="notice sim-version"><span>${esc(S.vintageNote)}</span>${link('sim', S.currentLink)}${link('simclassic', S.classicLink)}</p>`
+      : modern
+        ? `<p class="notice notice--quiet sim-version"><span>${esc(S.v2Title)}</span>${link('simclassic', S.classicLink)}${link('sim3', S.v3Link)}</p>`
+        : `<p class="notice sim-version"><span>${esc(S.classicNote)}</span>${link('sim', S.currentLink)}</p>`
   const body = `
 <section class="sector wrap">
-  <h1>${P(v2 ? S.title : S.classicTitle)}</h1>
+  <h1>${P(pageTitle)}</h1>
   <p class="record__meta">${esc(S.headerSub)}</p>
   <p class="prose">${P(S.intro)}</p>
-  ${v2 ? `<p class="prose">${P(S.v2Body)}</p>` : ''}
+  ${v3 ? `<p class="prose">${P(S.v3Body)}</p>` : modern ? `<p class="prose">${P(S.v2Body)}</p>` : ''}
   ${versionNote}
 
-  <div class="sim" data-sim-stage data-sim-version="${v2 ? '2.0' : '1.0'}"
-       data-sim-src="${esc(v2 ? SIM2_ENTRY : SIM_ENTRY)}"
+  <div class="sim" data-sim-stage data-sim-version="${v3 ? '3.0' : modern ? '2.0' : '1.0'}"
+       data-sim-src="${esc(v3 ? SIM3_ENTRY : modern ? SIM2_ENTRY : SIM_ENTRY)}"${v3 ? `
+       data-sim-tier-src="${esc(SIM3_TIER)}"
+       data-sim-assets="${esc(ASSETS_ORIGIN)}"
+       data-sim-vintage-href="${urlFor('simvintage', lang)}"
+       data-sim-classic-href="${urlFor('simclassic', lang)}"` : ''}
        data-sim-labels="${esc(JSON.stringify(labels))}"
        data-sim-fleet="${esc(JSON.stringify(fleet))}"
        data-sim-flaps="${esc(JSON.stringify(FLAP_SETS))}"
@@ -1352,7 +1391,7 @@ function simPage(c, lang, version = '2.0') {
         <label for="sim-fr">${esc(S.setup.failure)}</label>
         <select id="sim-fr" data-sim-failrate>${frOpts}</select>
       </div>
-      ${v2 ? `<div class="field">
+      ${modern ? `<div class="field">
         <label for="sim-wx">${esc(S.setup.weather)}</label>
         <select id="sim-wx" data-sim-weather>${wxOpts}</select>
       </div>` : ''}
@@ -1364,6 +1403,7 @@ function simPage(c, lang, version = '2.0') {
       <button class="btn" type="button" data-sim-phone hidden aria-pressed="false">${esc(S.phoneButton)}</button>
     </p>
     <p class="status" role="status" data-sim-status></p>
+    ${v3 ? `<p class="notice notice--quiet" data-sim-tier hidden></p>` : ''}
     <p class="record__meta">${esc(S.startNote)}</p>
 
     <div class="sim-stage" data-sim-mount>
@@ -1373,7 +1413,7 @@ function simPage(c, lang, version = '2.0') {
 
     <div class="sim-panel" data-sim-panel hidden>
       <div class="sim-bar">
-        ${(v2 ? ['pause', 'reset', 'camera', 'assist', 'autopilot', 'lights', 'sound'] : ['pause', 'reset', 'camera', 'assist', 'sound']).map(a =>
+        ${(modern ? ['pause', 'reset', 'camera', 'assist', 'autopilot', 'lights', 'sound'] : ['pause', 'reset', 'camera', 'assist', 'sound']).map(a =>
     `<button class="btn sim-tog" type="button" data-sim-action="${a}"${
       ['assist', 'sound'].includes(a) ? ' aria-pressed="true"' : ['autopilot', 'lights'].includes(a) ? ' aria-pressed="false"' : ''
     }>${esc(S.actions[a])}${
@@ -1476,6 +1516,11 @@ function simPage(c, lang, version = '2.0') {
     <tbody>${bandRows}</tbody>
   </table>
 
+  ${v3 ? `<details class="prose sim-credits"><summary>${esc(S.creditsTitle)}</summary>${
+    CREDITS.length
+      ? `<ul>${CREDITS.map(cr => `<li>${esc(cr.id)} · ${esc(cr.author)} · ${esc(cr.license)} · ${esc(cr.source)}</li>`).join('')}</ul>`
+      : `<p>${esc(S.creditsNone)}</p>`}</details>` : ''}
+
   <p class="btn-row btn-row--foot">
     <a class="btn" href="${urlFor('dispatch', lang)}">${icon('i-dispatch')}${esc(c.dispatch.title)}</a>
     <a class="btn" href="${urlFor('home', lang)}">${icon('i-home')}${esc(S.backHome)}</a>
@@ -1483,9 +1528,10 @@ function simPage(c, lang, version = '2.0') {
 </section>`
 
   return shell({
-    c, lang, key: v2 ? 'sim' : 'simclassic',
-    title: `${v2 ? S.title : S.classicTitle} — ${c.meta.siteName}`, desc: S.intro, body,
-    head: v2 ? IMPORT_MAP : '',
+    c, lang, key: v3 ? 'sim3' : vintage ? 'simvintage' : modern ? 'sim' : 'simclassic',
+    title: `${pageTitle} — ${c.meta.siteName}`, desc: S.intro, body,
+    head: modern ? IMPORT_MAP : '',
+    noindex: v3,
   })
 }
 
@@ -1633,7 +1679,7 @@ function aprilfools(c, lang) {
 }
 
 /* --- Emit ----------------------------------------------------------------- */
-const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, sim: simPage, simclassic: (c, lang) => simPage(c, lang, 'classic'), hangar: hangarPage, accessibility: a11y, aprilfools }
+const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, sim: simPage, simclassic: (c, lang) => simPage(c, lang, 'classic'), simvintage: (c, lang) => simPage(c, lang, 'vintage'), sim3: (c, lang) => simPage(c, lang, '3.0'), hangar: hangarPage, accessibility: a11y, aprilfools }
 let count = 0
 for (const p of PAGES) {
   for (const [lang, cat, sub] of [['zh-Hans', zh, p.zhPath], ['en', en, p.enPath]]) {
@@ -1767,7 +1813,7 @@ writeFileSync(join(OUT, 'favicon.svg'),
 
 // Sitemap with xhtml alternates — the parent sitemap does not declare that
 // namespace, so /axz/ carries its own, referenced from its own robots.txt.
-const sm = PAGES.filter(p => p.key !== 'aprilfools').flatMap(p =>
+const sm = PAGES.filter(p => p.key !== 'aprilfools' && p.key !== 'sim3').flatMap(p =>
   ['zh-Hans', 'en'].map(lang => `  <url><loc>https://xiaobrook.com${urlFor(p.key, lang)}</loc>
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://xiaobrook.com${urlFor(p.key, 'zh-Hans')}"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://xiaobrook.com${urlFor(p.key, 'en')}"/>
