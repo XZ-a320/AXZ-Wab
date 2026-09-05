@@ -20,6 +20,7 @@ import { Sim } from './main.js'
 import { MobileControls, isPhone } from './mobile.js'
 import { AssetHub } from './assets.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 
 export async function boot(cfg) {
   const stage = cfg.stage
@@ -45,7 +46,13 @@ export async function boot(cfg) {
   /* Sourced models come down by fleet id, parsed once, kept for the Sim.
      A type the hub has no model for flies the hangar's procedural one. */
   const rigged = new Map()
+  /* Draco-compressed geometry decodes with the decoder the assets origin
+     serves, pinned to the same three.js version as the page's import map. */
   const loader = new GLTFLoader()
+  const draco = new DRACOLoader()
+  draco.setDecoderPath(`${hub.origin}/decoders/three-0.170.0/draco/`)
+  draco.setDecoderConfig({ type: 'wasm' })
+  loader.setDRACOLoader(draco)
   async function preload(id) {
     if (rigged.has(id) || !hub.online) return rigged.get(id) || null
     const asset = hub.modelFor(id)

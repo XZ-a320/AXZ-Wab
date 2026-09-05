@@ -8,7 +8,7 @@
    index carries the licence and author so the credits page cannot omit one.
    ========================================================================== */
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, copyFileSync, rmSync } from 'node:fs'
-import { join, extname, basename } from 'node:path'
+import { join, extname, basename, dirname } from 'node:path'
 import { createHash } from 'node:crypto'
 
 export const ALLOWED = ['CC0-1.0', 'CC-BY-4.0', 'CC-BY-3.0', 'PDM', 'Copernicus', 'ODbL', 'purchased', 'authored', 'Apache-2.0', 'MIT', 'GPL-2.0-or-later', 'GPL-3.0-or-later']
@@ -48,14 +48,18 @@ export function buildIndex(repo, { origin = 'https://axz-assets.vercel.app', now
        published file is a different artefact and gets its own hash. */
     if (!r.derived && r.sha256 && r.sha256 !== sha) throw new Error(`${r.id}: sha256 mismatch`)
     const ext = extname(r.file), name = basename(r.file, ext)
-    assets[r.id] = { kind: r.kind, url: `${r.kind}s/${name}.${sha.slice(0, 8)}${ext}`, bytes: buf.length, sha256: sha, ...(r.derived && r.sha256 ? { sourceSha256: r.sha256 } : {}), license: r.license, author: r.author, source: r.source, ...(r.types ? { types: r.types } : {}), ...(r.part ? { part: r.part } : {}), _src: src }
+    /* Decoders keep their names and their folder: three.js's DRACOLoader asks
+       for draco_wasm_wrapper.js and draco_decoder.wasm side by side under one
+       path. The three.js version in the path is the cache key instead. */
+    const url = r.kind === 'decoder' ? r.file : `${r.kind}s/${name}.${sha.slice(0, 8)}${ext}`
+    assets[r.id] = { kind: r.kind, url, bytes: buf.length, sha256: sha, ...(r.derived && r.sha256 ? { sourceSha256: r.sha256 } : {}), license: r.license, author: r.author, source: r.source, ...(r.types ? { types: r.types } : {}), ...(r.part ? { part: r.part } : {}), _src: src }
     credits.push({ id: r.id, title: r.title || r.id, author: r.author, authorUrl: r.authorUrl || '', license: r.license, source: r.source, modified: r.modified || '', phase: r.phase })
   }
   // public/ is entirely generated: clear it, then write.
   rmSync(pub, { recursive: true, force: true })
   mkdirSync(pub, { recursive: true })
   for (const a of Object.values(assets)) {
-    mkdirSync(join(pub, a.url.split('/')[0]), { recursive: true })
+    mkdirSync(join(pub, dirname(a.url)), { recursive: true })
     copyFileSync(a._src, join(pub, a.url))
     delete a._src
   }

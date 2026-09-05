@@ -106,3 +106,14 @@ test('a derived row whose GLB is not built yet is credited and pending, not an e
   assert.equal(index.assets.later, undefined); assert.deepEqual(index.pending, ['later (not built)'])
   assert.equal(index.credits.find(c => c.id === 'later').published, false)
 })
+
+test('a decoder keeps its own name and folder so DRACOLoader can find its pair', () => {
+  const repo = fixture()
+  mkdirSync(join(repo, 'raw', 'decoders', 'three-0.170.0', 'draco'), { recursive: true })
+  writeFileSync(join(repo, 'raw', 'decoders', 'three-0.170.0', 'draco', 'draco_decoder.wasm'), Buffer.from('wasm'))
+  writeFileSync(join(repo, 'manifests', 'phase-1.json'), JSON.stringify({ phase: '1', rows: [
+    { id: 'draco-wasm', kind: 'decoder', file: 'decoders/three-0.170.0/draco/draco_decoder.wasm', source: 'https://x', license: 'Apache-2.0', author: 'Google' }] }))
+  const index = buildIndex(repo)
+  assert.equal(index.assets['draco-wasm'].url, 'decoders/three-0.170.0/draco/draco_decoder.wasm')
+  assert.ok(existsSync(join(repo, 'public', 'decoders', 'three-0.170.0', 'draco', 'draco_decoder.wasm')))
+})

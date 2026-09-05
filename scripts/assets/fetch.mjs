@@ -11,7 +11,8 @@
      urls       several files into one directory
      svn-dir    a SourceForge SVN directory over plain HTTP, recursively
      git-sparse a GitHub repo, one shallow partial clone, only the paths named
-     manual     Brook downloads it (Sketchfab needs a login); we only verify
+     manual     Brook downloads it; we only verify
+     sketchfab  the download API, with SKETCHFAB_TOKEN from .env.local; else as manual
 
    Usage: node scripts/assets/fetch.mjs manifests/phase-1.json [--only a,b] [--dry]
    ========================================================================== */
@@ -20,6 +21,35 @@ import { join, dirname, basename, relative } from 'node:path'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
+
+/* Secrets come from <repo>/.env.local (gitignored), never from the manifest
+   and never printed: SKETCHFAB_TOKEN=… lets the Sketchfab rows fetch
+   themselves through the download API. */
+export function readEnvLocal(repo) {
+  const p = join(repo, '.env.local')
+  if (!existsSync(p)) return {}
+  const out = {}
+  for (const line of readFileSync(p, 'utf8').split(/\r?\n/)) { const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line); if (m) out[m[1]] = m[2].replace(/^["']|["']$/g, '') }
+  return out
+}
+
+/** Sketchfab's download API: a logged-in account's token buys a short-lived
+    URL for the glTF zip of a downloadable model. The token is the account's;
+    the licence is the model's; both are checked before a byte moves. */
+async function sketchfab(uid, into, { token, fetchImpl, log, exec = execFileSync }) {
+  if (!token) return null
+  const res = await fetchImpl(`https://api.sketchfab.com/v3/models/${uid}/download`, { headers: { Authorization: `Token ${token}` } })
+  if (!res.ok) throw new Error(`Sketchfab download API ${res.status} for ${uid}${res.status === 401 || res.status === 403 ? ' (token refused: is it a personal API token from Settings → Password & API?)' : ''}`)
+  const meta = await res.json()
+  const g = meta.gltf || meta.glb
+  if (!g || !g.url) throw new Error(`Sketchfab: no glTF archive offered for ${uid}`)
+  const zip = join(into, 'source.zip')
+  const buf = await download(g.url, zip, fetchImpl)
+  log(`    source.zip ${(buf.length / 1048576).toFixed(1)} MB (Sketchfab said ${g.size ? (g.size / 1048576).toFixed(1) + ' MB' : 'unknown'})`)
+  mkdirSync(join(into, 'source'), { recursive: true })
+  exec('unzip', ['-q', '-o', zip, '-d', join(into, 'source')], { stdio: 'pipe' })
+  return buf
+}
 
 const sha256 = buf => createHash('sha256').update(buf).digest('hex')
 
@@ -96,14 +126,18 @@ function gitSparse(repo, paths, into, { ref = 'HEAD', log, exec = execFileSync }
   return { commit }
 }
 
-export async function fetchRow(row, { repo, fetchImpl = fetch, log = () => {}, exec }) {
+export async function fetchRow(row, { repo, fetchImpl = fetch, log = () => {}, exec, env = readEnvLocal(repo) }) {
   const specs = Array.isArray(row.fetch) ? row.fetch : [row.fetch]
   const rawDir = join(repo, 'raw')
   const result = { bytes: 0, files: 0 }
   for (const spec of specs) {
     if (!spec) throw new Error(`${row.id}: no fetch spec`)
-    if (spec.type === 'manual') {
+    if (spec.type === 'manual' || spec.type === 'sketchfab') {
       const p = join(rawDir, spec.expect || row.file)
+      if (!existsSync(p) && spec.type === 'sketchfab' && spec.uid) {
+        const got = await sketchfab(spec.uid, dirname(p), { token: env.SKETCHFAB_TOKEN, fetchImpl, log, exec })
+        if (!got) return { manual: true, expect: spec.expect || row.file, instructions: `${spec.instructions || ''} (or put SKETCHFAB_TOKEN=… in ${join(repo, '.env.local')} and rerun)`.trim() }
+      }
       if (!existsSync(p)) return { manual: true, expect: spec.expect || row.file, instructions: spec.instructions }
       const buf = readFileSync(p); result.bytes += buf.length; result.files++; result.sha256 = sha256(buf)
     } else if (spec.type === 'url') {
@@ -129,7 +163,7 @@ export async function fetchRow(row, { repo, fetchImpl = fetch, log = () => {}, e
   return result
 }
 
-export async function fetchManifest(path, { repo, only = null, dry = false, fetchImpl = fetch, log = console.log, exec } = {}) {
+export async function fetchManifest(path, { repo, only = null, dry = false, fetchImpl = fetch, log = console.log, exec, env = readEnvLocal(repo) } = {}) {
   const m = JSON.parse(readFileSync(path, 'utf8'))
   if (!m.approvedBy || !m.approvedOn) throw new Error(`${basename(path)}: not approved (approvedBy/approvedOn missing) — nothing fetched`)
   const report = []
@@ -140,7 +174,7 @@ export async function fetchManifest(path, { repo, only = null, dry = false, fetc
     log(`  ${row.id}`)
     if (dry) { report.push({ id: row.id, state: 'dry' }); continue }
     try {
-      const r = await fetchRow(row, { repo, fetchImpl, log, exec })
+      const r = await fetchRow(row, { repo, fetchImpl, log, exec, env })
       if (r.manual) { report.push({ id: row.id, state: 'manual', expect: r.expect, instructions: r.instructions }); continue }
       Object.assign(row, { fetched: true, fetchedOn: new Date().toISOString().slice(0, 10), bytes: r.bytes, files: r.files, sha256: r.sha256, ...(r.commit ? { commit: r.commit } : {}) })
       report.push({ id: row.id, state: 'fetched', bytes: r.bytes, files: r.files })

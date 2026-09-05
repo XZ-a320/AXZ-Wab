@@ -1,0 +1,14 @@
+{
+  "name": "axz-wab-source",
+  "private": true,
+  "type": "module",
+  "description": "Build, gates and asset tooling for xiaobrook.com/axz/. Not deployed.",
+  "devDependencies": {
+    "@gltf-transform/cli": "^4.1.0",
+    "@gltf-transform/core": "^4.1.0",
+    "@gltf-transform/extensions": "^4.1.0",
+    "@gltf-transform/functions": "^4.1.0",
+    "draco3dgltf": "^1.5.7",
+    "sharp": "^0.33.5"
+  }
+}

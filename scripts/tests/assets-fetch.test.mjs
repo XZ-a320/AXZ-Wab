@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
-import { parseSvnListing, treeHash, fetchRow, fetchManifest } from '../assets/fetch.mjs'
+import { parseSvnListing, treeHash, fetchRow, fetchManifest, readEnvLocal } from '../assets/fetch.mjs'
 
 const sha = s => createHash('sha256').update(s).digest('hex')
 const respond = table => async url => {
@@ -76,4 +76,29 @@ test('fetchManifest refuses an unapproved manifest and writes back fetched rows'
   assert.deepEqual(report.map(r => r.state), ['fetched', 'error', 'already'])
   const m = JSON.parse(readFileSync(p, 'utf8'))
   assert.equal(m.rows[0].fetched, true); assert.equal(m.rows[0].sha256, sha('WASM')); assert.equal(m.rows[1].fetched, false)
+})
+
+test('readEnvLocal reads KEY=value lines and nothing else', () => {
+  const repo = repoDir()
+  writeFileSync(join(repo, '.env.local'), '# comment\nSKETCHFAB_TOKEN="abc123"\nOTHER=x y\nnot a line\n')
+  assert.deepEqual(readEnvLocal(repo), { SKETCHFAB_TOKEN: 'abc123', OTHER: 'x y' })
+  assert.deepEqual(readEnvLocal(mkdtempSync(join(tmpdir(), 'axz-none-'))), {})
+})
+
+test('a sketchfab row without a token waits like a manual one, and with a token fetches through the download API', async () => {
+  const repo = repoDir()
+  const row = { id: 'sk', file: 'models/sk/sk.glb', fetched: false, fetch: { type: 'sketchfab', uid: 'abc', expect: 'models/sk/source.zip', instructions: 'download from Sketchfab' } }
+  const r1 = await fetchRow(row, { repo, env: {} })
+  assert.equal(r1.manual, true); assert.match(r1.instructions, /SKETCHFAB_TOKEN/)
+  const calls = []
+  const fetchImpl = async (url, opts = {}) => {
+    calls.push([url, (opts.headers || {}).Authorization || ''])
+    if (url.endsWith('/models/abc/download')) return { ok: true, status: 200, json: async () => ({ gltf: { url: 'https://cdn/x.zip', size: 3 } }) }
+    if (url === 'https://cdn/x.zip') return { ok: true, status: 200, arrayBuffer: async () => new TextEncoder().encode('ZIP').buffer }
+    return { ok: false, status: 404 }
+  }
+  const exec = (cmd, args) => { assert.equal(cmd, 'unzip'); mkdirSync(args[args.length - 1], { recursive: true }); return Buffer.from('') }
+  const r2 = await fetchRow(row, { repo, env: { SKETCHFAB_TOKEN: 'tok' }, fetchImpl, exec })
+  assert.equal(calls[0][1], 'Token tok'); assert.equal(r2.files, 1); assert.equal(r2.sha256, sha('ZIP'))
+  assert.ok(existsSync(join(repo, 'raw', 'models', 'sk', 'source.zip')))
 })

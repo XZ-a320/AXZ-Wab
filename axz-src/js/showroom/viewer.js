@@ -8,7 +8,7 @@
    ========================================================================== */
 import { RiggedAircraft } from './rigged.js'
 
-export function createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader }, mount, labels) {
+export function createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader, draco }, mount, labels) {
   const canvas = document.createElement('canvas')
   canvas.setAttribute('aria-label', labels.canvasLabel || 'Model viewer')
   canvas.tabIndex = 0
@@ -40,6 +40,7 @@ export function createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader
   canvas.addEventListener('pointerdown', () => { controls.autoRotate = false })
 
   const loader = new GLTFLoader()
+  if (draco) loader.setDRACOLoader(draco)
   let current = null, currentSpec = null
   let t = 0, motion = true, exercise = true
 

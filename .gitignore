@@ -8,3 +8,5 @@ axz-src/fonts-src/*.ttf
 
 # Intermediate subsetting artifacts
 axz-src/.font-tmp/
+# tooling installed by npm; never deployed
+node_modules/

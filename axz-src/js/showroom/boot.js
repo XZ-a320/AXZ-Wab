@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { AssetHub } from './assets.js'
 import { createViewer } from './viewer.js'
 
@@ -18,7 +19,10 @@ export async function boot(cfg) {
   await hub.load()
   if (!hub.online) return { error: 'offline', detail: hub.error }
   let viewer
-  try { viewer = createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader }, mount, L) } catch (err) { return { error: err && err.message === 'no-webgl' ? 'no-webgl' : 'failed', detail: String(err) } }
+  const draco = new DRACOLoader()
+  draco.setDecoderPath(`${hub.origin}/decoders/three-0.170.0/draco/`)
+  draco.setDecoderConfig({ type: 'wasm' })
+  try { viewer = createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader, draco }, mount, L) } catch (err) { return { error: err && err.message === 'no-webgl' ? 'no-webgl' : 'failed', detail: String(err) } }
 
   const cells = {}
   for (const n of stage.querySelectorAll('[data-showroom-field]')) cells[n.getAttribute('data-showroom-field')] = n
