@@ -170,6 +170,7 @@
 没有 WebGL2 转到 1.0，都不会先下 3.0 引擎。2.0 原样保留在 `/axz/sim/vintage/`，
 1.0 在 `/axz/sim/classic/`；`/axz/sim/` 在 3.0 完工前仍是 2.0。
 素材库部署后用 `node scripts/check-axz-assets-live.mjs https://<origin>` 从外部核对：索引可达、每个文件的大小与索引一致、CORS、缓存头。
+每个 FlightGear 机包一条命令：`node scripts/assets/fg-build.mjs <id> <root.xml> <packageRoot> derived/models/<id> [--exclude=…] [--textures=<重绘目录>]`，读 XML 里的绑定、转换每个 .ac、拼成一个带绑定的 GLB；`<condition>`、`<property alias>`、容器 XML 的 select、procedural_light 面片和过大的灯光体都在代码里处理，真实航司或厂家涂装用 `neutralise-livery.mjs` 抹掉并记入清单。陈列室在 `/axz/showroom/`（`axz-src/js/showroom/`），3.0 选机器把每一型标成「3.0 机模」或「2.0 机模」。
 
 ## 目录
 
