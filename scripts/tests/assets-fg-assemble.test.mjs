@@ -73,3 +73,20 @@ test('assemble follows the rig, honours exclude, and embeds the rig in asset.ext
   assert.equal(noDeck.json.asset.extras.axzRig.parts[0].animations[0].property, 'x')
   const glb = parseGlb(packGlb(noDeck)); assert.equal(summarize(glb.json).triangles, 1)
 })
+
+test('a conditional include becomes a select on its own node, and an airfield-sized light volume is dropped', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'axz-asm3-'))
+  writeFileSync(join(dir, 'fuselage.glb'), packGlb(toGltf(parseAc(acText('fus')))))
+  writeFileSync(join(dir, 'chute.glb'), packGlb(toGltf(parseAc(acText('canopy')))))
+  const huge = acText('cone').replace('0 0 0\n1 0 0\n0 1 0', '0 0 0\n160 0 0\n0 160 0')
+  writeFileSync(join(dir, 'cone.glb'), packGlb(toGltf(parseAc(huge))))
+  const rig = { id: 't', frame: 'fg', parts: [
+    { xml: 'root.xml', ac: 'fuselage.ac', glb: 'fuselage.glb', dir: 'Models', offset: null, animations: [] },
+    { xml: 'dragchute.xml', ac: 'chute.ac', glb: 'chute.glb', dir: 'Models', name: 'chute', condition: { op: 'property', name: 'sim/model/f16/chute' }, offset: null, animations: [] },
+    { xml: 'light-cone.xml', ac: 'cone.ac', glb: 'cone.glb', dir: 'Models', offset: null, animations: [] }] }
+  const r = assemble(rig, dir)
+  assert.deepEqual(r.parts, ['root.xml', 'dragchute.xml']); assert.equal(r.dropped.length, 1); assert.match(r.dropped[0], /light-cone/)
+  const chute = r.json.asset.extras.axzRig.parts.find(p => p.part === 'dragchute.xml')
+  assert.equal(chute.node, 'chute'); assert.equal(chute.animations[0].type, 'select'); assert.deepEqual(chute.animations[0].objects, ['chute'])
+  assert.ok(r.json.nodes.some(n => n.name === 'chute' && n.extras && n.extras.part === 'dragchute.xml'))
+})

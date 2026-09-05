@@ -131,7 +131,7 @@ function quatFromRot(r) {
 }
 
 /* --- glTF assembly -------------------------------------------------------- */
-export function toGltf(ac, { textureDir = null, textureRoot = null, generator = 'axz ac2gltf' } = {}) {
+export function toGltf(ac, { textureDir = null, textureRoot = null, textureOverride = null, generator = 'axz ac2gltf' } = {}) {
   const bin = []; let binLen = 0
   const bufferViews = [], accessors = [], images = [], textures = [], materials = [], meshes = [], nodes = []
   const imageIndex = new Map(), materialIndex = new Map()
@@ -148,6 +148,7 @@ export function toGltf(ac, { textureDir = null, textureRoot = null, generator = 
      .ac's folder, then each ancestor up to `textureRoot`, then Textures/. */
   const dirsFor = () => {
     const out = []
+    if (textureOverride) out.push(textureOverride)          // an authored repaint wins over the package's own texture
     if (textureDir) { let d = textureDir; for (let k = 0; k < 6; k++) { out.push(d, join(d, 'Textures')); if (!textureRoot || d === textureRoot) break; const up = dirname(d); if (up === d) break; d = up } }
     return out
   }
@@ -220,7 +221,7 @@ export function packGlb({ json, bin }) {
 
 export function convert(acPath, outPath, opts = {}) {
   const ac = parseAc(readFileSync(acPath, 'utf8'))
-  const g = toGltf(ac, { textureDir: dirname(acPath), textureRoot: opts.textureRoot || null, ...opts })
+  const g = toGltf(ac, { textureDir: dirname(acPath), textureRoot: opts.textureRoot || null, textureOverride: opts.textureOverride || null, ...opts })
   const glb = packGlb(g)
   writeFileSync(outPath, glb)
   return { bytes: glb.length, ...g.stats, warnings: [...(ac.warnings || []), ...g.warnings], materials: g.json.materials.length, textures: (g.json.textures || []).length }

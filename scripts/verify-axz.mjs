@@ -1433,6 +1433,56 @@ console.log('\nsimulator 3.0')
   }
 }
 
+/* --- Showroom ---------------------------------------------------------------
+   The sourced 3.0 models, viewed. Same rules as the hangar: nothing fetched
+   until the stage is looked at, then the viewer, then a model from the
+   assets origin, with its author and licence on the page. */
+console.log('\nshowroom')
+{
+  const ASSETS = 'http://localhost:4790'
+  const sc = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  const sp = await sc.newPage()
+  const asked = []
+  sp.on('request', r => { if (/assets\/showroom-|three@/.test(r.url()) || r.url().startsWith(ASSETS)) asked.push(r.url()) })
+  await sp.goto(BASE + '/axz/en/showroom/?assets=' + ASSETS, { waitUntil: 'networkidle' })
+  const picks = await sp.$$eval('[data-showroom-pick]', bs => bs.map(b => b.getAttribute('data-showroom-pick')))
+  picks.length >= 5 ? ok(`${picks.length} sourced models to pick from: ${picks.join(' ')}`) : bad(`${picks.length} showroom models`)
+  const models = JSON.parse(await sp.getAttribute('[data-showroom-stage]', 'data-showroom-models'))
+  models.every(m => m.author && m.license && /^https?:/.test(m.source)) ? ok('every showroom model names its author, licence and source') : bad('a showroom model is missing author, licence or source')
+  const tagged = await sp.$$eval('[data-showroom-pick] .ros-tag', ts => ts.map(t => t.textContent))
+  tagged.every(t => /3\.0/.test(t) && /GPL|CC/.test(t)) ? ok('each pick is tagged as a 3.0 model with its licence') : bad(`tags: ${tagged.join(' | ')}`)
+  const inView = await sp.evaluate(() => { const r = document.querySelector('[data-showroom-stage]').getBoundingClientRect(); return r.top < innerHeight + 200 })
+  if (!inView) asked.length === 0 ? ok('showroom fetches nothing until the stage is looked at') : bad(`showroom fetched on load: ${asked[0]}`)
+  await sp.evaluate(() => document.querySelector('[data-showroom-stage]').scrollIntoView())
+  const up = await sp.waitForFunction(() => window.__axzShowroom && window.__axzShowroom.viewer.current, null, { timeout: 120000 }).then(() => true).catch(() => false)
+  if (!up) bad(`showroom did not start: "${await sp.textContent('[data-showroom-status]')}"`)
+  else {
+    ok('the showroom draws the first model once the stage scrolls into view')
+    const st = await sp.evaluate(() => { const v = window.__axzShowroom.viewer; return { id: document.querySelector('[data-showroom-stage]').getAttribute('data-showroom-current'), rigged: !!v.current.rigged, animated: v.current.animated.size, frames: v.frames, tri: document.querySelector('[data-showroom-field="triangles"]').textContent, credit: document.querySelector('[data-showroom-credit]').textContent } })
+    st.rigged && st.animated > 20 ? ok(`${st.id} is rigged in the showroom (${st.animated} animated parts, ${st.tri} triangles)`) : bad(`showroom model: ${JSON.stringify(st)}`)
+    ;/GPL|CC/.test(st.credit) && /FlightGear|Sketchfab|Poly Haven/.test(st.credit) ? ok(`credit reads: "${st.credit.trim().slice(0, 80)}…"`) : bad(`credit: "${st.credit}"`)
+    const second = picks[1]
+    await sp.click(`[data-showroom-pick="${second}"]`)
+    const swapped = await sp.waitForFunction(id => document.querySelector('[data-showroom-stage]').getAttribute('data-showroom-current') === id && document.querySelector('[data-showroom-status]').textContent === '', second, { timeout: 180000 }).then(() => true).catch(() => false)
+    swapped ? ok(`picking ${second} loads it and clears the status`) : bad(`could not swap to ${second}: "${await sp.textContent('[data-showroom-status]')}"`)
+    const cors = await sp.evaluate(() => window.__axzShowroom.hub.transferred)
+    cors > 1e6 ? ok(`${(cors / 1048576).toFixed(1)} MB came through the hub from the assets origin`) : bad(`hub transferred ${cors} bytes`)
+  }
+  await sc.close()
+
+  // 3.0 labels which aeroplane is a sourced model and which is the 2.0 airframe.
+  const lc = await browser.newContext()
+  const lp = await lc.newPage()
+  await lp.goto(BASE + '/axz/en/sim/v3/', { waitUntil: 'networkidle' })
+  const opts = await lp.$$eval('[data-sim-aircraft] option', os => os.map(o => [o.value, o.getAttribute('data-model'), o.textContent]))
+  const b737 = opts.find(o => o[0] === 'b-737x'), b789 = opts.find(o => o[0] === 'b789')
+  b737 && b737[1] === '3.0' && /3\.0 model/.test(b737[2]) && b789 && b789[1] === '2.0' && /2\.0 model/.test(b789[2])
+    ? ok('the 3.0 picker labels the 737 a 3.0 model and the 787 a 2.0 model') : bad(`picker labels: ${JSON.stringify([b737, b789])}`)
+  const sourced = opts.filter(o => o[1] === '3.0').length
+  sourced >= 7 ? ok(`${sourced} of ${opts.length} types fly sourced models`) : bad(`${sourced} sourced types`)
+  await lc.close()
+}
+
 await browser.close()
 console.log(fails.length ? `\n✗ ${fails.length} failure(s)` : '\n✓ all functional checks pass')
 process.exit(fails.length ? 1 : 0)

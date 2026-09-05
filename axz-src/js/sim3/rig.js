@@ -58,12 +58,41 @@ export function fgProperty(name, S) {
   return null                                          // not a thing a flight model knows; the animation is skipped
 }
 
+/** A FlightGear condition against our state. A property the flight model
+    does not know is 0/false, which is also what FlightGear does with an
+    unset one: the chute stays packed, the ground crew stays away. */
+export function evalCondition(c, S) {
+  if (!c) return true
+  const val = x => x.property != null ? (fgProperty(x.property, S) ?? 0) : x.value
+  switch (c.op) {
+    case 'property': return (fgProperty(c.name, S) ?? 0) > 0
+    case 'not': return !evalCondition(c.a, S)
+    case 'and': return c.list.every(x => evalCondition(x, S))
+    case 'or': return c.list.some(x => evalCondition(x, S))
+    case 'eq': return val(c.left) == val(c.right)
+    case 'ne': return val(c.left) != val(c.right)
+    case 'lt': return val(c.left) < val(c.right)
+    case 'le': return val(c.left) <= val(c.right)
+    case 'gt': return val(c.left) > val(c.right)
+    case 'ge': return val(c.left) >= val(c.right)
+    default: return true
+  }
+}
+
 /** Evaluate every animation; returns Map<objectName, op[]> with ops in rig order. */
 export function evaluateRig(rig, S) {
   const ops = new Map()
   for (const part of rig.parts || []) {
     for (const a of part.animations || []) {
       if (!a.objects || !a.objects.length) continue
+      const condOk = evalCondition(a.condition, S)
+      if (a.type === 'select') {
+        const v = a.property ? fgProperty(a.property, S) : null
+        const visible = a.condition ? condOk : (v == null ? false : v > 0.5)
+        for (const name of a.objects) { if (!ops.has(name)) ops.set(name, []); ops.get(name).push({ type: 'select', visible }) }
+        continue
+      }
+      if (!condOk) continue
       const v = a.property ? fgProperty(a.property, S) : 0
       if (v == null) continue
       let op = null
@@ -80,8 +109,6 @@ export function evaluateRig(rig, S) {
       } else if (a.type === 'spin') {
         if (!a.axis) continue
         op = { type: 'spin', axis: a.axis, center: a.center || [0, 0, 0], rpm: v * (a.factor == null ? 1 : a.factor) }
-      } else if (a.type === 'select') {
-        op = { type: 'select', visible: v > 0.5 }
       } else continue
       for (const name of a.objects) { if (!ops.has(name)) ops.set(name, []); ops.get(name).push(op) }
     }

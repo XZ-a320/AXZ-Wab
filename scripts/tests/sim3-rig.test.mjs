@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { interpolate, fgProperty, evaluateRig, stateFrom } from '../../axz-src/js/sim3/rig.js'
+import { interpolate, fgProperty, evaluateRig, stateFrom, evalCondition } from '../../axz-src/js/sim3/rig.js'
 
 const S = { gear: 1, gearComp: [0.5, 0.2, 0.2], flap: 0.5, slat: 1, aileron: -0.5, elevator: 0.2, rudder: 0.1, spoiler: 0, speedbrake: 0.3, n1: [0.8, 0.6], reverse: [0, 0], throttle: [0.7, 0.7], wheelSpeed: [10, 10, 10], brakeL: 0, brakeR: 1, steer: 0.1, onGround: true }
 
@@ -57,4 +57,19 @@ test('the FlightGear→body quaternion sends fg x (aft) to body z, fg y (starboa
   assert.deepEqual(fgToBody([1, 2, 3]), [2, 3, 1])
   assert.deepEqual(acToFg(fgToAc([1, 2, 3])), [1, 2, 3])
   assert.deepEqual(fgToAc([-16.55, 0.48, -1.09]), [-16.55, -1.09, -0.48])   // the nose gear door centre, measured
+})
+
+test('a select on an unknown property hides its objects, as FlightGear does with an unset one', () => {
+  const rig = { parts: [{ animations: [
+    { type: 'select', objects: ['chute'], property: 'sim/model/f16/chute' },
+    { type: 'select', objects: ['chocks'], property: 'gear/gear[0]/wow' },
+    { type: 'select', objects: ['covers'], condition: { op: 'not', a: { op: 'property', name: 'sim/model/c172p/securing/covers' } } },
+    { type: 'rotate', objects: ['door'], property: 'gear/gear[0]/position-norm', factor: 90, axis: [1, 0, 0], condition: { op: 'gt', left: { property: 'engines/engine[0]/n1' }, right: { value: 50 } } },
+  ] }] }
+  const ops = evaluateRig(rig, S)
+  assert.equal(ops.get('chute')[0].visible, false)
+  assert.equal(ops.get('chocks')[0].visible, true)
+  assert.equal(ops.get('covers')[0].visible, true)      // not(unset) = shown
+  assert.equal(ops.get('door')[0].deg, 90)             // n1 80 > 50: the condition holds
+  assert.equal(evalCondition({ op: 'and', list: [{ op: 'property', name: 'gear/gear[0]/wow' }, { op: 'lt', left: { property: 'controls/flight/flaps' }, right: { value: 1 } }] }, S), true)
 })

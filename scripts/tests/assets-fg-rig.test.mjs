@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { parseXml, readAnimation, resolveInclude, buildRig } from '../assets/fg-rig.mjs'
+import { parseXml, readAnimation, readCondition, resolveInclude, buildRig } from '../assets/fg-rig.mjs'
 
 const GEAR = `<?xml version="1.0"?>
 <PropertyList>
@@ -52,7 +52,7 @@ test('readAnimation reads rotate with a table and a centre, translate with a fac
   assert.deepEqual(rot.axis, [1, 0, -0.1]); assert.deepEqual(rot.center, [-16.55, 0.48, -1.09]); assert.deepEqual(rot.table, [[0, 0], [1, 90]])
   assert.equal(tr.type, 'translate'); assert.equal(tr.factor, 0.3048); assert.deepEqual(tr.axis, [0, 0, 1])
   assert.deepEqual(two.axis, [0, 1, 0]); assert.deepEqual(two.center, [1, 2, 3])
-  assert.equal(mat.type, 'material'); assert.equal(mat.condition, true)
+  assert.equal(mat.type, 'material'); assert.equal(mat.condition, undefined)   // an empty <equals/> is no condition
 })
 
 test('resolveInclude maps Aircraft/<name>/… to the package root and the rest to the XML directory', () => {
@@ -82,4 +82,12 @@ test('a PropertyList include= merges the included file, with local n-indexed mod
   const rig = buildRig('t', join(pkg, 'Models', '738.xml'), pkg)
   assert.equal(rig.parts[0].ac, '737.ac'); assert.equal(rig.parts[0].animations.length, 1)
   const gear = rig.parts.find(p => p.xml === 'NoseGear.xml'); assert.ok(gear); assert.equal(gear.offset.x, -1); assert.equal(gear.animations.length, 3)
+})
+
+test('readCondition builds not/and/or and comparison trees', () => {
+  const d = parseXml(`<animation><type>select</type><object-name>chute</object-name><condition><and><property>sim/model/chute</property><not><equals><property>gear/gear[0]/wow</property><value>1</value></equals></not></and></condition></animation>`)
+  const a = readAnimation(d.children[0])
+  assert.equal(a.type, 'select'); assert.deepEqual(a.condition, { op: 'and', list: [{ op: 'property', name: 'sim/model/chute' }, { op: 'not', a: { op: 'eq', left: { property: 'gear/gear[0]/wow' }, right: { value: 1 } } }] })
+  const lt = readCondition(parseXml('<condition><less-than><property>a</property><value>0.5</value></less-than></condition>').children[0])
+  assert.deepEqual(lt, { op: 'lt', left: { property: 'a' }, right: { value: 0.5 } })
 })

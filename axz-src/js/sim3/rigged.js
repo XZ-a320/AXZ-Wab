@@ -33,17 +33,23 @@ export class RiggedAircraft {
 
     // Every named node, by name (a name can repeat across parts).
     this.byName = new Map()
-    this.model.traverse(o => { if (o.name && !o.name.startsWith('part:')) { if (!this.byName.has(o.name)) this.byName.set(o.name, []); this.byName.get(o.name).push(o) } })
+    this.model.traverse(o => { if (o.name) { if (!this.byName.has(o.name)) this.byName.set(o.name, []); this.byName.get(o.name).push(o) } })
     // Rest transforms and the parent-chain translation (AC3D frame) of every node that an animation names.
     this.animated = new Map()
     for (const part of rig.parts || []) for (const a of part.animations || []) for (const name of a.objects || []) {
       for (const node of this.byName.get(name) || []) if (!this.animated.has(node)) {
         let off = [0, 0, 0], p = node.parent
-        while (p && !(p.name || '').startsWith('part:')) { off = [off[0] + p.position.x, off[1] + p.position.y, off[2] + p.position.z]; p = p.parent }
+        while (p && !(p.extras && p.extras.part) && !(p.userData && p.userData.part)) { off = [off[0] + p.position.x, off[1] + p.position.y, off[2] + p.position.z]; p = p.parent }
         this.animated.set(node, { pos: node.position.clone(), quat: node.quaternion.clone(), off })
       }
     }
     this.spin = new Map()
+
+    /* Pose the rig at rest FIRST, so a packed drag chute, a cover, or a
+       ground crew that FlightGear hides does not shape the contacts, the
+       eye or the box. */
+    this.restState = { pos: { x: 0, y: 0, z: 0 }, q: { x: 0, y: 0, z: 0, w: 1 }, gearPos: 1, flapDeg: 0, cfg: { flapMaxDeg: 40 }, ctl: { aileron: 0, elevator: 0, rudder: 0 }, thrustLag: 0, eng: new Array(spec.engines || 2).fill(1), throttle: 0, reversePos: 0, brakes: 0, onGround: true, vel: { x: 0, y: 0, z: 0 }, spoilerPos: 0 }
+    this.poseNodes(this.restState, 0)
 
     /* Geometry facts, in the frame's coordinates (body axes, model origin). */
     const box = new THREE.Box3(), tmp = new THREE.Box3()
@@ -51,8 +57,9 @@ export class RiggedAircraft {
     let bodyMin = Infinity, bodyMax = -Infinity
     let fuselage = null, fuselageVol = 0
     this.frame.updateMatrixWorld(true)
+    const shown = o => { for (let p = o; p; p = p.parent) if (p.visible === false) return false; return true }
     this.model.traverse(o => {
-      if (!o.isMesh) return
+      if (!o.isMesh || !shown(o)) return
       o.castShadow = true; o.receiveShadow = true
       tmp.setFromObject(o)
       // Gear is gear by its own name or any ancestor's: struts and doors are not fuselage.
@@ -107,9 +114,14 @@ export class RiggedAircraft {
 
   /** Called once per rendered frame with the flight state. */
   update(ac, dt) {
-    const THREE = this.THREE
     this.root.position.set(ac.pos.x, ac.pos.y, ac.pos.z)
     this.root.quaternion.set(ac.q.x, ac.q.y, ac.q.z, ac.q.w)
+    this.poseNodes(ac, dt)
+  }
+
+  /** Apply the rig to the named nodes for a flight state. */
+  poseNodes(ac, dt) {
+    const THREE = this.THREE
     const ops = evaluateRig(this.rig, stateFrom(ac))
     const m = new THREE.Matrix4(), t = new THREE.Matrix4(), q = new THREE.Quaternion(), axis = new THREE.Vector3(), c = new THREE.Vector3()
     for (const [node, rest] of this.animated) {

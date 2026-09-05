@@ -89,7 +89,7 @@ export function mergeGlbs(parts) {
     // The part node: AC3D → FlightGear frame, then the package's <offsets>.
     const off = part.offset || null
     const q = quatMul(offsetQuat(off), AC_TO_FG)
-    const partNode = { name: `part:${part.name}`, rotation: q, children: json.scenes[json.scene || 0].nodes.map(c => nodeBase + c), extras: { xml: part.xml || null, ac: part.ac || null } }
+    const partNode = { name: part.nodeName || `part:${part.name}`, rotation: q, children: json.scenes[json.scene || 0].nodes.map(c => nodeBase + c), extras: { part: part.name, xml: part.xml || null, ac: part.ac || null } }
     if (off && (off.x || off.y || off.z)) partNode.translation = [off.x, off.y, off.z]
     out.nodes.push(partNode)
     out.scenes[0].nodes.push(out.nodes.length - 1)
@@ -100,19 +100,40 @@ export function mergeGlbs(parts) {
   return { json: out, bin }
 }
 
+/** Local extent of a parsed part GLB, for spotting light volumes and other junk. */
+function partExtent(glb) {
+  const { json } = glb
+  const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity]
+  for (const a of json.accessors) if (a.min && a.type === 'VEC3' && a.max) for (let i = 0; i < 3; i++) { mn[i] = Math.min(mn[i], a.min[i]); mx[i] = Math.max(mx[i], a.max[i]) }
+  return mn[0] === Infinity ? 0 : Math.max(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2])
+}
+
 export function assemble(rig, glbDir, { include = null, exclude = [] } = {}) {
   const parts = []
+  const dropped = []
   for (const p of rig.parts) {
     if (!p.glb) continue
     if (include && !include.includes(p.xml || p.ac)) continue
     if (exclude.some(x => (p.xml || '') === x || (p.ac || '') === x || (p.dir || '').split('/').includes(x))) continue
     const file = [join(glbDir, p.dir || '', p.glb), join(glbDir, p.glb)].find(existsSync)
     if (!file) continue
-    parts.push({ name: p.xml || p.ac, xml: p.xml, ac: p.ac, offset: p.offset, glb: parseGlb(readFileSync(file)) })
+    const glb = parseGlb(readFileSync(file))
+    parts.push({ name: p.xml || p.ac, nodeName: p.name || null, xml: p.xml, ac: p.ac, offset: p.offset, condition: p.condition || null, glb, extent: partExtent(glb) })
   }
-  const merged = mergeGlbs(parts)
-  merged.json.asset.extras = { axzRig: { id: rig.id, frame: rig.frame, parts: rig.parts.filter(p => parts.some(q => q.name === (p.xml || p.ac))).map(p => ({ part: p.xml || p.ac, animations: p.animations })) } }
-  return { ...merged, parts: parts.map(p => p.name) }
+  /* A light volume the size of an airfield is not an aeroplane part. Anything
+     more than 2.5× the largest real part is dropped and reported. */
+  const first = parts[0] ? parts[0].extent : 0
+  const body = Math.max(first, ...parts.filter(p => !/light|strobe|beacon|cone|flash/i.test(p.name)).map(p => p.extent))
+  const kept = parts.filter(p => { const ok = !(body > 0 && p.extent > body * 2.5); if (!ok) dropped.push(`${p.name} (${p.extent.toFixed(0)} m across, airframe ${body.toFixed(0)} m)`); return ok })
+  const merged = mergeGlbs(kept)
+  const rigParts = rig.parts.filter(p => kept.some(q => q.name === (p.xml || p.ac))).map(p => {
+    const animations = [...p.animations]
+    // A conditional include becomes a select on its own node, so the runtime can hide it exactly as FlightGear would.
+    if (p.condition) animations.unshift({ type: 'select', objects: [p.name || `part:${p.xml || p.ac}`], condition: p.condition })
+    return { part: p.xml || p.ac, node: p.name || `part:${p.xml || p.ac}`, animations }
+  })
+  merged.json.asset.extras = { axzRig: { id: rig.id, frame: rig.frame, parts: rigParts } }
+  return { ...merged, parts: kept.map(p => p.name), dropped }
 }
 
 if (process.argv[1] && import.meta.filename === process.argv[1]) {

@@ -59,18 +59,36 @@ function readTable(anim) {
   return kids(t, 'entry').map(e => [num(e, 'ind', 0), num(e, 'dep', 0)])
 }
 
+/** FlightGear <condition> → a small tree the runtime can evaluate.
+    Leaves are properties or values; nodes are not/and/or and comparisons. */
+export function readCondition(node) {
+  if (!node) return null
+  const cmp = { equals: 'eq', 'not-equals': 'ne', 'less-than': 'lt', 'less-than-equals': 'le', 'greater-than': 'gt', 'greater-than-equals': 'ge' }
+  const operands = n => n.children.filter(c => c.name === 'property' || c.name === 'value').map(c => c.name === 'property' ? { property: c.text.trim() } : { value: isNaN(parseFloat(c.text)) ? c.text.trim() : parseFloat(c.text) })
+  const terms = []
+  for (const c of node.children) {
+    if (c.name === 'property') terms.push({ op: 'property', name: c.text.trim() })
+    else if (c.name === 'not') { const inner = readCondition(c); if (inner) terms.push({ op: 'not', a: inner }) }
+    else if (c.name === 'and' || c.name === 'or') { const inner = readCondition(c); if (inner) terms.push(inner.op === c.name ? inner : { op: c.name, list: [inner] }) }
+    else if (cmp[c.name]) { const [l, r] = operands(c); if (l && r) terms.push({ op: cmp[c.name], left: l, right: r }) }
+  }
+  if (!terms.length) return null
+  if (terms.length === 1) return terms[0]
+  return { op: node.name === 'or' ? 'or' : 'and', list: terms }
+}
+
 export function readAnimation(a) {
   const type = txt(a, 'type', '')
   const objects = kids(a, 'object-name').map(o => o.text.trim()).filter(Boolean)
   const out = { type, objects, property: txt(a, 'property') }
+  const cond = readCondition(kid(a, 'condition'))
+  if (cond) out.condition = cond
   if (type === 'rotate' || type === 'spin') {
     const ax = readAxis(a) || {}
     Object.assign(out, { axis: ax.axis || null, center: readCenter(a) || ax.center || null, factor: num(a, 'factor', 1), offsetDeg: num(a, 'offset-deg', 0), min: num(a, 'min-deg'), max: num(a, 'max-deg'), table: readTable(a) })
   } else if (type === 'translate') {
     const ax = readAxis(a) || {}
     Object.assign(out, { axis: ax.axis || null, factor: num(a, 'factor', 1), offsetM: num(a, 'offset-m', 0), min: num(a, 'min-m'), max: num(a, 'max-m'), table: readTable(a) })
-  } else if (type === 'select' || type === 'noshadow' || type === 'material' || type === 'textranslate' || type === 'texrotate' || type === 'pick' || type === 'scale' || type === 'range' || type === 'alpha-test' || type === 'blend' || type === 'billboard' || type === 'flash' || type === 'dist-scale' || type === 'shader' || type === 'light' || type === 'timed' || type === 'knob' || type === 'slider' || type === 'touch' || type === 'locked-track') {
-    out.condition = !!kid(a, 'condition')
   }
   return out
 }
@@ -127,11 +145,13 @@ export function readModelXml(xmlPath, { packageRoot, seen = new Set(), depth = 0
     const p = txt(m, 'path')
     if (!p) continue
     const off = kid(m, 'offsets')
-    const inc = { path: p, name: txt(m, 'name'), offset: off ? { x: num(off, 'x-m', 0), y: num(off, 'y-m', 0), z: num(off, 'z-m', 0), pitch: num(off, 'pitch-deg', 0), roll: num(off, 'roll-deg', 0), heading: num(off, 'heading-deg', 0) } : null }
+    /* A <model> may carry a <condition>: FlightGear loads the submodel only
+       while it holds (a drag chute, a fuel truck, a bomb on a pylon). */
+    const inc = { path: p, name: txt(m, 'name'), condition: readCondition(kid(m, 'condition')), offset: off ? { x: num(off, 'x-m', 0), y: num(off, 'y-m', 0), z: num(off, 'z-m', 0), pitch: num(off, 'pitch-deg', 0), roll: num(off, 'roll-deg', 0), heading: num(off, 'heading-deg', 0) } : null }
     part.includes.push(inc)
     const target = resolveInclude(p, { xmlDir: dirname(abs), packageRoot })
-    if (/\.xml$/i.test(p)) for (const sub of readModelXml(target, { packageRoot, seen, depth: depth + 1 })) { sub.placedBy = part.xml; sub.offset = sub.offset || inc.offset; parts.push(sub) }
-    else if (/\.ac$/i.test(p)) parts.push({ xml: null, dir: dirname(target), ac: basename(target), animations: [], other: {}, includes: [], placedBy: part.xml, offset: inc.offset })
+    if (/\.xml$/i.test(p)) for (const sub of readModelXml(target, { packageRoot, seen, depth: depth + 1 })) { sub.placedBy = part.xml; sub.offset = sub.offset || inc.offset; if (!sub.name) sub.name = inc.name; if (inc.condition && !sub.condition) sub.condition = inc.condition; parts.push(sub) }
+    else if (/\.ac$/i.test(p)) parts.push({ xml: null, dir: dirname(target), ac: basename(target), name: inc.name, condition: inc.condition, animations: [], other: {}, includes: [], placedBy: part.xml, offset: inc.offset })
   }
   return parts
 }
@@ -143,7 +163,7 @@ export function buildRig(id, rootXml, packageRoot) {
   const props = new Set(); for (const p of parts) for (const a of p.animations) if (a.property) props.add(a.property)
   return {
     id, root: basename(rootXml), frame: 'FlightGear model frame: x aft, y starboard, z up, metres',
-    parts: parts.map(p => ({ xml: p.xml, ac: p.ac, glb: p.ac ? p.ac.replace(/\.ac$/i, '.glb') : null, dir: relative(resolve(packageRoot), p.dir), placedBy: p.placedBy || null, offset: p.offset || null, animations: p.animations, other: p.other })),
+    parts: parts.map(p => ({ xml: p.xml, ac: p.ac, glb: p.ac ? p.ac.replace(/\.ac$/i, '.glb') : null, dir: relative(resolve(packageRoot), p.dir), name: p.name || null, condition: p.condition || null, placedBy: p.placedBy || null, offset: p.offset || null, animations: p.animations, other: p.other })),
     summary: { parts: parts.length, withGeometry: withAc.length, animations: anims, properties: [...props].sort() },
   }
 }

@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync, rmSy
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
+import { parseGlb, summarize } from './assets/inspect-glb.mjs'
 import {
   airframe, sideview, TYPES, scaleBase,
   SIM_TYPES, AXZ_ORDER, SIM_ONLY, FLAP_SETS, liftSlope, speedsFor,
@@ -88,12 +89,12 @@ const cssBundle = ['tokens', 'base', 'ledger', 'plate', 'pages', 'panels']
   .map(f => readFileSync(join(SRC, 'css', `${f}.css`), 'utf8')).join('\n')
 // Each file is wrapped in its own block and terminated, so one file can never
 // be parsed as a call on the previous file's trailing expression.
-const jsBundle = ['site', 'axzlog', 'panels', 'simload', 'hangarload']
+const jsBundle = ['site', 'axzlog', 'panels', 'simload', 'hangarload', 'showroomload']
   .map(f => `;(function(){\n${readFileSync(join(SRC, 'js', `${f}.js`), 'utf8')}\n})();`).join('\n')
 
 // Guard the same failure inside a single file: an IIFE that follows another
 // with no separating semicolon parses cleanly and throws at runtime.
-for (const f of ['site', 'axzlog', 'panels', 'simload', 'hangarload']) {
+for (const f of ['site', 'axzlog', 'panels', 'simload', 'hangarload', 'showroomload']) {
   const src = readFileSync(join(SRC, 'js', `${f}.js`), 'utf8')
   if (/\}\)\(\)\s*(?:\/\*[\s\S]*?\*\/)?\s*\(function/.test(src)) {
     console.error(`✗ ${f}.js: an IIFE follows another with no separating semicolon — this throws at runtime`)
@@ -172,6 +173,27 @@ const LICENSE_URLS = {
   'GPL-2.0-or-later': 'https://www.gnu.org/licenses/old-licenses/gpl-2.0.html', 'GPL-3.0-or-later': 'https://www.gnu.org/licenses/gpl-3.0.html',
   'ODbL': 'https://opendatacommons.org/licenses/odbl/1-0/', 'Copernicus': 'https://sentinels.copernicus.eu/documents/247904/690755/Sentinel_Data_Legal_Notice',
 }
+/* --- Showroom ------------------------------------------------------------
+   The 3.0 models, viewed. Its own hashed directory: the viewer and entry are
+   its own; the rig, rigged aeroplane and asset hub are the simulator's, copied
+   in, so what moves in the showroom moves the same way on the runway. The
+   model list is read from the published index so the page can never name a
+   model the origin does not serve. */
+const SHOWROOM_OWN = ['boot', 'viewer']
+const showroomFiles = [
+  ...SHOWROOM_OWN.map(f => [f, readFileSync(join(SRC, 'js', 'showroom', `${f}.js`), 'utf8')]),
+  ...['rig', 'rigged', 'assets'].map(f => [f, readFileSync(join(SRC, 'js', 'sim3', `${f}.js`), 'utf8')]),
+]
+const showroomDir = `showroom-${hash(showroomFiles.map(f => f[1]).join('\n'))}`
+mkdirSync(join(OUT, 'assets', showroomDir), { recursive: true })
+for (const [f, src] of showroomFiles) writeFileSync(join(OUT, 'assets', showroomDir, `${f}.js`), src)
+const SHOWROOM_ENTRY = `${BASE}/assets/${showroomDir}/boot.js`
+const ASSET_INDEX = existsSync(join(ASSETS_REPO, 'public', 'index.json'))
+  ? JSON.parse(readFileSync(join(ASSETS_REPO, 'public', 'index.json'), 'utf8')) : { assets: {}, credits: [] }
+/* Fleet types that have a sourced exterior in the published index. */
+const SOURCED_TYPES = new Map()
+for (const [id, a] of Object.entries(ASSET_INDEX.assets)) if (a.kind === 'model' && Array.isArray(a.types) && /exterior/.test(a.part || '')) for (const t of a.types) if (!SOURCED_TYPES.has(t)) SOURCED_TYPES.set(t, id)
+
 const creditLine = cr => {
   const link = (href, text) => /^https?:\/\//.test(href || '') ? `<a href="${esc(href)}" rel="noopener">${esc(text)}</a>` : esc(text)
   const lic = link(LICENSE_URLS[cr.license], cr.license)
@@ -319,6 +341,7 @@ const PAGES = [
   { key: 'simvintage', zhPath: 'sim/vintage', enPath: 'en/sim/vintage' },
   { key: 'sim3', zhPath: 'sim/v3', enPath: 'en/sim/v3' },
   { key: 'hangar', zhPath: 'hangar', enPath: 'en/hangar' },
+  { key: 'showroom', zhPath: 'showroom', enPath: 'en/showroom' },
   { key: 'accessibility', zhPath: 'accessibility', enPath: 'en/accessibility' },
   { key: 'aprilfools', zhPath: 'aprilfools', enPath: 'en/aprilfools' },
 ]
@@ -334,8 +357,8 @@ function shell({ c, lang, key, title, desc, body, noindex = false, head = '' }) 
   const otherCat = lang === 'zh-Hans' ? en : zh
   const P = s => parts(s, lang)
 
-  const NAV_ICON = { home: 'i-home', guestbook: 'i-guestbook', logbook: 'i-logbook', dispatch: 'i-dispatch', sim: 'i-fleet', hangar: 'i-hangar', accessibility: 'i-a11y' }
-  const nav = ['home', 'guestbook', 'logbook', 'dispatch', 'sim', 'hangar', 'accessibility'].map(k =>
+  const NAV_ICON = { home: 'i-home', guestbook: 'i-guestbook', logbook: 'i-logbook', dispatch: 'i-dispatch', sim: 'i-fleet', hangar: 'i-hangar', showroom: 'i-hangar', accessibility: 'i-a11y' }
+  const nav = ['home', 'guestbook', 'logbook', 'dispatch', 'sim', 'hangar', 'showroom', 'accessibility'].map(k =>
     `<a href="${urlFor(k, lang)}"${k === key ? ' aria-current="page"' : ''}>${icon(NAV_ICON[k])}<span>${P(c.nav[k])}</span></a>`
   ).join('')
 
@@ -1234,7 +1257,7 @@ function simPage(c, lang, version = '2.0') {
     sysNames: S.sysNames, failWhy: S.failWhy,
     keyboard: S.keyboard, gamepad: S.gamepad,
     score: S.score, autopilotLabel: S.autopilotLabel, lightsLabel: S.lightsLabel, reverseLabel: S.reverseLabel,
-    ...(v3 ? { tierLabel: S.tierLabel, tiers: S.tiers, tierAuto: S.tierAuto, assetsLabel: S.assetsLabel, assetsOffline: S.assetsOffline } : {}),
+    ...(v3 ? { tierLabel: S.tierLabel, tiers: S.tiers, tierAuto: S.tierAuto, assetsLabel: S.assetsLabel, assetsOffline: S.assetsOffline, modelLabel: S.modelLabel, model3: S.model3, model2: S.model2 } : {}),
   }
   const bands = LG.bands.map(b => b.remark)
 
@@ -1246,7 +1269,10 @@ function simPage(c, lang, version = '2.0') {
     const t = SIM_TYPES[id]
     const reg = t.axz ? c.fleet[id].reg : t.reg
     const nm = t.axz ? c.fleet[id].name : t.name
-    return `<option value="${esc(id)}">${esc(reg)} · ${esc(nm)}</option>`
+    /* 3.0 says which aeroplanes are sourced models and which still fly the 2.0 airframe. */
+    const sourced = v3 && SOURCED_TYPES.has(id)
+    const tag = v3 ? ` · ${sourced ? S.model3 : S.model2}` : ''
+    return `<option value="${esc(id)}"${v3 ? ` data-model="${sourced ? '3.0' : '2.0'}"` : ''}>${esc(reg)} · ${esc(nm)}${esc(tag)}</option>`
   }
   const acOpts =
     `<optgroup label="${esc(S.fleetGroup)}">${AXZ_ORDER.map(acOpt).join('')}</optgroup>` +
@@ -1360,7 +1386,8 @@ function simPage(c, lang, version = '2.0') {
        data-sim-tier-src="${esc(SIM3_TIER)}"
        data-sim-assets="${esc(ASSETS_ORIGIN)}"
        data-sim-vintage-href="${urlFor('simvintage', lang)}"
-       data-sim-classic-href="${urlFor('simclassic', lang)}"` : ''}
+       data-sim-classic-href="${urlFor('simclassic', lang)}"
+       data-sim-models="${esc(JSON.stringify(Object.fromEntries([...SOURCED_TYPES].map(([t, id]) => [t, { id, title: (ASSET_INDEX.credits.find(cr => cr.id === id) || {}).title || id, license: ASSET_INDEX.assets[id].license }]))))}"` : ''}
        data-sim-labels="${esc(JSON.stringify(labels))}"
        data-sim-fleet="${esc(JSON.stringify(fleet))}"
        data-sim-flaps="${esc(JSON.stringify(FLAP_SETS))}"
@@ -1626,6 +1653,81 @@ function hangarPage(c, lang) {
   return shell({ c, lang, key: 'hangar', title: `${H.title} — ${c.meta.siteName}`, desc: H.intro, body, head: IMPORT_MAP })
 }
 
+/* --- Showroom -------------------------------------------------------------
+   The sourced models, each named with its author and licence, in a curated
+   order: the airline's own type first, then the best-built of the rest. */
+const SHOWROOM_ORDER = ['b738-fg', 'c172-fg', 'f16-fg', 'a32x-fg', 'b744-fg', 'f35-fg', 'conc-fg']
+function showroomModels(c) {
+  const out = []
+  for (const id of SHOWROOM_ORDER) {
+    const a = ASSET_INDEX.assets[id]
+    if (!a || a.kind !== 'model') continue
+    const cr = ASSET_INDEX.credits.find(x => x.id === id) || {}
+    const type = (a.types || [])[0]
+    const t = SIM_TYPES[type] || {}
+    let stats = { parts: null, triangles: null, textures: null, animations: null }
+    const glbPath = join(ASSETS_REPO, 'public', a.url)
+    if (existsSync(glbPath)) {
+      const { json } = parseGlb(readFileSync(glbPath))
+      const sm = summarize(json)
+      const rig = json.asset && json.asset.extras && json.asset.extras.axzRig
+      stats = { parts: sm.nodeNames.filter(n => n.startsWith('part:')).length, triangles: sm.triangles, textures: sm.images, animations: rig ? rig.parts.reduce((n, p) => n + p.animations.length, 0) : 0 }
+    }
+    out.push({ id, bytes: a.bytes, url: a.url, types: a.types, title: cr.title || id, author: cr.author, authorUrl: cr.authorUrl, license: a.license, source: a.source, modified: cr.modified,
+      name: t.axz ? c.fleet[type].name : t.name, reg: t.axz ? c.fleet[type].reg : t.reg, axz: !!t.axz,
+      spec: { len: t.len, span: t.span, dia: t.dia, h: t.h, engines: t.engines, track: t.track, name: t.name },
+      ...stats, creditHtml: creditLine({ ...cr, license: a.license, source: a.source }).replace(/^<li>|<\/li>$/g, '') })
+  }
+  return out
+}
+function showroomPage(c, lang) {
+  const P = s => parts(s, lang), R = c.showroom
+  const models = showroomModels(c)
+  const labels = { loading: R.loading, offline: R.offline, unsupported: R.unsupported, failed: R.failed, canvasLabel: R.canvas }
+  const picks = models.map((m, i) => `<button class="btn hangar-pick" type="button" data-showroom-pick="${esc(m.id)}" aria-pressed="${i === 0 ? 'true' : 'false'}">${P(m.name)}${m.reg ? ` <span class="code">${esc(m.reg)}</span>` : ''}<span class="ros-tag${m.axz ? ' is-own' : ''}">${esc(R.tagNew)} · ${esc(m.license)}</span></button>`).join('')
+  const first = models[0]
+  const fields = ['length', 'parts', 'triangles', 'animated', 'textures', 'size']
+  const initial = first ? { length: `${first.spec.len.toFixed(2)} m`, parts: String(first.parts ?? '—'), triangles: (first.triangles ?? 0).toLocaleString('en-US'), animated: String(first.animations ?? '—'), textures: String(first.textures ?? '—'), size: `${(first.bytes / 1048576).toFixed(1)} MB` } : {}
+  const cells = fields.map(k => `<div class="sim-cell"><span class="sim-cell__k">${esc(R.fields[k])}</span><span class="sim-cell__v code" data-showroom-field="${k}">${esc(initial[k] || '—')}</span></div>`).join('')
+  const body = `
+<section class="sector wrap">
+  <h1>${P(R.title)}</h1>
+  <p class="record__meta">${esc(R.headerSub)}</p>
+  <p class="prose">${P(R.intro)}</p>
+
+  <div class="hangar" data-showroom-stage
+       data-showroom-src="${esc(SHOWROOM_ENTRY)}"
+       data-showroom-assets="${esc(ASSETS_ORIGIN)}"
+       data-showroom-initial="${esc(first ? first.id : '')}"
+       data-showroom-labels="${esc(JSON.stringify(labels))}"
+       data-showroom-models="${esc(JSON.stringify(models))}">
+    <div class="hangar-picker" role="group" aria-label="${esc(R.pickLabel)}">${picks}</div>
+    <p class="status" role="status" data-showroom-status></p>
+    <div class="hangar-stage" data-showroom-mount>
+      <noscript><p class="hangar-nojs">${P(R.unsupported)}</p></noscript>
+    </div>
+    <p class="record__meta">${P(R.hint)}</p>
+    <p class="btn-row">
+      <button class="btn" type="button" data-showroom-motion aria-pressed="true">${esc(R.motion)}</button>
+      <button class="btn" type="button" data-showroom-rig aria-pressed="true">${esc(R.rig)}</button>
+    </p>
+    <div class="sim-grid hangar-readout">${cells}</div>
+    <h2>${esc(R.creditTitle)}</h2>
+    <p class="prose" data-showroom-credit>${first ? first.creditHtml : ''}</p>
+  </div>
+
+  <h2>${esc(R.aboutTitle)}</h2>
+  <p class="prose">${P(R.aboutBody)}</p>
+
+  <p class="btn-row btn-row--foot">
+    <a class="btn" href="${urlFor('sim3', lang)}">${icon('i-fleet')}${esc(R.openSim)}</a>
+    <a class="btn" href="${urlFor('hangar', lang)}">${icon('i-hangar')}${esc(c.hangar.title)}</a>
+    <a class="btn" href="${urlFor('home', lang)}">${icon('i-home')}${esc(R.backHome)}</a>
+  </p>
+</section>`
+  return shell({ c, lang, key: 'showroom', title: `${R.title} — ${c.meta.siteName}`, desc: R.intro, body, head: IMPORT_MAP })
+}
+
 /* --- Accessibility -------------------------------------------------------- */
 function a11y(c, lang) {
   const P = s => parts(s, lang), A = c.accessibility
@@ -1693,7 +1795,7 @@ function aprilfools(c, lang) {
 }
 
 /* --- Emit ----------------------------------------------------------------- */
-const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, sim: simPage, simclassic: (c, lang) => simPage(c, lang, 'classic'), simvintage: (c, lang) => simPage(c, lang, 'vintage'), sim3: (c, lang) => simPage(c, lang, '3.0'), hangar: hangarPage, accessibility: a11y, aprilfools }
+const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, sim: simPage, simclassic: (c, lang) => simPage(c, lang, 'classic'), simvintage: (c, lang) => simPage(c, lang, 'vintage'), sim3: (c, lang) => simPage(c, lang, '3.0'), hangar: hangarPage, showroom: showroomPage, accessibility: a11y, aprilfools }
 let count = 0
 for (const p of PAGES) {
   for (const [lang, cat, sub] of [['zh-Hans', zh, p.zhPath], ['en', en, p.enPath]]) {
