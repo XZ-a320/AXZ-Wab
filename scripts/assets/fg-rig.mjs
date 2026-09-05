@@ -119,7 +119,16 @@ export function mergePropertyLists(base, local) {
   return merged
 }
 
-export function readModelXml(xmlPath, { packageRoot, seen = new Set(), depth = 0 } = {}) {
+const readOffsets = off => off ? { x: num(off, 'x-m', 0), y: num(off, 'y-m', 0), z: num(off, 'z-m', 0), pitch: num(off, 'pitch-deg', 0), roll: num(off, 'roll-deg', 0), heading: num(off, 'heading-deg', 0) } : null
+/** Offsets compose down the include chain: translations add, the deepest
+    rotation wins (FlightGear's own parts are placed on unrotated parents). */
+export function composeOffsets(base, own) {
+  if (!base) return own || null
+  if (!own) return base
+  return { x: base.x + own.x, y: base.y + own.y, z: base.z + own.z, pitch: own.pitch || base.pitch, roll: own.roll || base.roll, heading: own.heading || base.heading }
+}
+
+export function readModelXml(xmlPath, { packageRoot, seen = new Set(), depth = 0, base = null } = {}) {
   const abs = resolve(xmlPath)
   if (seen.has(abs) || depth > 8 || !existsSync(abs)) return []
   seen.add(abs)
@@ -136,7 +145,9 @@ export function readModelXml(xmlPath, { packageRoot, seen = new Set(), depth = 0
       if (base) pl = mergePropertyLists(base, pl)
     }
   }
-  const part = { xml: basename(abs), dir: dirname(abs), ac: txt(pl, 'path'), animations: [], other: {}, includes: [] }
+  /* A model XML may shift its own .ac with a root-level <offsets>. */
+  const own = composeOffsets(base, readOffsets(kid(pl, 'offsets')))
+  const part = { xml: basename(abs), dir: dirname(abs), ac: txt(pl, 'path'), offset: own, animations: [], other: {}, includes: [] }
   for (const a of kids(pl, 'animation')) {
     const an = readAnimation(a)
     if (['rotate', 'translate', 'spin', 'select'].includes(an.type) && an.objects.length) part.animations.push(an)
@@ -149,11 +160,12 @@ export function readModelXml(xmlPath, { packageRoot, seen = new Set(), depth = 0
     const off = kid(m, 'offsets')
     /* A <model> may carry a <condition>: FlightGear loads the submodel only
        while it holds (a drag chute, a fuel truck, a bomb on a pylon). */
-    const inc = { path: p, name: txt(m, 'name'), condition: readCondition(kid(m, 'condition')), offset: off ? { x: num(off, 'x-m', 0), y: num(off, 'y-m', 0), z: num(off, 'z-m', 0), pitch: num(off, 'pitch-deg', 0), roll: num(off, 'roll-deg', 0), heading: num(off, 'heading-deg', 0) } : null }
+    const inc = { path: p, name: txt(m, 'name'), condition: readCondition(kid(m, 'condition')), offset: readOffsets(off) }
     part.includes.push(inc)
     const target = resolveInclude(p, { xmlDir: dirname(abs), packageRoot })
-    if (/\.xml$/i.test(p)) for (const sub of readModelXml(target, { packageRoot, seen, depth: depth + 1 })) { sub.placedBy = part.xml; sub.offset = sub.offset || inc.offset; if (!sub.name) sub.name = inc.name; if (inc.condition && !sub.condition) sub.condition = inc.condition; parts.push(sub) }
-    else if (/\.ac$/i.test(p)) parts.push({ xml: null, dir: dirname(target), ac: basename(target), name: inc.name, condition: inc.condition, animations: [], other: {}, includes: [], placedBy: part.xml, offset: inc.offset })
+    const placed = composeOffsets(own, inc.offset)
+    if (/\.xml$/i.test(p)) for (const sub of readModelXml(target, { packageRoot, seen, depth: depth + 1, base: placed })) { if (!sub.placedBy) { sub.placedBy = part.xml; if (!sub.name) sub.name = inc.name; if (inc.condition && !sub.condition) sub.condition = inc.condition }; parts.push(sub) }
+    else if (/\.ac$/i.test(p)) parts.push({ xml: null, dir: dirname(target), ac: basename(target), name: inc.name, condition: inc.condition, animations: [], other: {}, includes: [], placedBy: part.xml, offset: placed })
   }
   return parts
 }

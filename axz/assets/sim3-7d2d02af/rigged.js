@@ -121,10 +121,15 @@ export class RiggedAircraft {
 
   /** Apply the rig to the named nodes for a flight state. */
   poseNodes(ac, dt) {
+    const S = stateFrom(ac)
+    this.applyOps(evaluateRig(this.rig, S), this.animated, this.spin, dt)
+    if (this.cockpit && this.cockpit.root.visible) this.applyOps(evaluateRig(this.cockpit.rig, S), this.cockpit.animated, this.cockpit.spin, dt)
+  }
+
+  applyOps(ops, animated, spins, dt) {
     const THREE = this.THREE
-    const ops = evaluateRig(this.rig, stateFrom(ac))
     const m = new THREE.Matrix4(), t = new THREE.Matrix4(), q = new THREE.Quaternion(), axis = new THREE.Vector3(), c = new THREE.Vector3()
-    for (const [node, rest] of this.animated) {
+    for (const [node, rest] of animated) {
       const list = ops.get(node.name)
       node.position.copy(rest.pos); node.quaternion.copy(rest.quat); node.visible = true
       if (!list) continue
@@ -138,7 +143,7 @@ export class RiggedAircraft {
           m.premultiply(t)
         } else if (op.type === 'rotate' || op.type === 'spin') {
           let deg = op.deg
-          if (op.type === 'spin') { const s = (this.spin.get(node) || 0) + op.rpm * 6 * dt; this.spin.set(node, s % 360); deg = s }
+          if (op.type === 'spin') { const s = (spins.get(node) || 0) + op.rpm * 6 * dt; spins.set(node, s % 360); deg = s }
           const a = fgToAc(op.axis); axis.set(a[0], a[1], a[2]).normalize()
           const cc = fgToAc(op.center); c.set(cc[0] - rest.off[0], cc[1] - rest.off[1], cc[2] - rest.off[2])
           q.setFromAxisAngle(axis, deg * Math.PI / 180)
@@ -150,6 +155,38 @@ export class RiggedAircraft {
       const local = new THREE.Matrix4().compose(rest.pos, rest.quat, new THREE.Vector3(1, 1, 1)).premultiply(m)
       local.decompose(node.position, node.quaternion, node.scale)
     }
+  }
+
+  /** The flight deck: another rigged GLB in the same FlightGear frame,
+      drawn only when the camera sits in it. Its rig runs with the same state. */
+  setCockpit(gltf) {
+    const THREE = this.THREE
+    if (this.cockpit) { this.frame.remove(this.cockpit.root); this.cockpit = null }
+    const rig = (gltf.parser && gltf.parser.json.asset.extras && gltf.parser.json.asset.extras.axzRig) || { parts: [] }
+    const root = gltf.scene
+    const byName = new Map(), animated = new Map()
+    root.traverse(o => { if (o.name) { if (!byName.has(o.name)) byName.set(o.name, []); byName.get(o.name).push(o) } if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; o.frustumCulled = false } })
+    for (const part of rig.parts || []) for (const a of part.animations || []) for (const name of a.objects || []) for (const node of byName.get(name) || []) if (!animated.has(node)) {
+      let off = [0, 0, 0], p = node.parent
+      while (p && !(p.userData && p.userData.part)) { off = [off[0] + p.position.x, off[1] + p.position.y, off[2] + p.position.z]; p = p.parent }
+      animated.set(node, { pos: node.position.clone(), quat: node.quaternion.clone(), off })
+    }
+    this.cockpit = { root, rig, byName, animated, spin: new Map() }
+    root.visible = false
+    this.frame.add(root)
+    /* The eye: FlightGear's view point if the rig carries one, else the
+       captain's seat estimated from the deck's own box. */
+    const box = new THREE.Box3().setFromObject(root)
+    const eyeFg = rig.eye || null
+    if (eyeFg) this.eye = { x: eyeFg[1] - this.cg.x, y: eyeFg[2] - this.cg.y, z: eyeFg[0] - this.cg.z }
+    else this.eye = { x: -0.5, y: box.max.y - 0.9 - this.cg.y, z: box.min.z + 0.55 * (box.max.z - box.min.z) - this.cg.z }
+    return this.cockpit
+  }
+
+  /** Inside: the deck is drawn and the airframe is not. */
+  setInside(inside) {
+    this.model.visible = !inside
+    if (this.cockpit) this.cockpit.root.visible = inside
   }
 
   bodyToWorld(p) { return this.root.localToWorld(new this.THREE.Vector3(p.x, p.y, p.z)) }

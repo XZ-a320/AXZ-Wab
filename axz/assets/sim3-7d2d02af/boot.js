@@ -60,8 +60,13 @@ export async function boot(cfg) {
     try {
       const buf = await hub.bytesOf(asset.id)
       const gltf = await new Promise((res, rej) => loader.parse(buf, '', res, rej))
-      rigged.set(id, { gltf, asset })
-      return rigged.get(id)
+      const entry = { gltf, asset }
+      const deck = hub.modelFor(id, 'cockpit')
+      if (deck && deck.id !== asset.id) {
+        try { entry.cockpit = await new Promise((res, rej) => hub.bytesOf(deck.id).then(b => loader.parse(b, '', res, rej), rej)); entry.cockpitAsset = deck } catch (err) { if (window.console) console.warn('[axz-sim3] cockpit', id, err) }
+      }
+      rigged.set(id, entry)
+      return entry
     } catch (err) {
       if (window.console) console.warn('[axz-sim3] model', id, err)
       return null

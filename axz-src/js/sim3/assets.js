@@ -62,7 +62,8 @@ export class AssetHub {
   modelFor(type, part = 'exterior') {
     const all = this.index && this.index.assets ? Object.entries(this.index.assets) : []
     const hits = all.filter(([, a]) => a.kind === 'model' && Array.isArray(a.types) && a.types.includes(type))
-    const withPart = hits.find(([, a]) => (a.part || '').includes(part))
+    const exact = hits.find(([, a]) => (a.part || '') === part)
+    const withPart = exact || hits.find(([, a]) => (a.part || '').split('+').includes(part)) || hits.find(([, a]) => (a.part || '').includes(part))
     const pick = withPart || (part === 'exterior' ? null : hits[0])
     return pick ? { id: pick[0], ...pick[1] } : null
   }

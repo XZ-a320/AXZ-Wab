@@ -77,6 +77,16 @@ test('modelFor() finds the exterior for a fleet type and ignores cockpit-only ro
   const hub = new AssetHub({ origin: 'http://assets.test', fetchImpl: fakeFetch({ 'http://assets.test/index.json': JSON.stringify(idx) }) })
   await hub.load()
   assert.equal(hub.modelFor('b-1717').id, 'b738-fg')
-  assert.equal(hub.modelFor('b-737x', 'cockpit').id, 'b738-fg')
+  assert.equal(hub.modelFor('b-737x', 'cockpit').id, 'b738-cockpit')   // the dedicated deck beats the compound label
   assert.equal(hub.modelFor('conc'), null)
+})
+
+test('modelFor() prefers an exact part over a compound label', async () => {
+  const idx = { ...INDEX, assets: { ...INDEX.assets,
+    'b738-fg': { kind: 'model', url: 'a.glb', bytes: 1, types: ['b-737x'], part: 'exterior-fallback' },
+    'b738-fg-cockpit': { kind: 'model', url: 'c.glb', bytes: 1, types: ['b-737x'], part: 'cockpit' } } }
+  const hub = new AssetHub({ origin: 'http://assets.test', fetchImpl: fakeFetch({ 'http://assets.test/index.json': JSON.stringify(idx) }) })
+  await hub.load()
+  assert.equal(hub.modelFor('b-737x').id, 'b738-fg')
+  assert.equal(hub.modelFor('b-737x', 'cockpit').id, 'b738-fg-cockpit')
 })

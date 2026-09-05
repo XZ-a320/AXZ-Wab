@@ -15,7 +15,7 @@ import { convert, packGlb } from './ac2gltf.mjs'
 import { assemble } from './fg-assemble.mjs'
 
 /** Several roots (Concorde keeps its exterior and flight deck in separate XMLs) merge into one rig. */
-export function buildPackage(id, rootXml, packageRoot, outDir, { exclude = [], textureOverride = null, log = () => {} } = {}) {
+export function buildPackage(id, rootXml, packageRoot, outDir, { exclude = [], include = null, textureOverride = null, log = () => {} } = {}) {
   const roots = String(rootXml).split(',').map(r => r.trim()).filter(Boolean)
   const rigs = roots.map(r => buildRig(id, r, packageRoot))
   const rig = rigs[0]
@@ -25,6 +25,7 @@ export function buildPackage(id, rootXml, packageRoot, outDir, { exclude = [], t
   const converted = [], warnings = []
   for (const p of rig.parts) {
     if (!p.ac) continue
+    if (include && !include.includes(p.xml || p.ac)) continue
     if (exclude.some(x => (p.xml || '') === x || (p.ac || '') === x || (p.dir || '').split('/').includes(x))) continue
     const acPath = join(packageRoot, p.dir, p.ac)
     if (!existsSync(acPath)) { warnings.push(`${p.ac}: not in package`); continue }
@@ -35,7 +36,7 @@ export function buildPackage(id, rootXml, packageRoot, outDir, { exclude = [], t
     for (const w of r.warnings) warnings.push(`${p.ac}: ${w}`)
     log(`  ${p.ac}: ${r.objects} objects, ${r.triangles.toLocaleString()} triangles`)
   }
-  const asm = assemble(rig, glbDir, { exclude })
+  const asm = assemble(rig, glbDir, { exclude, include })
   for (const d of asm.dropped || []) warnings.push(`dropped oversized part ${d}`)
   const glb = packGlb(asm)
   mkdirSync(outDir, { recursive: true })
@@ -51,7 +52,8 @@ if (process.argv[1] && import.meta.filename === process.argv[1]) {
   if (!outDir) { console.error('usage: node scripts/assets/fg-build.mjs <id> <root.xml> <packageRoot> <outDir> [--exclude=a.xml,Dir] [--textures=<override dir>]'); process.exit(2) }
   const ex = process.argv.find(a => a.startsWith('--exclude='))
   const ov = process.argv.find(a => a.startsWith('--textures='))
-  const r = buildPackage(id, rootXml, packageRoot, outDir, { exclude: ex ? ex.slice(10).split(',') : [], textureOverride: ov ? ov.slice(11) : null, log: console.log })
+  const inc = process.argv.find(a => a.startsWith('--include='))
+  const r = buildPackage(id, rootXml, packageRoot, outDir, { exclude: ex ? ex.slice(10).split(',') : [], include: inc ? inc.slice(10).split(',') : null, textureOverride: ov ? ov.slice(11) : null, log: console.log })
   console.log(`✓ ${r.id}.glb: ${r.parts.length} parts, ${r.triangles.toLocaleString()} triangles, ${r.images} images, ${r.animations} animations, ${(r.bytes / 1048576).toFixed(2)} MB`)
   for (const w of [...new Set(r.warnings)]) console.log(`  ! ${w}`)
 }

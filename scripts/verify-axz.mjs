@@ -1410,6 +1410,21 @@ console.log('\nsimulator 3.0')
       rig.rest > 2 && rig.rest < 6 && rig.clearance > 0 ? ok(`stands on its wheels: CG ${rig.rest} m up, belly ${rig.clearance} m clear`) : bad(`stance: rest ${rig.rest}, clearance ${rig.clearance}`)
       rig.animated >= 50 && rig.moved >= 30 ? ok(`${rig.animated} rigged parts, ${rig.moved} of them move for gear and aileron`) : bad(`rig: ${rig.animated} parts, ${rig.moved} moved`)
       rig.meshes <= 600 ? ok(`${rig.meshes} visible meshes, inside the 600 draw-call budget`) : bad(`${rig.meshes} visible meshes`)
+
+      /* Phase 2, first step: the flight deck is a second sourced model, drawn
+         only from the cockpit camera, with the airframe hidden behind it. */
+      const deck = await page.evaluate(() => {
+        const s = window.__axzSimHandle.sim, v = s.view
+        const before = s.cameraMode; s.cameraMode = 0; s.render(1 / 60)
+        const inside = { deck: !!(v.cockpit && v.cockpit.root.visible), exterior: v.model.visible, animated: v.cockpit ? v.cockpit.animated.size : 0, eyeX: v.eye.x }
+        s.cameraMode = 1; s.render(1 / 60)
+        const outside = { deck: !!(v.cockpit && v.cockpit.root.visible), exterior: v.model.visible }
+        s.cameraMode = before
+        return { inside, outside }
+      })
+      deck.inside.deck && !deck.inside.exterior ? ok(`from the cockpit camera the flight deck is drawn and the airframe is not (${deck.inside.animated} deck parts rigged)`) : bad(`cockpit view: ${JSON.stringify(deck.inside)}`)
+      deck.outside.exterior && !deck.outside.deck ? ok('from the chase camera the airframe is drawn and the deck is not') : bad(`chase view: ${JSON.stringify(deck.outside)}`)
+      deck.inside.eyeX < 0 ? ok(`the eye sits in the captain's seat, ${deck.inside.eyeX.toFixed(2)} m left of the centreline`) : bad(`eye x ${deck.inside.eyeX}`)
     }
     await ctx.close()
 

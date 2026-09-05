@@ -137,6 +137,7 @@ export class Sim {
     if (this.view) { this.gfx.scene.remove(this.view.root); this.view.dispose() }
     const loaded = this.rigged.get(id)
     const view = this.view = loaded ? new RiggedAircraft(this.THREE, loaded.gltf, spec, loaded.asset) : new AircraftView(this.THREE, this.hangar, spec)
+    if (loaded && loaded.cockpit) view.setCockpit(loaded.cockpit)
     for (const m of view.materials) if (m.isMeshStandardMaterial) this.gfx.csm.setupMaterial(m)
     this.gfx.scene.add(view.root)
     const keep = this.ac ? { pos: this.ac.pos, vel: this.ac.vel, q: this.ac.q } : null
@@ -546,9 +547,12 @@ export class Sim {
     const spec = ac.spec
     const eye = this.view ? this.view.eye : { x: 0, y: spec.dia * 0.28, z: -spec.len * 0.33 }
     if (mode === 'cockpit') {
-      this.camPos = vadd(ac.pos, qrot(ac.q, { x: 0, y: eye.y + spec.dia * 0.12, z: eye.z }))
+      /* A sourced deck gives the captain's eye point as measured; the hangar
+         airframes keep 2.0's estimate above their own eye mark. */
+      const seat = this.view && this.view.cockpit ? { x: eye.x, y: eye.y, z: eye.z } : { x: 0, y: eye.y + spec.dia * 0.12, z: eye.z }
+      this.camPos = vadd(ac.pos, qrot(ac.q, seat))
       this.camQ = ac.q
-      this.fov = 62 * DEG
+      this.fov = this.view && this.view.cockpit ? 70 * DEG : 62 * DEG
     } else if (mode === 'chase') {
       const back = spec.len * 1.5, up = spec.len * 0.42
       const fwd = qrot(ac.q, { x: 0, y: 0, z: -1 })
@@ -634,8 +638,8 @@ export class Sim {
     const inside = CAMERAS[this.cameraMode] === 'cockpit'
     if (this.view) {
       this.view.update(ac, dt, { time: this.clock })
-      // You are sitting in it: the airframe is not drawn from the cockpit.
-      this.view.model.visible = !inside
+      // You are sitting in it: the airframe is not drawn from the cockpit, the flight deck is.
+      if (this.view.setInside) this.view.setInside(inside); else this.view.model.visible = !inside
       this.gfx.setLandingLights(this.landingLights && ac.gearPos > 0.5 && !ac.crashed, this.view.root, ac.spec)
     }
     this.gfx.update(dt, {

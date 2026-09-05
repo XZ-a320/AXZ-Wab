@@ -96,3 +96,15 @@ test('a property alias attribute names the property', () => {
   const c = readCondition(parseXml('<condition><and><property alias="/params/broken"/><equals><property alias="/params/kit"/><value>5</value></equals></and></condition>').children[0])
   assert.deepEqual(c, { op: 'and', list: [{ op: 'property', name: 'params/broken' }, { op: 'eq', left: { property: 'params/kit' }, right: { value: 5 } }] })
 })
+
+test('offsets compose down the include chain, including a root-level <offsets>', () => {
+  const pkg = mkdtempSync(join(tmpdir(), 'axz-rig-off-')); mkdirSync(join(pkg, 'Models'), { recursive: true })
+  writeFileSync(join(pkg, 'Models', '738.xml'), '<PropertyList><path>737.ac</path><model><name>Cockpit</name><path>cockpit.xml</path></model></PropertyList>')
+  writeFileSync(join(pkg, 'Models', 'cockpit.xml'), '<PropertyList><path>cockpit.ac</path><offsets><x-m>-18.31</x-m></offsets><model><name>flightdesk</name><path>flightdesk.xml</path><offsets><x-m>0.43</x-m><z-m>0.91</z-m><pitch-deg>-15</pitch-deg></offsets></model></PropertyList>')
+  writeFileSync(join(pkg, 'Models', 'flightdesk.xml'), '<PropertyList><path>flightdesk.ac</path></PropertyList>')
+  const rig = buildRig('t', join(pkg, 'Models', '738.xml'), pkg)
+  const cockpit = rig.parts.find(p => p.xml === 'cockpit.xml'), desk = rig.parts.find(p => p.xml === 'flightdesk.xml')
+  assert.equal(cockpit.offset.x, -18.31)
+  assert.ok(Math.abs(desk.offset.x + 17.88) < 1e-9); assert.equal(desk.offset.z, 0.91); assert.equal(desk.offset.pitch, -15)
+  assert.equal(rig.parts.find(p => p.xml === '738.xml').offset, null)
+})
