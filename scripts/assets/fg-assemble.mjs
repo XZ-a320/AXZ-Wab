@@ -39,8 +39,11 @@ export function offsetQuat(off) {
   return q.map(v => +v.toFixed(7))
 }
 
-/** Merge several parsed GLBs into one document; returns { json, bin }. */
+export const JUNK_NODE = /^procedural_light|^lightcone|^light_cone|^halo$/i
+
+/** Merge several parsed GLBs into one document; returns { json, bin, dropped }. */
 export function mergeGlbs(parts) {
+  const dropped = []
   const out = { asset: { version: '2.0', generator: 'axz fg-assemble' }, scene: 0, scenes: [{ nodes: [] }], nodes: [], meshes: [], materials: [], textures: [], images: [], samplers: [{ magFilter: 9729, minFilter: 9987, wrapS: 10497, wrapT: 10497 }], accessors: [], bufferViews: [], buffers: [{ byteLength: 0 }] }
   const chunks = []; let binLen = 0
   const imageByHash = new Map()
@@ -85,7 +88,12 @@ export function mergeGlbs(parts) {
     const meshBase = out.meshes.length
     for (const m of json.meshes) out.meshes.push({ name: m.name, primitives: m.primitives.map(p => ({ attributes: Object.fromEntries(Object.entries(p.attributes).map(([k, v]) => [k, accessorOf(v)])), ...(p.indices != null ? { indices: accessorOf(p.indices) } : {}), ...(p.material != null ? { material: materialOf(p.material) } : {}) })) })
     const nodeBase = out.nodes.length
-    for (const n of json.nodes) out.nodes.push({ ...n, ...(n.mesh != null ? { mesh: meshBase + n.mesh } : {}), ...(n.children ? { children: n.children.map(c => nodeBase + c) } : {}) })
+    /* FlightGear's procedural light billboards are 2 m quads meant for a
+       shader this renderer does not have; without it they are white cards
+       around the aeroplane. They carry no geometry worth keeping. */
+    const junk = n => JUNK_NODE.test(n.name || '')
+    for (const n of json.nodes) { const { mesh, children, ...rest } = n; out.nodes.push({ ...rest, ...(mesh != null && !junk(n) ? { mesh: meshBase + mesh } : {}), ...(children ? { children: children.map(c => nodeBase + c) } : {}) }) }
+    if (json.nodes.some(junk)) dropped.push(`${part.name}: ${json.nodes.filter(junk).length} procedural light quad(s)`)
     // The part node: AC3D → FlightGear frame, then the package's <offsets>.
     const off = part.offset || null
     const q = quatMul(offsetQuat(off), AC_TO_FG)
@@ -97,7 +105,7 @@ export function mergeGlbs(parts) {
   if (!out.textures.length) { delete out.textures; delete out.images; delete out.samplers }
   const bin = Buffer.concat(chunks)
   out.buffers[0].byteLength = bin.length
-  return { json: out, bin }
+  return { json: out, bin, dropped }
 }
 
 /** Local extent of a parsed part GLB, for spotting light volumes and other junk. */
@@ -124,9 +132,15 @@ export function assemble(rig, glbDir, { include = null, exclude = [] } = {}) {
      more than 2.5× the largest real part is dropped and reported. */
   const first = parts[0] ? parts[0].extent : 0
   const body = Math.max(first, ...parts.filter(p => !/light|strobe|beacon|cone|flash/i.test(p.name)).map(p => p.extent))
-  const kept = parts.filter(p => { const ok = !(body > 0 && p.extent > body * 2.5); if (!ok) dropped.push(`${p.name} (${p.extent.toFixed(0)} m across, airframe ${body.toFixed(0)} m)`); return ok })
+  const isLight = p => /light|strobe|beacon|cone|flash|glow|halo/i.test(p.name)
+  const kept = parts.filter(p => { const limit = isLight(p) ? body * 0.6 : body * 2.5; const ok = !(body > 0 && p.extent > limit); if (!ok) dropped.push(`${p.name} (${p.extent.toFixed(0)} m across, airframe ${body.toFixed(0)} m)`); return ok })
   const merged = mergeGlbs(kept)
-  const rigParts = rig.parts.filter(p => kept.some(q => q.name === (p.xml || p.ac))).map(p => {
+  dropped.push(...(merged.dropped || []))
+  /* Every part's animations travel, geometry or not: a container XML with
+     no .ac of its own is where FlightGear selects the weapons and the
+     ground crew its includes bring in. */
+  const keptNames = new Set(kept.map(q => q.name))
+  const rigParts = rig.parts.filter(p => keptNames.has(p.xml || p.ac) || (!p.ac && p.animations.length)).map(p => {
     const animations = [...p.animations]
     // A conditional include becomes a select on its own node, so the runtime can hide it exactly as FlightGear would.
     if (p.condition) animations.unshift({ type: 'select', objects: [p.name || `part:${p.xml || p.ac}`], condition: p.condition })

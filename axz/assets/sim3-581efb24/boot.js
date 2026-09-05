@@ -100,12 +100,21 @@ export async function boot(cfg) {
       if (window.console) console.warn('[axz-sim3] probe', err)
     }
   }
+  /* The engine line says which aeroplane this is: a sourced 3.0 model with
+     its licence, or the 2.0 airframe. It is repainted on every swap. */
   const tierEl = stage.querySelector('[data-sim-tier]')
-  if (tierEl) {
+  let modelsMeta = {}
+  try { modelsMeta = JSON.parse(stage.getAttribute('data-sim-models') || '{}') } catch (e) { modelsMeta = {} }
+  function paintTier() {
+    if (!tierEl) return
     const mb = (hub.transferred / 1048576).toFixed(2)
-    tierEl.textContent = `${L.tierLabel} ${L.tiers.v3} · ${L.tierAuto} · ${hub.online ? `${L.assetsLabel} ${mb} MB` : L.assetsOffline}`
+    const id = sim.aircraftId
+    const meta = rigged.has(id) ? modelsMeta[id] : null
+    const model = meta ? `${L.modelLabel}: ${meta.title} · ${meta.license}` : `${L.modelLabel}: ${L.model2}`
+    tierEl.textContent = `${L.tierLabel} ${L.tiers.v3} · ${L.tierAuto} · ${hub.online ? `${L.assetsLabel} ${mb} MB` : L.assetsOffline} · ${model}`
     tierEl.hidden = false
   }
+  paintTier()
 
   function handleEvent(ev) {
     if (ev.type === 'landing') {
@@ -230,6 +239,7 @@ export async function boot(cfg) {
     await preload(id)                       // the sourced model, if there is one, before the swap
     if (acSel.value !== id) return          // the reader moved on while it loaded
     sim.setAircraft(id); sim.setScenario(scSel ? scSel.value : sim.scenario)
+    paintTier()
   })
   if (scSel) scSel.addEventListener('change', () => sim.setScenario(scSel.value))
 

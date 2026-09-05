@@ -64,10 +64,12 @@ function readTable(anim) {
 export function readCondition(node) {
   if (!node) return null
   const cmp = { equals: 'eq', 'not-equals': 'ne', 'less-than': 'lt', 'less-than-equals': 'le', 'greater-than': 'gt', 'greater-than-equals': 'ge' }
-  const operands = n => n.children.filter(c => c.name === 'property' || c.name === 'value').map(c => c.name === 'property' ? { property: c.text.trim() } : { value: isNaN(parseFloat(c.text)) ? c.text.trim() : parseFloat(c.text) })
+  /* <property alias="/params/x"/> names the property by attribute. */
+  const pname = c => (c.text.trim() || (c.attrs && c.attrs.alias) || '').replace(/^\//, '')
+  const operands = n => n.children.filter(c => c.name === 'property' || c.name === 'value').map(c => c.name === 'property' ? { property: pname(c) } : { value: isNaN(parseFloat(c.text)) ? c.text.trim() : parseFloat(c.text) })
   const terms = []
   for (const c of node.children) {
-    if (c.name === 'property') terms.push({ op: 'property', name: c.text.trim() })
+    if (c.name === 'property') terms.push({ op: 'property', name: pname(c) })
     else if (c.name === 'not') { const inner = readCondition(c); if (inner) terms.push({ op: 'not', a: inner }) }
     else if (c.name === 'and' || c.name === 'or') { const inner = readCondition(c); if (inner) terms.push(inner.op === c.name ? inner : { op: c.name, list: [inner] }) }
     else if (cmp[c.name]) { const [l, r] = operands(c); if (l && r) terms.push({ op: cmp[c.name], left: l, right: r }) }

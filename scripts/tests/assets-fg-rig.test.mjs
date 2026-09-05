@@ -91,3 +91,8 @@ test('readCondition builds not/and/or and comparison trees', () => {
   const lt = readCondition(parseXml('<condition><less-than><property>a</property><value>0.5</value></less-than></condition>').children[0])
   assert.deepEqual(lt, { op: 'lt', left: { property: 'a' }, right: { value: 0.5 } })
 })
+
+test('a property alias attribute names the property', () => {
+  const c = readCondition(parseXml('<condition><and><property alias="/params/broken"/><equals><property alias="/params/kit"/><value>5</value></equals></and></condition>').children[0])
+  assert.deepEqual(c, { op: 'and', list: [{ op: 'property', name: 'params/broken' }, { op: 'eq', left: { property: 'params/kit' }, right: { value: 5 } }] })
+})

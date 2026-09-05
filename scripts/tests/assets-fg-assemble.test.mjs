@@ -90,3 +90,21 @@ test('a conditional include becomes a select on its own node, and an airfield-si
   assert.equal(chute.node, 'chute'); assert.equal(chute.animations[0].type, 'select'); assert.deepEqual(chute.animations[0].objects, ['chute'])
   assert.ok(r.json.nodes.some(n => n.name === 'chute' && n.extras && n.extras.part === 'dragchute.xml'))
 })
+
+test('procedural_light quads lose their meshes in the merge', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'axz-asm4-'))
+  const glb = parseGlb(packGlb(toGltf(parseAc(acText('procedural_light')))))
+  const m = mergeGlbs([{ name: 'x.xml', glb, offset: null }])
+  assert.equal(m.json.nodes.find(n => n.name === 'procedural_light').mesh, undefined)
+  assert.match(m.dropped.join(' '), /1 procedural light quad/)
+})
+
+test('a container XML with no geometry still contributes its select animations', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'axz-asm5-'))
+  writeFileSync(join(dir, 'truck.glb'), packGlb(toGltf(parseAc(acText('truckbody')))))
+  const rig = { id: 't', frame: 'fg', parts: [
+    { xml: 'chocks.xml', ac: null, glb: null, dir: 'Models', offset: null, animations: [{ type: 'select', objects: ['truckbody'], property: 'sim/model/f16/fuel-truck' }] },
+    { xml: 'truck.xml', ac: 'truck.ac', glb: 'truck.glb', dir: 'Models', name: 'fuel-truck', offset: null, animations: [] }] }
+  const r = assemble(rig, dir)
+  assert.ok(r.json.asset.extras.axzRig.parts.some(p => p.part === 'chocks.xml' && p.animations[0].objects[0] === 'truckbody'))
+})
