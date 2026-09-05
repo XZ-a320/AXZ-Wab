@@ -22,6 +22,7 @@ import {
   lightPoints, cityBoxes, CITY, elevation, hdgVec,
 } from './world.js'
 import * as TEX from './tex.js'
+import { runwaySurfaces, runwayTile, decalSquare, designatorTex } from './runway.js'
 import { clamp } from './math.js'
 
 const NEAR_SIZE = 11000, NEAR_RES = 96
@@ -178,6 +179,8 @@ export class Scene3D {
        its own layers: without this the far rings were drawn unlit, and the
        fog tinted a black landscape into a dark band under the sky. */
     for (const l of [this.hemi, this.ambient, ...this.csm.lights]) l.layers.enableAll()
+    // A flat surface lit at a grazing angle shows shadow acne as a moving moiré; a normal bias removes it without lifting the shadow off the wheels.
+    for (const l of this.csm.lights) l.shadow.normalBias = 0.04
 
     /* --- Materials ----------------------------------------------------- */
     this.terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0 })
@@ -207,14 +210,40 @@ export class Scene3D {
     this.papis = {}
     this.papiPoints = {}
     this.lightMat = this.makeLightMaterial()
+    /* The runway surface and its paint are textures, mip-mapped and filtered
+       anisotropically, because thin flat triangles shimmer at speed. */
+    const aniso = R.capabilities.getMaxAnisotropy()
+    const tileTex = this.canvasTex(runwayTile(61))
+    tileTex.wrapS = THREE.RepeatWrapping; tileTex.wrapT = THREE.ClampToEdgeWrapping; tileTex.anisotropy = aniso; tileTex.generateMipmaps = true; tileTex.minFilter = THREE.LinearMipmapLinearFilter
+    this.surfaceMat = new THREE.MeshStandardMaterial({ map: tileTex, roughness: 0.9, metalness: 0.02, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })
+    const squareTex = this.canvasTex(decalSquare(256)); squareTex.anisotropy = aniso; squareTex.generateMipmaps = true; squareTex.minFilter = THREE.LinearMipmapLinearFilter
+    this.decalMat = new THREE.MeshStandardMaterial({ map: squareTex, transparent: true, alphaTest: 0.35, roughness: 0.6, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -6 })
+    this.csm.setupMaterial(this.surfaceMat); this.csm.setupMaterial(this.decalMat)
+    this.designatorMats = new Map()
     for (const key of AP_LIST) {
       const ap = AIRPORTS[key]
-      const strip = new THREE.Mesh(this.geo(runwayMesh(ap, false)), this.pavementMat)
-      strip.receiveShadow = true
-      const marks = new THREE.Mesh(this.geo(runwayMesh(ap, true)), this.paintMat)
+      const apron = new THREE.Mesh(this.geo(runwayMesh(ap, 'apron')), this.pavementMat)
+      apron.receiveShadow = true
+      const rs = runwaySurfaces(ap)
+      const surface = new THREE.Mesh(this.geoUV(rs.surf), this.surfaceMat)
+      surface.receiveShadow = true
+      S.add(apron, surface)
+      // Decals: the squares in one mesh, each designator in its own (its own texture).
+      const squares = { pos: [], normal: [], uv: [] }, byDesignator = new Map()
+      for (let i = 0; i < rs.decals.tex.length; i++) {
+        const t = rs.decals.tex[i]
+        const target = t === 0 ? squares : (byDesignator.get(t) || byDesignator.set(t, { pos: [], normal: [], uv: [] }).get(t))
+        target.pos.push(rs.decals.pos[i * 3], rs.decals.pos[i * 3 + 1], rs.decals.pos[i * 3 + 2]); target.normal.push(0, 1, 0); target.uv.push(rs.decals.uv[i * 2], rs.decals.uv[i * 2 + 1])
+      }
+      S.add(new THREE.Mesh(this.geoUV(squares), this.decalMat))
+      for (const [idx, d] of byDesignator) {
+        const name = rs.designators[idx - 1]
+        if (!this.designatorMats.has(name)) { const tx = this.canvasTex(designatorTex(name, 256)); tx.anisotropy = aniso; tx.generateMipmaps = true; tx.minFilter = THREE.LinearMipmapLinearFilter; const m = new THREE.MeshStandardMaterial({ map: tx, transparent: true, alphaTest: 0.35, roughness: 0.6, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -6 }); this.csm.setupMaterial(m); this.designatorMats.set(name, m) }
+        S.add(new THREE.Mesh(this.geoUV(d), this.designatorMats.get(name)))
+      }
       const city = new THREE.Mesh(this.geo(scenery(ap, CITY[key][0], CITY[key][1])), this.cityMat)
       city.castShadow = true; city.receiveShadow = true
-      S.add(strip, marks, city)
+      S.add(city)
       S.add(this.lightsFor(ap))
       S.add(this.windowsFor(ap, key))
       this.papis[key] = papiUnits(ap)
@@ -287,6 +316,14 @@ export class Scene3D {
       out[i] = c < 0.04045 ? c * 0.0773993808 : Math.pow(c * 0.9478672986 + 0.0521327014, 2.4)
     }
     return out
+  }
+  geoUV(d) {
+    const THREE = this.THREE
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.Float32BufferAttribute(d.pos, 3))
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(d.normal, 3))
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(d.uv, 2))
+    return g
   }
   geo(d) {
     const THREE = this.THREE

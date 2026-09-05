@@ -540,8 +540,9 @@ function buildStrip(ap, R, marks, pos, normal, color) {
 
   const u0 = -R.len / 2, u1 = R.len / 2
 
-  if (!marks) {
-    quad(at(u0, -half), at(u1, -half), at(u1, half), at(u0, half), asphalt)
+  if (!marks || marks === 'apron') {
+    // 'apron': shoulders and taxiways only; the strip itself is a textured surface now (runway.js).
+    if (marks !== 'apron') quad(at(u0, -half), at(u1, -half), at(u1, half), at(u0, half), asphalt)
     // Shoulders, so the strip reads as a made surface rather than a floating slab.
     const shoulder = [0.20, 0.21, 0.18]
     quad(at(u0, -half - 26), at(u1, -half - 26), at(u1, -half), at(u0, -half), shoulder)

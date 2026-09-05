@@ -129,7 +129,7 @@ const simBytes = simSources.reduce((n, s) => n + Buffer.byteLength(s), 0)
    it did not are copied in from js/sim/ so 1.0 stays exactly the 1.0 that
    ships on the archive page. The model library is the hangar's, copied in
    as models.js, so the aeroplane you fly is the aeroplane the hangar shows. */
-const SIM2_OWN = ['scene', 'aircraft', 'main', 'boot', 'fdm', 'input', 'world']
+const SIM2_OWN = ['scene', 'aircraft', 'main', 'boot', 'fdm', 'input', 'world', 'runway']
 const SIM2_SHARED = ['math', 'tex', 'sound', 'particles', 'hud', 'mobile']
 const sim2Files = [
   ...SIM2_OWN.map(f => [f, readFileSync(join(SRC, 'js', 'sim2', `${f}.js`), 'utf8')]),
@@ -148,7 +148,7 @@ const SIM2_ENTRY = `${BASE}/assets/${sim2Dir}/boot.js`
    lives in a separate repo on its own origin; the page carries that origin
    so the engine never guesses it. */
 const SIM3_OWN = ['boot', 'tier', 'assets', 'rig', 'rigged', 'main']
-const SIM3_FROM_SIM2 = ['scene', 'aircraft', 'fdm', 'input', 'world']
+const SIM3_FROM_SIM2 = ['scene', 'aircraft', 'fdm', 'input', 'world', 'runway']
 const sim3Files = [
   ...SIM3_OWN.map(f => [f, readFileSync(join(SRC, 'js', 'sim3', `${f}.js`), 'utf8')]),
   ...SIM3_FROM_SIM2.map(f => [f, readFileSync(join(SRC, 'js', 'sim2', `${f}.js`), 'utf8')]),
@@ -1656,7 +1656,7 @@ function hangarPage(c, lang) {
 /* --- Showroom -------------------------------------------------------------
    The sourced models, each named with its author and licence, in a curated
    order: the airline's own type first, then the best-built of the rest. */
-const SHOWROOM_ORDER = ['b738-fg', 'c172-fg', 'f16-fg', 'a32x-fg', 'b744-fg', 'f35-fg', 'conc-fg']
+const SHOWROOM_ORDER = ['b738-fg', 'c172-fg', 'f16-fg', 'a32x-fg', 'b789-fg', 'b744-fg', 'f22-fg', 'f35-fg', 'conc-fg']
 function showroomModels(c) {
   const out = []
   for (const id of SHOWROOM_ORDER) {
