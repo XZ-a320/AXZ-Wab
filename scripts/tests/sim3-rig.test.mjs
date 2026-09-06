@@ -73,3 +73,17 @@ test('a select on an unknown property hides its objects, as FlightGear does with
   assert.equal(ops.get('door')[0].deg, 90)             // n1 80 > 50: the condition holds
   assert.equal(evalCondition({ op: 'and', list: [{ op: 'property', name: 'gear/gear[0]/wow' }, { op: 'lt', left: { property: 'controls/flight/flaps' }, right: { value: 1 } }] }, S), true)
 })
+
+test('two selects on one object AND, as FlightGear shows an object only when every select passes', () => {
+  const rig = { parts: [{ name: 'fx', animations: [
+    { type: 'select', objects: ['ShockWave'], condition: { op: 'and', list: [{ op: 'not', a: { op: 'or', list: [{ op: 'lt', left: { property: '/velocities/mach' }, right: { value: 0.89 } }, { op: 'gt', left: { property: '/velocities/mach' }, right: { value: 1.05 } }] } }, { op: 'lt', left: { property: '/position/altitude-ft' }, right: { value: 60000 } }] } },
+    { type: 'select', objects: ['ShockWave'], condition: { op: 'not', a: { op: 'property', name: '/sim/rendering/rembrandt/enabled' } } },
+  ] }] }
+  const S = stateFrom({ pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, ctl: {}, eng: [1], onGround: true, mach: 0 })
+  const ops = evaluateRig(rig, S)
+  const sel = ops.get('ShockWave').filter(o => o.type === 'select')
+  assert.equal(sel.length, 1)
+  assert.equal(sel[0].visible, false, 'at rest the shock cone is hidden even though the renderer select passes')
+  const fast = evaluateRig(rig, stateFrom({ pos: { x: 0, y: 3000, z: 0 }, vel: { x: 0, y: 0, z: 0 }, ctl: {}, eng: [1], onGround: false, mach: 0.97 }))
+  assert.equal(fast.get('ShockWave').find(o => o.type === 'select').visible, true, 'transonic and low, both selects pass')
+})

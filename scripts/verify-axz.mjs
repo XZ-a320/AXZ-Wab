@@ -1474,8 +1474,20 @@ console.log('\nshowroom')
   else {
     ok('the showroom draws the first model once the stage scrolls into view')
     const st = await sp.evaluate(() => { const v = window.__axzShowroom.viewer; return { id: document.querySelector('[data-showroom-stage]').getAttribute('data-showroom-current'), rigged: !!v.current.rigged, animated: v.current.animated.size, frames: v.frames, tri: document.querySelector('[data-showroom-field="triangles"]').textContent, credit: document.querySelector('[data-showroom-credit]').textContent } })
-    st.rigged && st.animated > 20 ? ok(`${st.id} is rigged in the showroom (${st.animated} animated parts, ${st.tri} triangles)`) : bad(`showroom model: ${JSON.stringify(st)}`)
+    /* The first pick is the best sourced airframe, a Sketchfab download with
+       no animation XML of its own; it must stand as a rigged view at real
+       size. The animation proof runs on the first FlightGear pick, which
+       carries a rig. */
+    st.rigged && st.frames > 0 && parseInt(st.tri.replace(/\D/g, ''), 10) > 10000 ? ok(`${st.id} is a rigged view in the showroom (${st.tri} triangles)`) : bad(`showroom model: ${JSON.stringify(st)}`)
     ;/GPL|CC/.test(st.credit) && /FlightGear|Sketchfab|Poly Haven/.test(st.credit) ? ok(`credit reads: "${st.credit.trim().slice(0, 80)}…"`) : bad(`credit: "${st.credit}"`)
+    ;/oriented|painted|rigged|converted/.test(st.credit) ? ok('the credit says how the model was modified, as CC BY asks') : bad(`credit does not state its modifications: "${st.credit}"`)
+    const fg = picks.find(p => /-fg$/.test(p))
+    if (fg) {
+      await sp.click(`[data-showroom-pick="${fg}"]`)
+      const got = await sp.waitForFunction(id => document.querySelector('[data-showroom-stage]').getAttribute('data-showroom-current') === id && document.querySelector('[data-showroom-status]').textContent === '', fg, { timeout: 180000 }).then(() => true).catch(() => false)
+      const rigged = got ? await sp.evaluate(() => { const v = window.__axzShowroom.viewer; return { rigged: !!v.current.rigged, animated: v.current.animated.size, tri: document.querySelector('[data-showroom-field="triangles"]').textContent } }) : null
+      rigged && rigged.rigged && rigged.animated > 20 ? ok(`${fg} is rigged in the showroom (${rigged.animated} animated parts, ${rigged.tri} triangles)`) : bad(`rigged showroom model ${fg}: ${JSON.stringify(rigged)}`)
+    } else bad('no FlightGear model in the showroom to prove the rig on')
     const second = picks[1]
     await sp.click(`[data-showroom-pick="${second}"]`)
     const swapped = await sp.waitForFunction(id => document.querySelector('[data-showroom-stage]').getAttribute('data-showroom-current') === id && document.querySelector('[data-showroom-status]').textContent === '', second, { timeout: 180000 }).then(() => true).catch(() => false)
@@ -1490,11 +1502,15 @@ console.log('\nshowroom')
   const lp = await lc.newPage()
   await lp.goto(BASE + '/axz/en/sim/v3/', { waitUntil: 'networkidle' })
   const opts = await lp.$$eval('[data-sim-aircraft] option', os => os.map(o => [o.value, o.getAttribute('data-model'), o.textContent]))
+  /* Since Phase 4 every fixed-wing type flies a sourced model (the H145 is
+     not a simulator type), so the picker must label every option 3.0 and
+     none 2.0; the 2.0 wording stays in the build for a type that loses its
+     model. */
   const b737 = opts.find(o => o[0] === 'b-737x'), g650 = opts.find(o => o[0] === 'g650')
-  b737 && b737[1] === '3.0' && /3\.0 model/.test(b737[2]) && g650 && g650[1] === '2.0' && /2\.0 model/.test(g650[2])
-    ? ok('the 3.0 picker labels the 737 a 3.0 model and the G650 a 2.0 model') : bad(`picker labels: ${JSON.stringify([b737, g650])}`)
+  b737 && b737[1] === '3.0' && /3\.0 model/.test(b737[2]) && g650 && g650[1] === '3.0' && /3\.0 model/.test(g650[2])
+    ? ok('the 3.0 picker labels the 737 and the G650 3.0 models') : bad(`picker labels: ${JSON.stringify([b737, g650])}`)
   const sourced = opts.filter(o => o[1] === '3.0').length
-  sourced >= 7 ? ok(`${sourced} of ${opts.length} types fly sourced models`) : bad(`${sourced} sourced types`)
+  sourced === opts.length && opts.every(o => /3\.0 model/.test(o[2])) ? ok(`${sourced} of ${opts.length} types fly sourced models`) : bad(`${sourced} of ${opts.length} sourced types: ${JSON.stringify(opts.filter(o => o[1] !== '3.0'))}`)
   await lc.close()
 }
 

@@ -21,7 +21,9 @@ export class RiggedAircraft {
     this.rigged = true
     const rig = (gltf.parser && gltf.parser.json && gltf.parser.json.asset && gltf.parser.json.asset.extras && gltf.parser.json.asset.extras.axzRig) || (gltf.asset && gltf.asset.extras && gltf.asset.extras.axzRig) || { parts: [] }
     this.rig = rig
-    this.model = gltf.scene
+    /* The parse is cached by fleet id and a type can be flown twice, so each
+       view poses its own clone; geometry and materials stay shared. */
+    this.model = gltf.scene.clone(true)
 
     /* FlightGear frame → body frame, then origin at the centre of gravity. */
     this.frame = new THREE.Group()
@@ -56,12 +58,16 @@ export class RiggedAircraft {
     const wheels = []
     let bodyMin = Infinity, bodyMax = -Infinity
     let fuselage = null, fuselageVol = 0
+    const samples = []                               // body vertices near the centreline, for the fuselage level
+    const v = new THREE.Vector3()
     this.frame.updateMatrixWorld(true)
     const shown = o => { for (let p = o; p; p = p.parent) if (p.visible === false) return false; return true }
     this.model.traverse(o => {
       if (!o.isMesh || !shown(o)) return
       o.castShadow = true; o.receiveShadow = true
-      tmp.setFromObject(o)
+      tmp.setFromObject(o, true)
+      const pos = o.geometry && o.geometry.attributes && o.geometry.attributes.position
+      if (pos && !GEAR_PART.test(o.name || '')) for (let i = 0; i < pos.count; i += 16) { v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld); samples.push([Math.abs(v.x), v.y, v.z]) }
       // Gear is gear by its own name or any ancestor's: struts and doors are not fuselage.
       let p = o, inGear = GEAR_PART.test(o.name || '')
       while (p && p !== this.model) { if (GEAR_PART.test(p.name || '')) inGear = true; p = p.parent }
@@ -80,6 +86,18 @@ export class RiggedAircraft {
     /* Contacts: wheels grouped into legs. The nose leg is the most forward
        (most negative z in body axes); the rest split by side. Without any
        wheel mesh, three points from the published geometry, as 2.0 did. */
+    /* The fuselage level: in the nose third there is nothing but fuselage,
+       and a fuselage is widest at its own centreline, so the height of the
+       widest band of vertices there is the centreline. A vertex mean leans
+       toward whichever side the modeller detailed (gear bays, fairings), and
+       a box centre sits halfway up the fin. */
+    const noseZ = box.min.z + spec.len * 0.3
+    const nose = samples.filter(([, , z]) => z < noseZ)
+    const widest = nose.reduce((m, [x]) => Math.max(m, x), 0)
+    const band = nose.filter(([x]) => x > widest * 0.85)
+    const fcBox = new THREE.Vector3(); (fuselage || box).getCenter(fcBox)
+    const cgY = band.length >= 30 ? band.reduce((a, [, y]) => a + y, 0) / band.length : fcBox.y
+
     let legs
     if (wheels.length >= 3) {
       const minZ = Math.min(...wheels.map(w => w.z))
@@ -89,21 +107,32 @@ export class RiggedAircraft {
       legs = [leg(nose, { nose: true }), leg(mains.filter(w => w.x < 0), {}), leg(mains.filter(w => w.x >= 0), {})].filter(Boolean)
     }
     if (!legs || legs.length < 3) {
-      const yb = box.min.y
+      /* The flight model squats each leg by a fixed fraction of the stance
+         (fdm.js: 0.062, clamped to 3–30 cm), so a contact at the model's
+         lowest point would bury the tyres by that much. The contact sits one
+         squat lower and the aeroplane settles onto its wheels. */
+      const d = cgY - box.min.y
+      let squat = 0; for (let i = 0; i < 3; i++) squat = Math.min(0.30, Math.max(0.03, (d + squat) * 0.062))
+      /* The spring is sized for a third of the weight per leg, and the mains
+         carry more than that: with the nose at −0.35 L, the mains at +0.05 L
+         and the CG 0.03 L ahead of the mains, each main takes 0.37 / 0.40 / 2
+         of the weight and squats by the same ratio over the nominal third. */
+      const mainShare = (0.37 / 0.40) / 2
+      const yb = box.min.y - squat * mainShare * 3
       legs = [{ x: 0, y: yb, z: -spec.len * 0.35, nose: true }, { x: -spec.track / 2 || -spec.span * 0.08, y: yb, z: spec.len * 0.05 }, { x: spec.track / 2 || spec.span * 0.08, y: yb, z: spec.len * 0.05 }]
     }
     /* Centre of gravity: a little ahead of the main wheels, on the fuselage centreline. */
     const mains = legs.filter(l => !l.nose)
     const mainZ = mains.reduce((s, l) => s + l.z, 0) / mains.length
-    const fc = new THREE.Vector3(); (fuselage || box).getCenter(fc)
-    this.cg = new THREE.Vector3(0, fc.y, mainZ - spec.len * 0.03)
+    this.cg = new THREE.Vector3(0, cgY, mainZ - spec.len * 0.03)
     this.frame.position.set(-this.cg.x, -this.cg.y, -this.cg.z)
     this.contacts = legs.map(l => ({ x: l.x - this.cg.x, y: l.y - this.cg.y, z: l.z - this.cg.z, nose: !!l.nose, tail: false }))
     this.restHeight = -Math.min(...this.contacts.map(c => c.y))
     this.bodyMinY = bodyMin - this.cg.y
     this.bodyMaxY = bodyMax - this.cg.y
-    const fuselageTop = fuselage ? fuselage.max.y : bodyMax
-    this.eye = { x: 0, y: fuselageTop - this.cg.y - 0.9, z: box.min.z - this.cg.z + spec.len * 0.09 }
+    /* The captain's eye, when no deck says otherwise: a little above the
+       fuselage level, in the nose. */
+    this.eye = { x: 0, y: spec.dia * 0.15 + 0.3, z: box.min.z - this.cg.z + spec.len * 0.09 }
     this.exhausts = [{ x: -spec.span * 0.18, y: this.bodyMinY + spec.dia * 0.4, z: spec.len * 0.12 }, { x: spec.span * 0.18, y: this.bodyMinY + spec.dia * 0.4, z: spec.len * 0.12 }].slice(0, Math.max(1, spec.engines || 2))
     this.tips = [{ x: -spec.span / 2, y: 0, z: spec.len * 0.05 }, { x: spec.span / 2, y: 0, z: spec.len * 0.05 }]
     this.hasFlames = false
@@ -136,7 +165,7 @@ export class RiggedAircraft {
       // Build the animation transform in the node's parent frame (AC3D axes, part-relative), then compose with the rest pose.
       m.identity()
       for (const op of list) {
-        if (op.type === 'select') { node.visible = op.visible; continue }
+        if (op.type === 'select') { node.visible = node.visible && op.visible; continue }
         if (op.type === 'translate') {
           const a = fgToAc(op.axis)
           t.makeTranslation(a[0] * op.m, a[1] * op.m, a[2] * op.m)
@@ -163,7 +192,7 @@ export class RiggedAircraft {
     const THREE = this.THREE
     if (this.cockpit) { this.frame.remove(this.cockpit.root); this.cockpit = null }
     const rig = (gltf.parser && gltf.parser.json.asset.extras && gltf.parser.json.asset.extras.axzRig) || { parts: [] }
-    const root = gltf.scene
+    const root = gltf.scene.clone(true)
     const byName = new Map(), animated = new Map()
     root.traverse(o => { if (o.name) { if (!byName.has(o.name)) byName.set(o.name, []); byName.get(o.name).push(o) } if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; o.frustumCulled = false } })
     for (const part of rig.parts || []) for (const a of part.animations || []) for (const name of a.objects || []) for (const node of byName.get(name) || []) if (!animated.has(node)) {
@@ -176,7 +205,7 @@ export class RiggedAircraft {
     this.frame.add(root)
     /* The eye: FlightGear's view point if the rig carries one, else the
        captain's seat estimated from the deck's own box. */
-    const box = new THREE.Box3().setFromObject(root)
+    const box = new THREE.Box3().setFromObject(root, true)
     const eyeFg = rig.eye || null
     if (eyeFg) this.eye = { x: eyeFg[1] - this.cg.x, y: eyeFg[2] - this.cg.y, z: eyeFg[0] - this.cg.z }
     else this.eye = { x: -0.5, y: box.max.y - 0.9 - this.cg.y, z: box.min.z + 0.55 * (box.max.z - box.min.z) - this.cg.z }
@@ -190,5 +219,6 @@ export class RiggedAircraft {
   }
 
   bodyToWorld(p) { return this.root.localToWorld(new this.THREE.Vector3(p.x, p.y, p.z)) }
-  dispose() { this.model.traverse(o => { if (o.geometry) o.geometry.dispose() }) }
+  /** Nothing to free per view: geometry and materials belong to the cached parse and the next view of this type shares them. */
+  dispose() { this.model.clear() }
 }

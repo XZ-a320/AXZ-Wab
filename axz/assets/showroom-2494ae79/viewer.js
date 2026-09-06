@@ -10,6 +10,9 @@ import { RiggedAircraft } from './rigged.js'
 
 export function createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader, draco }, mount, labels) {
   const canvas = document.createElement('canvas')
+  /* The stylesheet sizes `.hangar-canvas` to its mount; without the class a
+     Retina screen lays the canvas out at its buffer size, twice too big. */
+  canvas.className = 'hangar-canvas'
   canvas.setAttribute('aria-label', labels.canvasLabel || 'Model viewer')
   canvas.tabIndex = 0
   mount.appendChild(canvas)
@@ -49,7 +52,7 @@ export function createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader
     const box = new THREE.Box3(), tmp = new THREE.Box3()
     root.updateMatrixWorld(true)
     const shown = o => { for (let p = o; p; p = p.parent) if (p.visible === false) return false; return true }
-    root.traverse(o => { if (o.isMesh && shown(o)) { tmp.setFromObject(o); box.union(tmp) } })
+    root.traverse(o => { if (o.isMesh && shown(o)) { tmp.setFromObject(o, true); box.union(tmp) } })
     return box
   }
   function fit(view) {

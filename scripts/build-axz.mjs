@@ -194,10 +194,15 @@ const ASSET_INDEX = existsSync(join(ASSETS_REPO, 'public', 'index.json'))
 const SOURCED_TYPES = new Map()
 for (const [id, a] of Object.entries(ASSET_INDEX.assets)) if (a.kind === 'model' && Array.isArray(a.types) && /exterior/.test(a.part || '')) for (const t of a.types) if (!SOURCED_TYPES.has(t)) SOURCED_TYPES.set(t, id)
 
+/* Where a model came from, said in words a reader knows: the CC BY rows are
+   Sketchfab downloads and say so on the page, as the licence asks. */
+const SOURCE_NAMES = { 'sketchfab.com': 'Sketchfab', 'polyhaven.com': 'Poly Haven', 'ambientcg.com': 'ambientCG', 'sourceforge.net': 'FlightGear FGAddon' }
 const creditLine = cr => {
   const link = (href, text) => /^https?:\/\//.test(href || '') ? `<a href="${esc(href)}" rel="noopener">${esc(text)}</a>` : esc(text)
   const lic = link(LICENSE_URLS[cr.license], cr.license)
-  return `<li>${link(cr.source, cr.title || cr.id)} · ${link(cr.authorUrl, cr.author)} · ${lic}${cr.modified ? ` · ${esc(cr.modified)}` : ''}</li>`
+  const host = (() => { try { return new URL(cr.source).hostname.replace(/^www\./, '') } catch (e) { return '' } })()
+  const via = SOURCE_NAMES[host] ? ` · via ${esc(SOURCE_NAMES[host])}` : ''
+  return `<li>${link(cr.source, cr.title || cr.id)} · ${link(cr.authorUrl, cr.author)} · ${lic}${via}${cr.modified ? ` · ${esc(cr.modified)}` : ''}</li>`
 }
 
 /* --- Hangar ---------------------------------------------------------------
@@ -1656,7 +1661,7 @@ function hangarPage(c, lang) {
 /* --- Showroom -------------------------------------------------------------
    The sourced models, each named with its author and licence, in a curated
    order: the airline's own type first, then the best-built of the rest. */
-const SHOWROOM_ORDER = ['b738-fg', 'c172-fg', 'f16-fg', 'a32x-fg', 'b789-fg', 'b744-fg', 'f22-fg', 'f35-fg', 'conc-fg']
+const SHOWROOM_ORDER = ['b789-exterior', 'b744-exterior', 'a321-exterior', 'b738-exterior-alt', 'g650-exterior', 'b2-exterior', 'f22-exterior', 'f35-exterior', 'b52-exterior', 'b738-exterior', 'c172-fg', 'f16-fg', 'conc-fg', 'a32x-fg', 'b738-fg', 'b789-fg', 'b744-fg', 'f22-fg', 'f35-fg']
 function showroomModels(c) {
   const out = []
   for (const id of SHOWROOM_ORDER) {

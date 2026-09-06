@@ -55,6 +55,10 @@ export function fgProperty(name, S) {
   if (/^b737\/controls\/gear\/lever$/.test(p)) return S.gear > 0.5 ? 1 : 0
   if (/^controls\/doors\//.test(p) || /door-positions/.test(p) || /baydoors/.test(p)) return 0
   if (/^sim\/multiplay\//.test(p)) return 0
+  if (/^velocities\/mach$/.test(p)) return S.mach || 0
+  if (/^velocities\/airspeed-kt$/.test(p)) return S.iasKt || 0
+  if (/^position\/altitude-ft$/.test(p)) return S.altFt || 0
+  if (/^position\/altitude-agl-ft$/.test(p)) return S.aglFt || 0
   return null                                          // not a thing a flight model knows; the animation is skipped
 }
 
@@ -89,7 +93,9 @@ export function evaluateRig(rig, S) {
       if (a.type === 'select') {
         const v = a.property ? fgProperty(a.property, S) : null
         const visible = a.condition ? condOk : (v == null ? false : v > 0.5)
-        for (const name of a.objects) { if (!ops.has(name)) ops.set(name, []); ops.get(name).push({ type: 'select', visible }) }
+        /* FlightGear shows an object only when every select on it passes,
+           so a second select on the same object ANDs with the first. */
+        for (const name of a.objects) { if (!ops.has(name)) ops.set(name, []); const prior = ops.get(name).find(o => o.type === 'select'); if (prior) prior.visible = prior.visible && visible; else ops.get(name).push({ type: 'select', visible }) }
         continue
       }
       if (!condOk) continue
@@ -133,6 +139,7 @@ export function stateFrom(ac) {
     reverse: new Array(nEng).fill(rev), throttle: new Array(nEng).fill(ac.throttle || 0),
     wheelSpeed: new Array(3).fill(ac.onGround && ac.vel ? Math.hypot(ac.vel.x, ac.vel.z) : 0),
     brakeL: ac.brakes || 0, brakeR: ac.brakes || 0, steer: (ac.ctl && -ac.ctl.rudder) || 0, onGround: !!ac.onGround,
+    mach: ac.mach || 0, iasKt: (ac.ias || 0) * 1.943844, altFt: ((ac.pos && ac.pos.y) || 0) * 3.28084, aglFt: (ac.agl || 0) * 3.28084,
   }
 }
 
