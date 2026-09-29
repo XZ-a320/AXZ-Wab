@@ -12,7 +12,7 @@
    ========================================================================== */
 
 export function createViewer(THREE, { OrbitControls, RoomEnvironment }, hangar, opts) {
-  const { el, canvas, theme = () => 'night', motionOn = () => true } = opts
+  const { el, canvas, theme = () => 'night', motionOn = () => true, onUserOrbit = () => {} } = opts
   const V3 = (x, y, z) => new THREE.Vector3(x, y, z)
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' })
@@ -56,6 +56,9 @@ export function createViewer(THREE, { OrbitControls, RoomEnvironment }, hangar, 
   controls.maxPolarAngle = Math.PI / 2 - 0.02
   controls.listenToKeyEvents(canvas)
   controls.keyPanSpeed = 14
+  controls.autoRotateSpeed = 0.6
+  // Grabbing the model stops the turntable; the page's switch is told.
+  canvas.addEventListener('pointerdown', () => { if (spin) { spin = false; onUserOrbit() } })
 
   const THEMES = {
     night: { bg: 0x0b0d10, floor: 0x1a1e24, grid1: 0x2b3138, grid2: 0x20252b, hemiSky: 0xcfd9e6, hemiGround: 0x3a3630, fog: 0x0b0d10 },
@@ -67,6 +70,8 @@ export function createViewer(THREE, { OrbitControls, RoomEnvironment }, hangar, 
   let spinSpeed = 0        // 0..1, eased
   let needsDraw = true
   let disposed = false
+  let spin = false         // turntable, off unless the page asks
+  let active = true        // false while the 3.0 viewer holds the mount
   let dims = { w: 1, h: 1 }
 
   function applyTheme() {
@@ -154,7 +159,9 @@ export function createViewer(THREE, { OrbitControls, RoomEnvironment }, hangar, 
     if (disposed) return
     requestAnimationFrame(tick)
     const dt = Math.min(0.05, clock.getDelta())
+    if (!active) return
     const on = motionOn()
+    controls.autoRotate = spin && on
     // Spool up on an ease, spool down on a straight ramp that really reaches
     // zero: an exponential decay never does, and a rotor that is "almost"
     // stopped is still a rotor turning with motion off.
@@ -196,5 +203,7 @@ export function createViewer(THREE, { OrbitControls, RoomEnvironment }, hangar, 
     renderer.dispose()
   }
 
-  return { show, resize, applyTheme, dispose, renderer, scene, camera, controls, get current() { return current } }
+  return { show, resize, applyTheme, dispose, renderer, scene, camera, controls, get current() { return current },
+    setAutoRotate(on) { spin = on; needsDraw = true },
+    setActive(on) { active = on; canvas.hidden = !on; if (on) { resize(); needsDraw = true } } }
 }

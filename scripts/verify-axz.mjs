@@ -172,6 +172,32 @@ console.log('\nicons')
     ? ok(`motion toggle: icon, name and pressed-state all change (${b2.mi}/${b2.mn} -> ${c3.mi}/${c3.mn})`)
     : bad(`motion toggle did not update together: ${JSON.stringify([b2, c3])}`)
   await page.close()
+
+  /* Night on every device (the owner's call, 2026-09-29): a device that
+     prefers light still opens dark, with or without scripts, and a saved
+     "day" is honoured before first paint. */
+  for (const js of [true, false]) {
+    const lc = await browser.newContext({ colorScheme: 'light', javaScriptEnabled: js })
+    const lp = await lc.newPage()
+    await lp.goto(BASE + '/axz/', { waitUntil: 'domcontentloaded' })
+    const t = await lp.evaluate(() => ({ theme: document.documentElement.getAttribute('data-theme'), bg: getComputedStyle(document.body).backgroundColor }))
+    const dark = (m => m && (+m[1] + +m[2] + +m[3]) < 120)(t.bg.match(/(\d+),\s*(\d+),\s*(\d+)/))
+    t.theme === 'night' && dark ? ok(`a light-preferring device opens at night${js ? '' : ' with scripts off'} (${t.bg})`) : bad(`light device, js=${js}: ${JSON.stringify(t)}`)
+    await lc.close()
+  }
+  {
+    const lc = await browser.newContext({ colorScheme: 'dark' })
+    const lp = await lc.newPage()
+    await lp.goto(BASE + '/axz/', { waitUntil: 'domcontentloaded' })
+    await lp.evaluate(() => localStorage.setItem('axz-theme', 'day'))
+    const first = []
+    await lp.exposeFunction('__seen', t => first.push(t))
+    // "interactive" is before the deferred site bundle runs, so only the <head> line can have set it.
+    await lp.addInitScript(() => { document.addEventListener('readystatechange', () => { if (document.readyState === 'interactive') window.__seen(document.documentElement.getAttribute('data-theme')) }) })
+    await lp.goto(BASE + '/axz/', { waitUntil: 'domcontentloaded' })
+    first[0] === 'day' ? ok('a saved "day" is applied before the page is interactive') : bad(`saved day, theme at interactive: ${first[0]}`)
+    await lc.close()
+  }
 }
 
 /* 2d. Units: Chinese metric (km and metres, including altitude), English
@@ -1246,11 +1272,13 @@ console.log('\nsimulator 2.0')
   await page.close(); await c3.close()
 }
 
-/* 2m. The hangar. The 3D viewer is a dynamic import that starts when the
-      stage scrolls into view, with Three.js from a CDN through an import
-      map, so this needs the network. What it asserts: the roster is the
-      fleet table's numbers, every pick draws, the motion toggle really
-      stops the rotors, and the standalone H145 page carries the same code. */
+/* 2m. The hangar, 2.0 half. The 3D viewer is a dynamic import that starts
+      when the stage scrolls into view, with Three.js from a CDN through an
+      import map, so this needs the network (and the assets server on :4790,
+      because the first type opens on its 3.0 model). What it asserts: the
+      roster is the fleet table's numbers, every type's 2.0 model draws, the
+      motion toggle really stops the rotors, and the standalone H145 page
+      carries the same code. The 3.0 half is asserted after simulator 3.0. */
 console.log('\nhangar')
 {
   // A fresh context: an earlier check leaves the motion toggle wherever it
@@ -1263,13 +1291,15 @@ console.log('\nhangar')
   await page.goto(BASE + '/axz/sim/classic/', { waitUntil: 'networkidle' })
   await page.goto(BASE + '/axz/', { waitUntil: 'networkidle' })
   cdn.length === 0 ? ok('no page but the hangar fetches Three.js') : bad(`Three.js fetched outside the hangar: ${cdn[0]}`)
-  await page.goto(BASE + '/axz/hangar/', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/axz/hangar/?assets=http://localhost:4790', { waitUntil: 'networkidle' })
   const roster = JSON.parse(await page.getAttribute('[data-hangar-stage]', 'data-hangar-roster'))
   roster['b-737x'] && roster['b-737x'].len === 39.47 && roster['b-321x'].len === 44.51 && roster.h145 && roster.h145.span === 11
     ? ok("the hangar roster carries the fleet table's dimensions (737-800 39.47 m, A321 44.51 m, H145 rotor 11.00 m)")
     : bad('hangar roster dimensions drifted from the fleet table')
   const picks = await page.$$eval('[data-hangar-pick]', bs => bs.map(b => b.getAttribute('data-hangar-pick')))
-  picks.length === 7 ? ok(`seven aircraft to pick from: ${picks.join(' ')}`) : bad(`${picks.length} picks, expected 7`)
+  picks.length === 16 ? ok(`sixteen aircraft to pick from: ${picks.join(' ')}`) : bad(`${picks.length} picks, expected 16`)
+  picks.slice(0, 4).join() === 'b-737x,b-321x,b-1717,b-0001f' ? ok("the airline's four come first") : bad(`first four picks: ${picks.slice(0, 4)}`)
+  Object.values(roster).every(t => t.variants.at(-1).key === 'procedural') ? ok('every type offers its 2.0 model') : bad('a type has no 2.0 model')
 
   await page.evaluate(() => document.querySelector('[data-hangar-stage]').scrollIntoView())
   const ran = await page.waitForSelector('[data-hangar-stage][data-hangar-state="running"]', { timeout: 45000 }).then(() => true).catch(() => false)
@@ -1278,23 +1308,26 @@ console.log('\nhangar')
   } else {
     ok('the hangar starts once the stage scrolls into view')
     cdn.some(u => /three@0\.\d+\.\d+\/build\/three\.module\.js/.test(u)) ? ok('Three.js comes from the pinned CDN build') : bad(`Three.js URL not pinned: ${cdn.join(' ')}`)
-    const canvas = await page.$('canvas.hangar-canvas')
+    const canvas = await page.$('canvas.hangar-canvas[role="img"]')
     canvas ? ok('a canvas is mounted') : bad('no canvas mounted')
-    const label = canvas && await canvas.getAttribute('aria-label')
-    label && label.includes('H145') ? ok(`the canvas is labelled: "${label}"`) : bad(`canvas label wrong: ${label}`)
 
-    // Every pick draws something with the right number of parts.
+    // Every type's 2.0 model draws, on the 2.0 canvas, with the 3.0 one hidden.
     let drawn = 0
     for (const id of picks) {
       await page.click(`[data-hangar-pick="${id}"]`)
+      await page.click('[data-hangar-variants] button:last-child')
       await page.waitForTimeout(120)
-      const n = await page.evaluate(() => { let n = 0; window.__axzHangar.viewer.current.traverse(o => { if (o.isMesh) n++ }); return n })
+      const r = await page.evaluate(() => {
+        let n = 0; window.__axzHangar.viewer.current.traverse(o => { if (o.isMesh) n++ })
+        const cs = [...document.querySelectorAll('[data-hangar-mount] canvas')]
+        return { n, variant: document.querySelector('[data-hangar-stage]').getAttribute('data-hangar-variant'), shown: cs.filter(c => !c.hidden).map(c => c.getAttribute('role') || 'gltf'), label: cs[0].getAttribute('aria-label') }
+      })
       const pressed = await page.getAttribute(`[data-hangar-pick="${id}"]`, 'aria-pressed')
       const shown = await page.textContent('[data-hangar-field="type"]')
-      if (n > 20 && pressed === 'true' && shown.trim() === roster[id].name) drawn++
-      else bad(`${id}: ${n} meshes, aria-pressed=${pressed}, readout "${shown.trim()}"`)
+      if (r.n > 20 && pressed === 'true' && shown.trim() === roster[id].name && r.variant === 'procedural' && r.shown.join() === 'img' && r.label.includes(roster[id].name)) drawn++
+      else bad(`${id}: ${JSON.stringify(r)}, aria-pressed=${pressed}, readout "${shown.trim()}"`)
     }
-    drawn === picks.length ? ok(`all ${drawn} aircraft build, press their button and fill the readout`) : bad(`${drawn}/${picks.length} aircraft drew correctly`)
+    drawn === picks.length ? ok(`all ${drawn} aircraft build their 2.0 model, press their button, label the canvas and fill the readout`) : bad(`${drawn}/${picks.length} aircraft drew correctly`)
 
     // Dimensions in the readout are the roster's, formatted, not retyped.
     await page.click('[data-hangar-pick="b-321x"]')
@@ -1448,55 +1481,124 @@ console.log('\nsimulator 3.0')
   }
 }
 
-/* --- Showroom ---------------------------------------------------------------
-   The sourced 3.0 models, viewed. Same rules as the hangar: nothing fetched
-   until the stage is looked at, then the viewer, then a model from the
-   assets origin, with its author and licence on the page. */
-console.log('\nshowroom')
+/* --- Hangar, 3.0 half -------------------------------------------------------
+   The sourced models, in the hangar since the showroom was folded into it
+   (2026-09-29). Nothing fetched until the stage is looked at; then the first
+   type opens on the model the simulator flies, rigged, with its author and
+   licence on the page; the second source and the 2.0 model are one press
+   away; the two switches say which way they are set. */
+console.log('\nhangar 3.0')
 {
   const ASSETS = 'http://localhost:4790'
   const sc = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const sp = await sc.newPage()
   const asked = []
-  sp.on('request', r => { if (/assets\/showroom-|three@/.test(r.url()) || r.url().startsWith(ASSETS)) asked.push(r.url()) })
-  await sp.goto(BASE + '/axz/en/showroom/?assets=' + ASSETS, { waitUntil: 'networkidle' })
-  const picks = await sp.$$eval('[data-showroom-pick]', bs => bs.map(b => b.getAttribute('data-showroom-pick')))
-  picks.length >= 5 ? ok(`${picks.length} sourced models to pick from: ${picks.join(' ')}`) : bad(`${picks.length} showroom models`)
-  const models = JSON.parse(await sp.getAttribute('[data-showroom-stage]', 'data-showroom-models'))
-  models.every(m => m.author && m.license && /^https?:/.test(m.source)) ? ok('every showroom model names its author, licence and source') : bad('a showroom model is missing author, licence or source')
-  const tagged = await sp.$$eval('[data-showroom-pick] .ros-tag', ts => ts.map(t => t.textContent))
-  tagged.every(t => /3\.0/.test(t) && /GPL|CC/.test(t)) ? ok('each pick is tagged as a 3.0 model with its licence') : bad(`tags: ${tagged.join(' | ')}`)
-  const inView = await sp.evaluate(() => { const r = document.querySelector('[data-showroom-stage]').getBoundingClientRect(); return r.top < innerHeight + 200 })
-  if (!inView) asked.length === 0 ? ok('showroom fetches nothing until the stage is looked at') : bad(`showroom fetched on load: ${asked[0]}`)
-  await sp.evaluate(() => document.querySelector('[data-showroom-stage]').scrollIntoView())
-  const up = await sp.waitForFunction(() => window.__axzShowroom && window.__axzShowroom.viewer.current, null, { timeout: 120000 }).then(() => true).catch(() => false)
-  if (!up) bad(`showroom did not start: "${await sp.textContent('[data-showroom-status]')}"`)
+  sp.on('request', r => { if (/assets\/hangar-|three@/.test(r.url()) || r.url().startsWith(ASSETS)) asked.push(r.url()) })
+  await sp.goto(BASE + '/axz/en/hangar/?assets=' + ASSETS, { waitUntil: 'networkidle' })
+  const navShowroom = await sp.$$eval('a[href*="showroom"]', as => as.length)
+  navShowroom === 0 ? ok('no link anywhere on the page leads to the old showroom') : bad(`${navShowroom} links to /showroom/`)
+  const roster = JSON.parse(await sp.getAttribute('[data-hangar-stage]', 'data-hangar-roster'))
+  const sourced = Object.values(roster).flatMap(t => t.variants.filter(v => v.key !== 'procedural'))
+  sourced.length >= 15 && sourced.every(m => m.author && m.license && /^https?:/.test(m.source)) ? ok(`${sourced.length} 3.0 models, each naming its author, licence and source`) : bad('a 3.0 model is missing author, licence or source')
+  const tagged = await sp.$$eval('[data-hangar-pick]', bs => bs.map(b => [b.getAttribute('data-hangar-pick'), /3\.0/.test(b.querySelector('.ros-tag').textContent)]))
+  tagged.every(([id, has]) => has === roster[id].variants.length > 1) ? ok('a pick says 3.0 exactly when that type has a 3.0 model') : bad(`tags: ${JSON.stringify(tagged)}`)
+  const inView = await sp.evaluate(() => { const r = document.querySelector('[data-hangar-stage]').getBoundingClientRect(); return r.top < innerHeight + 200 })
+  if (!inView) asked.length === 0 ? ok('the hangar fetches nothing until the stage is looked at') : bad(`hangar fetched on load: ${asked[0]}`)
+  await sp.evaluate(() => document.querySelector('[data-hangar-stage]').scrollIntoView())
+  const settled = key => sp.waitForFunction(k => { const st = document.querySelector('[data-hangar-stage]'); const shown = [...st.querySelectorAll('[data-hangar-mount] canvas')].filter(c => !c.hidden).map(c => c.getAttribute('role') || 'gltf').join(); return st.getAttribute('data-hangar-variant') === k && st.querySelector('[data-hangar-status]').textContent === '' && window.__axzHangar && shown === (k === 'procedural' ? 'img' : 'gltf') }, key, { timeout: 180000 }).then(() => true).catch(() => false)
+  const view = () => sp.evaluate(async () => {
+    const s = await window.__axzHangar.sourced
+    const v = s && s.viewer, st = document.querySelector('[data-hangar-stage]')
+    const btn = k => { const b = st.querySelector(`[data-hangar-${k}]`); return b.hidden ? 'hidden' : `${b.getAttribute('aria-pressed')}:${b.textContent.trim()}` }
+    return { id: st.getAttribute('data-hangar-current'), variant: st.getAttribute('data-hangar-variant'), rigged: !!(v && v.current && v.current.rigged), animated: v && v.current ? v.current.animated.size : 0, frames: v ? v.frames : 0,
+      shown: [...st.querySelectorAll('[data-hangar-mount] canvas')].filter(c => !c.hidden).map(c => c.getAttribute('role') || 'gltf').join(),
+      credit: st.querySelector('[data-hangar-credit]').textContent, size: st.querySelector('[data-hangar-field="size"]').textContent, spin: btn('spin'), exercise: btn('exercise'), transferred: s && s.hub ? s.hub.transferred : 0 }
+  })
+  const during = await sp.waitForFunction(() => /Downloading/.test(document.querySelector('[data-hangar-status]').textContent), null, { timeout: 30000 }).then(() => true, () => false)
+  during ? ok('the status says a model is downloading while it downloads') : bad('no download status was shown')
+  if (!(await settled('fg'))) bad(`the first 3.0 model did not load: "${await sp.textContent('[data-hangar-status]')}"`)
   else {
-    ok('the showroom draws the first model once the stage scrolls into view')
-    const st = await sp.evaluate(() => { const v = window.__axzShowroom.viewer; return { id: document.querySelector('[data-showroom-stage]').getAttribute('data-showroom-current'), rigged: !!v.current.rigged, animated: v.current.animated.size, frames: v.frames, tri: document.querySelector('[data-showroom-field="triangles"]').textContent, credit: document.querySelector('[data-showroom-credit]').textContent } })
-    /* The first pick is the best sourced airframe, a Sketchfab download with
-       no animation XML of its own; it must stand as a rigged view at real
-       size. The animation proof runs on the first FlightGear pick, which
-       carries a rig. */
-    st.rigged && st.frames > 0 && parseInt(st.tri.replace(/\D/g, ''), 10) > 10000 ? ok(`${st.id} is a rigged view in the showroom (${st.tri} triangles)`) : bad(`showroom model: ${JSON.stringify(st)}`)
-    ;/GPL|CC/.test(st.credit) && /FlightGear|Sketchfab|Poly Haven/.test(st.credit) ? ok(`credit reads: "${st.credit.trim().slice(0, 80)}…"`) : bad(`credit: "${st.credit}"`)
-    ;/oriented|painted|rigged|converted/.test(st.credit) ? ok('the credit says how the model was modified, as CC BY asks') : bad(`credit does not state its modifications: "${st.credit}"`)
-    const fg = picks.find(p => /-fg$/.test(p))
-    if (fg) {
-      await sp.click(`[data-showroom-pick="${fg}"]`)
-      const got = await sp.waitForFunction(id => document.querySelector('[data-showroom-stage]').getAttribute('data-showroom-current') === id && document.querySelector('[data-showroom-status]').textContent === '', fg, { timeout: 180000 }).then(() => true).catch(() => false)
-      const rigged = got ? await sp.evaluate(() => { const v = window.__axzShowroom.viewer; return { rigged: !!v.current.rigged, animated: v.current.animated.size, tri: document.querySelector('[data-showroom-field="triangles"]').textContent } }) : null
-      rigged && rigged.rigged && rigged.animated > 20 ? ok(`${fg} is rigged in the showroom (${rigged.animated} animated parts, ${rigged.tri} triangles)`) : bad(`rigged showroom model ${fg}: ${JSON.stringify(rigged)}`)
-    } else bad('no FlightGear model in the showroom to prove the rig on')
-    const second = picks[1]
-    await sp.click(`[data-showroom-pick="${second}"]`)
-    const swapped = await sp.waitForFunction(id => document.querySelector('[data-showroom-stage]').getAttribute('data-showroom-current') === id && document.querySelector('[data-showroom-status]').textContent === '', second, { timeout: 180000 }).then(() => true).catch(() => false)
-    swapped ? ok(`picking ${second} loads it and clears the status`) : bad(`could not swap to ${second}: "${await sp.textContent('[data-showroom-status]')}"`)
-    const cors = await sp.evaluate(() => window.__axzShowroom.hub.transferred)
-    cors > 1e6 ? ok(`${(cors / 1048576).toFixed(1)} MB came through the hub from the assets origin`) : bad(`hub transferred ${cors} bytes`)
+    const a = await view()
+    a.id === 'b-737x' && a.rigged && a.animated > 20 && a.frames > 0 && a.shown === 'gltf' ? ok(`the hangar opens on the 737's FlightGear model, rigged (${a.animated} moving parts), on the 3.0 canvas`) : bad(`first view: ${JSON.stringify(a)}`)
+    ;/GPL/.test(a.credit) && /FlightGear/.test(a.credit) ? ok(`credit reads: "${a.credit.trim().slice(0, 70)}…"`) : bad(`credit: "${a.credit}"`)
+    ;/^true:Moving parts\s*ON$/.test(a.exercise) && /^true:Turntable\s*ON$/.test(a.spin) ? ok('both switches say what they do and that they are on') : bad(`switches: ${a.spin} / ${a.exercise}`)
+    await sp.click('[data-hangar-exercise]')
+    const ex = await view()
+    ;/^false:Moving parts\s*OFF$/.test(ex.exercise) ? ok('"Moving parts" turns off and says OFF') : bad(`exercise after press: ${ex.exercise}`)
+    // Pressing the switch can scroll the stage under the sticky top bar; centre it before grabbing.
+    await sp.evaluate(() => document.querySelector('.hangar-stage').scrollIntoView({ block: 'center' }))
+    const box = await sp.locator('.hangar-stage').boundingBox()
+    await sp.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await sp.mouse.down(); await sp.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2); await sp.mouse.up()
+    const grab = await view()
+    ;/^false:Turntable\s*OFF$/.test(grab.spin) ? ok('grabbing the model stops the turntable, and the switch says so') : bad(`turntable after grab: ${grab.spin}`)
+
+    await sp.click('[data-hangar-variants] button:nth-child(2)')
+    if (!(await settled('sketchfab'))) bad('the Sketchfab 737 did not load')
+    else {
+      const b = await view()
+      b.shown === 'gltf' && b.exercise === 'hidden' && /CC-BY/.test(b.credit) && /Sketchfab/.test(b.credit) ? ok('the second source loads, credits Sketchfab and CC BY, and hides "Moving parts" (it has no rig)') : bad(`sketchfab view: ${JSON.stringify(b)}`)
+      ;/oriented|painted|rigged|converted/.test(b.credit) ? ok('the credit says how the model was modified, as CC BY asks') : bad(`credit does not state its modifications: "${b.credit}"`)
+      b.transferred > 1e6 ? ok(`${(b.transferred / 1048576).toFixed(1)} MB came through the hub from the assets origin`) : bad(`hub transferred ${b.transferred} bytes`)
+    }
+    await sp.click('[data-hangar-variants] button:last-child')
+    const c = await settled('procedural') && await view()
+    c && c.shown === 'img' && c.size === 'none' && c.exercise === 'hidden' ? ok('the 2.0 model takes the stage back and says it downloads nothing') : bad(`2.0 view: ${JSON.stringify(c)}`)
   }
   await sc.close()
 
+  // The showroom's old addresses land on the hangar.
+  const rc = await browser.newContext()
+  const rp = await rc.newPage()
+  for (const [from, to] of [['/axz/showroom/', '/axz/hangar/'], ['/axz/en/showroom/', '/axz/en/hangar/']]) {
+    await rp.goto(BASE + from)
+    await rp.waitForURL(u => u.pathname === to, { timeout: 5000 }).then(() => ok(`${from} forwards to ${to}`), () => bad(`${from} stayed at ${rp.url()}`))
+  }
+  await rc.close()
+}
+
+/* --- Simulator 1.0 offline ----------------------------------------------------
+   The owner asked for a 1.0 that runs from a download. The zip the sim pages
+   link to must hold one page per language that opens from disk and flies with
+   the network cut off entirely. */
+console.log('\nsimulator 1.0 offline')
+{
+  const { mkdtempSync, writeFileSync: wf } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { execFileSync } = await import('node:child_process')
+  const { join } = await import('node:path')
+  const lc = await browser.newContext()
+  const lp = await lc.newPage()
+  await lp.goto(BASE + '/axz/sim/', { waitUntil: 'domcontentloaded' })
+  const link = await lp.$eval('.btn-row--foot a[download]', a => ({ href: a.getAttribute('href'), text: a.textContent.trim() }))
+  const stated = await lp.evaluate(() => { const m = document.querySelector('.sector').innerText.match(/ZIP · ([\d.]+) MB/); return m && m[1] })
+  ;/offline\.zip$/.test(link.href) && /1\.0/.test(link.text) ? ok(`the simulator page ends with "${link.text}"`) : bad(`offline link: ${JSON.stringify(link)}`)
+  const res = await lp.request.get(BASE + link.href)
+  const body = await res.body()
+  res.ok() && (body.length / 1048576).toFixed(1) === stated ? ok(`the zip downloads, and the stated ${stated} MB is its size`) : bad(`zip status ${res.status()}, ${body.length} bytes vs stated ${stated} MB`)
+  await lc.close()
+  const dir = mkdtempSync(join(tmpdir(), 'axz-offline-'))
+  wf(join(dir, 'o.zip'), body)
+  execFileSync('unzip', ['-q', join(dir, 'o.zip'), '-d', dir])
+  for (const [f, other] of [['AXZ-Sim-1.0-zh.html', 'AXZ-Sim-1.0-en.html'], ['AXZ-Sim-1.0-en.html', 'AXZ-Sim-1.0-zh.html']]) {
+    const oc = await browser.newContext()
+    const left = []
+    await oc.route('**/*', r => { const u = r.request().url(); if (/^(file|data|blob):/.test(u)) return r.continue(); left.push(u); return r.abort() })
+    const op = await oc.newPage()
+    const errs = []
+    op.on('pageerror', e => errs.push(String(e)))
+    await op.goto('file://' + join(dir, f))
+    await op.click('[data-sim-start]')
+    const flew = await op.waitForFunction(() => document.querySelector('[data-sim-stage]').getAttribute('data-running') === 'true', null, { timeout: 30000 }).then(() => true, () => false)
+    const audio = await op.evaluate(async () => { try { const b = await (await fetch('axz-audio:callout-gear.m4a')).arrayBuffer(); return (await new AudioContext().decodeAudioData(b)).duration > 0 } catch (e) { return String(e) } })
+    const sib = await op.$$eval('.lang a', as => as.map(a => a.getAttribute('href')))
+    flew && !errs.length && !left.length ? ok(`${f} flies from disk with the network cut off`) : bad(`${f}: running=${flew} errors=${errs.slice(0, 2)} network=${left.slice(0, 2)}`)
+    audio === true ? ok(`${f} plays its warning recordings from inside the file`) : bad(`${f} audio: ${audio}`)
+    sib.includes(other) ? ok(`${f} switches language to ${other} in the same folder`) : bad(`${f} language links: ${sib}`)
+    await oc.close()
+  }
+}
+
+{
   // 3.0 labels which aeroplane is a sourced model and which is the 2.0 airframe.
   const lc = await browser.newContext()
   const lp = await lc.newPage()

@@ -2010,7 +2010,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   gap: var(--s-1);
   margin-block-end: var(--s-2);
 }
-.hangar-pick[aria-pressed="true"] {
+.hangar-pick[aria-pressed="true"],
+.hangar-variant[aria-pressed="true"] {
   background: var(--ink);
   color: var(--paper);
   border-color: var(--ink);
@@ -2028,6 +2029,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   touch-action: none;
 }
 .hangar-canvas { display: block; width: 100%; height: 100%; outline: none; }
+/* Two viewers share the stage, the 2.0 and the 3.0; only one is shown. */
+.hangar-canvas[hidden] { display: none; }
 .hangar-canvas:focus-visible { outline: 3px solid var(--focus-outer); outline-offset: -3px; }
 .hangar-nojs {
   position: absolute;
@@ -2037,6 +2040,26 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   padding: var(--s-3);
   text-align: center;
   color: var(--ink-2);
+}
+/* Under the stage: which model, then the two switches that change what it does. */
+.hangar-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-2);
+  margin-block-end: var(--s-2);
+}
+.hangar-bar .record__label { margin: 0; }
+.hangar-variants,
+.hangar-toggles { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.hangar-toggles { margin-inline-start: auto; }
+/* Here the setting is read at full size beside the verb, not in the corner:
+   "自动旋转 开" answers what the button does and which way it is set. */
+.hangar-toggles .sim-tog__st {
+  position: static;
+  margin-inline-start: .6em;
+  font-size: inherit;
+  letter-spacing: 0;
 }
 .hangar-readout { margin-block-start: var(--s-2); }
 .hangar-desc { margin-block-start: var(--s-2); }

@@ -69,7 +69,10 @@
 
     choose.then(function (entry) {
       if (!entry) return null
-      return import(entry).then(function (mod) {
+      /* The 1.0 offline edition carries its engine inline, because a page
+         opened from disk may not import module files. */
+      var local = window.AXZ_OFFLINE_ENGINE
+      return (local ? Promise.resolve(local) : import(entry)).then(function (mod) {
         return mod.boot({
         stage: stage,
         labels: labels,

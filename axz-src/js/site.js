@@ -8,7 +8,11 @@
   var root = document.documentElement
   root.classList.remove('no-js')
 
-  /* --- Theme ------------------------------------------------------------- */
+  /* --- Theme -------------------------------------------------------------
+     Night on every device until the reader says otherwise (the owner's
+     call, 2026-09-29): the build writes data-theme="night" on <html>, so
+     even with scripts off the page opens dark. A saved "day" is applied by
+     one line in <head> before first paint; this repeats it for safety. */
   var THEME_KEY = 'axz-theme'
   try {
     var saved = localStorage.getItem(THEME_KEY)

@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="no-js">
+<html lang="en" class="no-js" data-theme="night">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{if(localStorage.getItem('axz-theme')==='day')document.documentElement.setAttribute('data-theme','day')}catch(e){}</script>
 <title>Simulator 2.0 (vintage) — Air Xiao Ze</title>
 <meta name="description" content="Fly the two Air Xiao Ze routes in your browser. The aircraft are dimensioned from the same table as the fleet drawings, and the routes, runway headings and cruise levels are the ones already published here. The aerodynamics are coefficient based: lift varies with angle of attack, the wing stalls, the engines take time to spool, the landing gear is a spring and damper, and how gently you arrive depends on how you flare.">
 
@@ -18,7 +19,7 @@
 <link rel="preload" as="font" type="font/woff2" href="/axz/fonts/axz-sans-400-en.c0bd618f.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="/axz/fonts/axz-mono-400.6fc3e157.woff2" crossorigin>
 <style>@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-400-en.c0bd618f.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Sans";src:url("/axz/fonts/axz-sans-700-en.6722dfdf.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Serif";src:url("/axz/fonts/axz-serif-400-en.31a67c8f.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-400.6fc3e157.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;}@font-face{font-family:"AXZ Mono";src:url("/axz/fonts/axz-mono-600.4d4d2e8c.woff2") format("woff2");font-weight:600;font-style:normal;font-display:swap;}</style>
-<link rel="stylesheet" href="/axz/assets/axz.350a273f.css">
+<link rel="stylesheet" href="/axz/assets/axz.aee2f2c7.css">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 </head>
 <body>
@@ -74,7 +75,7 @@
       <img class="mark mark--light" src="/axz/img/wordmark-light.webp" alt="" aria-hidden="true" width="114" height="74">
       <img class="mark mark--dark" src="/axz/img/wordmark-dark.webp" alt="" aria-hidden="true" width="114" height="74">
     </a>
-    <nav class="nav" aria-label="Main navigation"><a href="/axz/en/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>Home</span></a><a href="/axz/en/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>Guestbook</span></a><a href="/axz/en/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>Flight Log</span></a><a href="/axz/en/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>Dispatch</span></a><a href="/axz/en/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>Simulator</span></a><a href="/axz/en/hangar/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>Hangar</span></a><a href="/axz/en/showroom/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>Showroom</span></a><a href="/axz/en/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>Accessibility</span></a></nav>
+    <nav class="nav" aria-label="Main navigation"><a href="/axz/en/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>Home</span></a><a href="/axz/en/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>Guestbook</span></a><a href="/axz/en/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>Flight Log</span></a><a href="/axz/en/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>Dispatch</span></a><a href="/axz/en/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>Simulator</span></a><a href="/axz/en/hangar/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>Hangar</span></a><a href="/axz/en/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>Accessibility</span></a></nav>
     <div class="controls">
       <div class="lang">
         <a lang="zh-Hans" hreflang="zh-Hans" href="/axz/sim/vintage/"><svg class="icon icon--flag" aria-hidden="true" focusable="false"><use href="#i-flag-cn"/></svg><span>中文</span></a>
@@ -243,7 +244,7 @@
   </div>
 
   <h2>Controls</h2>
-  <p class="prose">Keyboard or gamepad. A pad is picked up as soon as it is plugged in, and its sticks have a deadzone and a squared curve so fine inputs are easier. The table below is here with or without scripts.</p>
+  <p class="prose">Keyboard or gamepad, and a pad is picked up as soon as it is plugged in. The sticks have a deadzone and a curve, so control is finer. The table below is the key map.</p>
   <table class="bd sim-keys">
     <thead><tr>
       <th scope="col">Action</th>
@@ -548,7 +549,9 @@
 
   
 
+  <p class="record__meta">The 1.0 offline edition is a single web page: unzip it, double-click it, and fly without a connection. ZIP · 0.9 MB</p>
   <p class="btn-row btn-row--foot">
+    <a class="btn" href="/axz/downloads/axz-sim-1.0-offline.zip" download="axz-sim-1.0-offline.zip"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-drop"/></svg>Download 1.0 offline</a>
     <a class="btn" href="/axz/en/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg>Dispatch Desk</a>
     <a class="btn" href="/axz/en/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg>Back to home</a>
   </p>
@@ -556,12 +559,12 @@
 </main>
 <footer class="foot">
   <div class="wrap">
-    <nav class="foot__nav" aria-label="Footer navigation"><a href="/axz/en/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>Home</span></a><a href="/axz/en/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>Guestbook</span></a><a href="/axz/en/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>Flight Log</span></a><a href="/axz/en/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>Dispatch</span></a><a href="/axz/en/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>Simulator</span></a><a href="/axz/en/hangar/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>Hangar</span></a><a href="/axz/en/showroom/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>Showroom</span></a><a href="/axz/en/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>Accessibility</span></a></nav>
+    <nav class="foot__nav" aria-label="Footer navigation"><a href="/axz/en/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>Home</span></a><a href="/axz/en/guestbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-guestbook"/></svg><span>Guestbook</span></a><a href="/axz/en/logbook/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-logbook"/></svg><span>Flight Log</span></a><a href="/axz/en/dispatch/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-dispatch"/></svg><span>Dispatch</span></a><a href="/axz/en/sim/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-fleet"/></svg><span>Simulator</span></a><a href="/axz/en/hangar/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-hangar"/></svg><span>Hangar</span></a><a href="/axz/en/accessibility/"><svg class="icon " aria-hidden="true" focusable="false"><use href="#i-a11y"/></svg><span>Accessibility</span></a></nav>
     <p>Air Xiao Ze (AXZ) © 2026</p>
     <p>A virtual airline. For flight simulation only.</p>
     <p class="foot__credit">Aircraft plan view by Julien.scavini via Wikimedia Commons, CC BY-SA 3.0, cropped and recoloured for this site. <a href="https://commons.wikimedia.org/wiki/File:Boeing_737-800_v1.0.png" rel="license noopener noreferrer" target="_blank">Opens in a new window</a></p>
   </div>
 </footer>
-<script src="/axz/assets/axz.08bd629e.js" defer></script>
+<script src="/axz/assets/axz.d217cd08.js" defer></script>
 </body>
 </html>

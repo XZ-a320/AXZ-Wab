@@ -1,14 +1,15 @@
 /* ==========================================================================
-   AXZ showroom — the sourced models at the resolution they were made in.
+   AXZ hangar — the 3.0 models, at the resolution they were made in.
 
    One renderer, a room environment for the paint to reflect, a shadowed
    floor, orbit controls, and the same rig code the simulator flies with, so
    what moves here moves there. Models arrive through the asset hub from the
-   assets origin; nothing is bundled.
+   assets origin; nothing is bundled. It shares the hangar's mount with the
+   2.0 viewer, and only the one in view draws.
    ========================================================================== */
 import { RiggedAircraft } from './rigged.js'
 
-export function createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader, draco }, mount, labels) {
+export function createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader, draco }, mount, labels, { theme = () => 'night', onUserOrbit = () => {} } = {}) {
   const canvas = document.createElement('canvas')
   /* The stylesheet sizes `.hangar-canvas` to its mount; without the class a
      Retina screen lays the canvas out at its buffer size, twice too big. */
@@ -25,7 +26,6 @@ export function createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
 
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(0x0b0d10)
   const pmrem = new THREE.PMREMGenerator(renderer)
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
 
@@ -33,19 +33,31 @@ export function createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader
   sun.position.set(30, 50, 20); sun.castShadow = true
   sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004
   scene.add(sun, new THREE.HemisphereLight(0xdbe6f5, 0x1a1c20, 0.55))
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(60, 96), new THREE.MeshStandardMaterial({ color: 0x1b1f26, roughness: 0.95, metalness: 0 }))
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x1b1f26, roughness: 0.95, metalness: 0 })
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(60, 96), floorMat)
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true
   scene.add(floor)
 
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 2000)
   const controls = new OrbitControls(camera, canvas)
-  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = Math.PI * 0.49; controls.autoRotate = true; controls.autoRotateSpeed = 0.6
-  canvas.addEventListener('pointerdown', () => { controls.autoRotate = false })
+  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = Math.PI * 0.49; controls.autoRotateSpeed = 0.6
+  /* Grabbing the model stops the turntable, and the page's switch is told so
+     it can say 关 rather than go on claiming the model is turning. */
+  canvas.addEventListener('pointerdown', () => { if (spin) { spin = false; onUserOrbit() } })
+
+  // The 2.0 viewer's two backgrounds, so switching models does not flash the room.
+  const THEMES = { night: { bg: 0x0b0d10, floor: 0x1b1f26 }, day: { bg: 0xe9e4d8, floor: 0xd9d3c5 } }
+  function applyTheme() {
+    const th = THEMES[theme()] || THEMES.night
+    scene.background = new THREE.Color(th.bg)
+    floorMat.color.set(th.floor)
+  }
+  applyTheme()
 
   const loader = new GLTFLoader()
   if (draco) loader.setDRACOLoader(draco)
   let current = null, currentSpec = null
-  let t = 0, motion = true, exercise = true
+  let t = 0, motion = true, exercise = true, spin = true, active = true
 
   /** The box of what is drawn: hidden parts (a packed chute, ground crew) do not frame the shot. */
   function visibleBox(root) {
@@ -93,14 +105,16 @@ export function createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader
 
   let last = performance.now()
   function frame(now) {
+    requestAnimationFrame(frame)
     const dt = Math.min(0.05, (now - last) / 1000); last = now
+    // Hidden behind the 2.0 viewer: keep the clock honest, draw nothing.
+    if (!active) return
     if (motion) t += dt
     if (current && exercise && motion) current.update(fakeState(t), dt, { time: t })
-    controls.autoRotate = controls.autoRotate && motion
+    controls.autoRotate = spin && motion
     controls.update()
     renderer.render(scene, camera)
     handle.frames++
-    requestAnimationFrame(frame)
   }
   function resize() {
     const r = mount.getBoundingClientRect(); const w = Math.max(2, r.width), h = Math.max(240, r.height)
@@ -109,8 +123,9 @@ export function createViewer(THREE, { OrbitControls, RoomEnvironment, GLTFLoader
   window.addEventListener('resize', resize); resize()
   requestAnimationFrame(frame)
 
-  const handle = { renderer, scene, camera, controls, show, frames: 0, get current() { return current },
+  const handle = { renderer, scene, camera, controls, canvas, show, frames: 0, get current() { return current },
     setMotion(on) { motion = on; if (on) last = performance.now() }, setExercise(on) { exercise = on; if (!on && current) current.update(fakeState(0), 0, { time: 0 }) },
+    setAutoRotate(on) { spin = on }, setActive(on) { active = on; canvas.hidden = !on; if (on) resize() }, applyTheme,
     dispose() { renderer.dispose() } }
   return handle
 }

@@ -45,7 +45,9 @@
         stage.setAttribute('data-hangar-state', 'failed')
         return
       }
-      say('')
+      // The page now owns the status line: it may already say a model is
+      // downloading, and that must not be wiped by the loader finishing.
+      if (status && status.textContent === labels.loading) say('')
       stage.setAttribute('data-hangar-state', 'running')
     }).catch(function (err) {
       say(labels.failed, 'error')

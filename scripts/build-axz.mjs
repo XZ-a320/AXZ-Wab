@@ -12,6 +12,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
 import { parseGlb, summarize } from './assets/inspect-glb.mjs'
+import { inlineModules, zip } from './offline.mjs'
 import {
   airframe, sideview, TYPES, scaleBase,
   SIM_TYPES, AXZ_ORDER, SIM_ONLY, FLAP_SETS, liftSlope, speedsFor,
@@ -89,12 +90,12 @@ const cssBundle = ['tokens', 'base', 'ledger', 'plate', 'pages', 'panels']
   .map(f => readFileSync(join(SRC, 'css', `${f}.css`), 'utf8')).join('\n')
 // Each file is wrapped in its own block and terminated, so one file can never
 // be parsed as a call on the previous file's trailing expression.
-const jsBundle = ['site', 'axzlog', 'panels', 'simload', 'hangarload', 'showroomload']
+const jsBundle = ['site', 'axzlog', 'panels', 'simload', 'hangarload']
   .map(f => `;(function(){\n${readFileSync(join(SRC, 'js', `${f}.js`), 'utf8')}\n})();`).join('\n')
 
 // Guard the same failure inside a single file: an IIFE that follows another
 // with no separating semicolon parses cleanly and throws at runtime.
-for (const f of ['site', 'axzlog', 'panels', 'simload', 'hangarload', 'showroomload']) {
+for (const f of ['site', 'axzlog', 'panels', 'simload', 'hangarload']) {
   const src = readFileSync(join(SRC, 'js', `${f}.js`), 'utf8')
   if (/\}\)\(\)\s*(?:\/\*[\s\S]*?\*\/)?\s*\(function/.test(src)) {
     console.error(`✗ ${f}.js: an IIFE follows another with no separating semicolon — this throws at runtime`)
@@ -173,21 +174,8 @@ const LICENSE_URLS = {
   'GPL-2.0-or-later': 'https://www.gnu.org/licenses/old-licenses/gpl-2.0.html', 'GPL-3.0-or-later': 'https://www.gnu.org/licenses/gpl-3.0.html',
   'ODbL': 'https://opendatacommons.org/licenses/odbl/1-0/', 'Copernicus': 'https://sentinels.copernicus.eu/documents/247904/690755/Sentinel_Data_Legal_Notice',
 }
-/* --- Showroom ------------------------------------------------------------
-   The 3.0 models, viewed. Its own hashed directory: the viewer and entry are
-   its own; the rig, rigged aeroplane and asset hub are the simulator's, copied
-   in, so what moves in the showroom moves the same way on the runway. The
-   model list is read from the published index so the page can never name a
-   model the origin does not serve. */
-const SHOWROOM_OWN = ['boot', 'viewer']
-const showroomFiles = [
-  ...SHOWROOM_OWN.map(f => [f, readFileSync(join(SRC, 'js', 'showroom', `${f}.js`), 'utf8')]),
-  ...['rig', 'rigged', 'assets'].map(f => [f, readFileSync(join(SRC, 'js', 'sim3', `${f}.js`), 'utf8')]),
-]
-const showroomDir = `showroom-${hash(showroomFiles.map(f => f[1]).join('\n'))}`
-mkdirSync(join(OUT, 'assets', showroomDir), { recursive: true })
-for (const [f, src] of showroomFiles) writeFileSync(join(OUT, 'assets', showroomDir, `${f}.js`), src)
-const SHOWROOM_ENTRY = `${BASE}/assets/${showroomDir}/boot.js`
+/* The published model index. The hangar's 3.0 models are read from it so the
+   page can never name a model the origin does not serve. */
 const ASSET_INDEX = existsSync(join(ASSETS_REPO, 'public', 'index.json'))
   ? JSON.parse(readFileSync(join(ASSETS_REPO, 'public', 'index.json'), 'utf8')) : { assets: {}, credits: [] }
 /* Fleet types that have a sourced exterior in the published index. */
@@ -206,15 +194,23 @@ const creditLine = cr => {
 }
 
 /* --- Hangar ---------------------------------------------------------------
-   The 3D fleet viewer. Same arrangement as the simulator: ES modules in a
-   directory that carries the hash. Three.js itself comes from a CDN through
-   an import map, pinned to one version, and only the hangar page carries the
-   map — no other document loads a byte of it. */
-const HANGAR_FILES = ['models', 'viewer', 'boot']
-const hangarSources = HANGAR_FILES.map(f => readFileSync(join(SRC, 'js', 'hangar', `${f}.js`), 'utf8'))
+   The 3D fleet viewer, and since 2026-09-29 the showroom too: every type in
+   one picker, each with its 2.0 procedural model and, where one exists, the
+   3.0 sourced model the simulator flies. Same arrangement as the simulator:
+   ES modules in a directory that carries the hash. The rig, rigged aeroplane
+   and asset hub are the simulator's, copied in, so what moves here moves the
+   same way on the runway. Three.js itself comes from a CDN through an import
+   map, pinned to one version, and only the hangar and simulator pages carry
+   the map. */
+const HANGAR_FILES = ['models', 'viewer', 'boot', 'gltf']
+const hangarSources = [
+  ...HANGAR_FILES.map(f => readFileSync(join(SRC, 'js', 'hangar', `${f}.js`), 'utf8')),
+  ...['rig', 'rigged', 'assets'].map(f => readFileSync(join(SRC, 'js', 'sim3', `${f}.js`), 'utf8')),
+]
+const hangarNames = [...HANGAR_FILES, 'rig', 'rigged', 'assets']
 const hangarDir = `hangar-${hash(hangarSources.join('\n'))}`
 mkdirSync(join(OUT, 'assets', hangarDir), { recursive: true })
-HANGAR_FILES.forEach((f, i) => writeFileSync(join(OUT, 'assets', hangarDir, `${f}.js`), hangarSources[i]))
+hangarNames.forEach((f, i) => writeFileSync(join(OUT, 'assets', hangarDir, `${f}.js`), hangarSources[i]))
 const HANGAR_ENTRY = `${BASE}/assets/${hangarDir}/boot.js`
 const THREE_VERSION = '0.170.0'
 const THREE_CDN = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}`
@@ -346,7 +342,6 @@ const PAGES = [
   { key: 'simvintage', zhPath: 'sim/vintage', enPath: 'en/sim/vintage' },
   { key: 'sim3', zhPath: 'sim/v3', enPath: 'en/sim/v3' },
   { key: 'hangar', zhPath: 'hangar', enPath: 'en/hangar' },
-  { key: 'showroom', zhPath: 'showroom', enPath: 'en/showroom' },
   { key: 'accessibility', zhPath: 'accessibility', enPath: 'en/accessibility' },
   { key: 'aprilfools', zhPath: 'aprilfools', enPath: 'en/aprilfools' },
 ]
@@ -362,16 +357,17 @@ function shell({ c, lang, key, title, desc, body, noindex = false, head = '' }) 
   const otherCat = lang === 'zh-Hans' ? en : zh
   const P = s => parts(s, lang)
 
-  const NAV_ICON = { home: 'i-home', guestbook: 'i-guestbook', logbook: 'i-logbook', dispatch: 'i-dispatch', sim: 'i-fleet', hangar: 'i-hangar', showroom: 'i-hangar', accessibility: 'i-a11y' }
-  const nav = ['home', 'guestbook', 'logbook', 'dispatch', 'sim', 'hangar', 'showroom', 'accessibility'].map(k =>
+  const NAV_ICON = { home: 'i-home', guestbook: 'i-guestbook', logbook: 'i-logbook', dispatch: 'i-dispatch', sim: 'i-fleet', hangar: 'i-hangar', accessibility: 'i-a11y' }
+  const nav = ['home', 'guestbook', 'logbook', 'dispatch', 'sim', 'hangar', 'accessibility'].map(k =>
     `<a href="${urlFor(k, lang)}"${k === key ? ' aria-current="page"' : ''}>${icon(NAV_ICON[k])}<span>${P(c.nav[k])}</span></a>`
   ).join('')
 
   return `<!DOCTYPE html>
-<html lang="${lang}" class="no-js">
+<html lang="${lang}" class="no-js" data-theme="night">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{if(localStorage.getItem('axz-theme')==='day')document.documentElement.setAttribute('data-theme','day')}catch(e){}</script>
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
 ${noindex ? '<meta name="robots" content="noindex, nofollow">' : ''}
@@ -1195,7 +1191,7 @@ function dispatchPage(c, lang) {
    The aircraft table handed to the engine is the SAME one that draws the plan
    views in sector 02. The thing you fly is dimensioned from the figures the
    fleet page publishes.                                                      */
-function simPage(c, lang, version = '2.0') {
+function simPage(c, lang, version = '2.0', { offline = false } = {}) {
   const P = s => parts(s, lang), S = c.sim, LG = c.landing
   const modern = version !== 'classic'          // 2.0, vintage and 3.0 share the 2.0 controls, weathers and flags
   const v3 = version === '3.0'
@@ -1567,7 +1563,9 @@ function simPage(c, lang, version = '2.0') {
       ? `<ul>${CREDITS.map(creditLine).join('')}</ul>`
       : `<p>${esc(S.creditsNone)}</p>`}</details>` : ''}
 
+  ${offline ? '' : `<p class="record__meta">${esc(S.offlineNote)} ZIP · ${OFFLINE.mb} MB</p>`}
   <p class="btn-row btn-row--foot">
+    ${offline ? '' : `<a class="btn" href="${OFFLINE.url}" download="${OFFLINE_FILE}">${icon('i-drop')}${esc(S.offlineLink)}</a>`}
     <a class="btn" href="${urlFor('dispatch', lang)}">${icon('i-dispatch')}${esc(c.dispatch.title)}</a>
     <a class="btn" href="${urlFor('home', lang)}">${icon('i-home')}${esc(S.backHome)}</a>
   </p>
@@ -1582,26 +1580,60 @@ function simPage(c, lang, version = '2.0') {
 }
 
 /* --- Hangar -----------------------------------------------------------------
-   The roster handed to the viewer is built from the SAME rows the simulator
-   flies and the fleet page draws, plus a helicopter and the drawing flags a
-   3D model needs and a flight model does not. Names for the airline's four
-   come from the catalogue, so they read the same as everywhere else. */
+   One roster for every type the site draws: the airline's four first, then
+   the guests. Each carries its FULL spec row (the same row the simulator
+   flies and the fleet page draws, plus the drawing flags a 3D model needs),
+   so the 2.0 model here is the 2.0 model in the air. Names for the airline's
+   four come from the catalogue, so they read the same as everywhere else.
+
+   Each type then lists its models, 3.0 first. The first 3.0 model is the one
+   the simulator flies (hub.modelFor's rule: an exact `exterior` part, then a
+   part that includes it); a second source is offered when there is one. Two
+   files from the same source would read as the same button twice, so each
+   source appears once, in the curated order below. */
+const HANGAR_ROSTER = [...AXZ_ORDER, 'b744', 'conc', 'h145', ...SIM_ONLY.filter(id => !['b744', 'conc'].includes(id))]
+const SOURCE_RANK = ['b789-exterior', 'b744-exterior', 'a321-exterior', 'b738-exterior-alt', 'g650-exterior', 'b2-exterior', 'f22-exterior', 'f35-exterior', 'b52-exterior', 'b738-exterior', 'c172-fg', 'f16-fg', 'conc-fg', 'a32x-fg', 'b738-fg', 'b789-fg', 'b744-fg', 'f22-fg']
+const sourceKey = a => /sketchfab\.com/.test(a.source || '') ? 'sketchfab' : 'fg'
+function flownModel(type) {
+  const hits = Object.entries(ASSET_INDEX.assets).filter(([, a]) => a.kind === 'model' && (a.types || []).includes(type))
+  const hit = hits.find(([, a]) => (a.part || '') === 'exterior') || hits.find(([, a]) => (a.part || '').split('+').includes('exterior')) || hits.find(([, a]) => (a.part || '').includes('exterior'))
+  return hit ? hit[0] : null
+}
+function modelVariant(id, spec) {
+  const a = ASSET_INDEX.assets[id]
+  const cr = ASSET_INDEX.credits.find(x => x.id === id) || {}
+  let stats = { parts: null, triangles: null, textures: null, animations: null }
+  const glbPath = join(ASSETS_REPO, 'public', a.url)
+  if (existsSync(glbPath)) {
+    const { json } = parseGlb(readFileSync(glbPath))
+    const sm = summarize(json)
+    const rig = json.asset && json.asset.extras && json.asset.extras.axzRig
+    stats = { parts: sm.nodeNames.filter(n => n.startsWith('part:')).length, triangles: sm.triangles, textures: sm.images, animations: rig ? rig.parts.reduce((n, p) => n + p.animations.length, 0) : 0 }
+  }
+  return { key: sourceKey(a), id, bytes: a.bytes, url: a.url, types: a.types, title: cr.title || id, author: cr.author, authorUrl: cr.authorUrl, license: a.license, source: a.source, modified: cr.modified,
+    spec: { len: spec.len, span: spec.span, dia: spec.dia, h: spec.h, engines: spec.engines, track: spec.track, name: spec.name },
+    ...stats, creditHtml: creditLine({ ...cr, license: a.license, source: a.source }).replace(/^<li>|<\/li>$/g, '') }
+}
 function hangarRoster(c) {
   const roster = {}
-  for (const id of HANGAR_ORDER) {
+  for (const id of HANGAR_ROSTER) {
     const t = SIM_TYPES[id] || ROTORCRAFT[id]
     if (!t) continue
     const flags = HANGAR_FLAGS[id] || {}
-    roster[id] = {
-      id, kind: flags.kind || t.kind || 'airliner',
+    const spec = {
+      ...t, ...flags, id, kind: flags.kind || t.kind || 'airliner',
       name: t.axz ? c.fleet[id].name : t.name,
       reg: t.axz ? c.fleet[id].reg : (t.reg || ''),
       axz: !!t.axz,
-      len: t.len, span: t.span, dia: t.dia, h: t.h, engines: t.engines,
-      mass: t.mass, wingArea: t.wingArea, track: t.track,
-      ...flags,
       note: c.hangar.notes[id] || '',
     }
+    const flown = flownModel(id)
+    const ids = [flown, ...SOURCE_RANK.filter(m => m !== flown && ASSET_INDEX.assets[m] && (ASSET_INDEX.assets[m].types || []).includes(id) && /exterior/.test(ASSET_INDEX.assets[m].part || ''))].filter(Boolean)
+    const seen = new Set()
+    const variants = []
+    for (const m of ids) { const v = modelVariant(m, spec); if (seen.has(v.key)) continue; seen.add(v.key); variants.push(v) }
+    variants.push({ key: 'procedural' })
+    roster[id] = { ...spec, variants }
   }
   return roster
 }
@@ -1609,22 +1641,38 @@ function hangarRoster(c) {
 function hangarPage(c, lang) {
   const P = s => parts(s, lang), H = c.hangar
   const roster = hangarRoster(c)
-  const labels = { loading: H.loading, unsupported: H.unsupported, failed: H.failed, canvas: H.canvas }
-  const picks = HANGAR_ORDER.filter(id => roster[id]).map((id, i) => {
+  const labels = {
+    loading: H.loading, unsupported: H.unsupported, failed: H.failed, canvas: H.canvas,
+    downloading: H.downloading, offline: H.offline, unsupported3: H.unsupported3, failed3: H.failed3,
+    variants: H.variants, noDownload: H.noDownload, creditProcedural: H.creditProcedural,
+    on: c.sim.hud.on, off: c.sim.hud.off,
+  }
+  const ids = HANGAR_ROSTER.filter(id => roster[id])
+  const picks = ids.map((id, i) => {
     const t = roster[id]
-    return `<button class="btn hangar-pick" type="button" data-hangar-pick="${id}" aria-pressed="${i === 0 ? 'true' : 'false'}">${P(t.name)}${t.reg ? ` <span class="code">${esc(t.reg)}</span>` : ''}<span class="ros-tag${t.axz ? ' is-own' : ''}">${P(t.axz ? H.tagOwn : H.tagGuest)}</span></button>`
+    const has3 = t.variants.length > 1
+    return `<button class="btn hangar-pick" type="button" data-hangar-pick="${id}" aria-pressed="${i === 0 ? 'true' : 'false'}">${P(t.name)}${t.reg ? ` <span class="code">${esc(t.reg)}</span>` : ''}<span class="ros-tag${t.axz ? ' is-own' : ''}">${P(t.axz ? H.tagOwn : H.tagGuest)}${has3 ? ' · 3.0' : ''}</span></button>`
   }).join('')
-  const first = roster[HANGAR_ORDER[0]]
-  const fields = ['type', 'reg', 'length', 'span', 'height', 'engines', 'mass']
+  const first = roster[ids[0]]
+  const v0 = first.variants[0]
+  const variantBtns = first.variants.map((v, i) =>
+    `<button class="btn hangar-variant" type="button" data-hangar-variant="${i}" aria-pressed="${i === 0 ? 'true' : 'false'}">${esc(H.variants[v.key])}</button>`).join('')
+  const moving = v0.key !== 'procedural' && v0.animations > 0
+  const fields = ['type', 'reg', 'length', 'span', 'height', 'engines', 'mass', 'model', 'triangles', 'animated', 'size']
   const initial = {
     type: first.name, reg: first.reg || '—', length: `${first.len.toFixed(2)} m`, span: `${first.span.toFixed(2)} m`,
     height: `${first.h.toFixed(2)} m`, engines: first.engineNote || String(first.engines),
     mass: first.mass ? `${(first.mass / 1000).toFixed(first.mass < 10000 ? 2 : 0)} t` : '—',
+    model: H.variants[v0.key],
+    triangles: v0.key === 'procedural' ? '—' : (v0.triangles ?? 0).toLocaleString('en-US'),
+    animated: v0.key === 'procedural' || !v0.animations ? '—' : String(v0.animations),
+    size: v0.key === 'procedural' ? H.noDownload : `${(v0.bytes / 1048576).toFixed(1)} MB`,
   }
   const cells = fields.map(k => `<div class="sim-cell">
     <span class="sim-cell__k">${esc(H.fields[k])}</span>
     <span class="sim-cell__v code" data-hangar-field="${k}">${esc(initial[k])}</span>
   </div>`).join('')
+  const tog = (attr, text, hidden) => `<button class="btn sim-tog" type="button" ${attr} aria-pressed="true"${hidden ? ' hidden' : ''}>${esc(text)}<span class="sim-tog__st" data-on="true">${esc(c.sim.hud.on)}</span></button>`
   const body = `
 <section class="sector wrap">
   <h1>${P(H.title)}</h1>
@@ -1633,7 +1681,8 @@ function hangarPage(c, lang) {
 
   <div class="hangar" data-hangar-stage
        data-hangar-src="${esc(HANGAR_ENTRY)}"
-       data-hangar-initial="${esc(HANGAR_ORDER[0])}"
+       data-hangar-assets="${esc(ASSETS_ORIGIN)}"
+       data-hangar-initial="${esc(ids[0])}"
        data-hangar-labels="${esc(JSON.stringify(labels))}"
        data-hangar-roster="${esc(JSON.stringify(roster))}">
     <div class="hangar-picker" role="group" aria-label="${esc(H.pickLabel)}">${picks}</div>
@@ -1641,96 +1690,32 @@ function hangarPage(c, lang) {
     <div class="hangar-stage" data-hangar-mount>
       <noscript><p class="hangar-nojs">${P(H.unsupported)}</p></noscript>
     </div>
+    <div class="hangar-bar">
+      <span class="record__label" id="hangar-variant-label">${esc(H.variantLabel)}</span>
+      <div class="hangar-variants" role="group" aria-labelledby="hangar-variant-label" data-hangar-variants>${variantBtns}</div>
+      <div class="hangar-toggles">${tog('data-hangar-spin', H.autorotate)}${tog('data-hangar-exercise', H.exercise, !moving)}</div>
+    </div>
     <p class="record__meta">${P(H.hint)}</p>
+    <p class="record__meta" data-hangar-exhint${moving ? '' : ' hidden'}>${P(H.exerciseHint)}</p>
     <div class="sim-grid hangar-readout">${cells}</div>
     <p class="prose hangar-desc" data-hangar-desc>${P(first.note)}</p>
+    <h2>${esc(H.creditTitle)}</h2>
+    <p class="prose" data-hangar-credit>${v0.key === 'procedural' ? esc(H.creditProcedural) : v0.creditHtml}</p>
   </div>
+
+  <h2>${esc(H.about3Title)}</h2>
+  <p class="prose">${P(H.about3Body)}</p>
 
   <h2>${esc(H.aboutTitle)}</h2>
   <p class="prose">${P(H.aboutBody)}</p>
 
   <p class="btn-row btn-row--foot">
+    <a class="btn" href="${urlFor('sim3', lang)}">${icon('i-fleet')}${esc(H.openSim)}</a>
     <a class="btn" href="${BASE}/hangar/h145.html" hreflang="en">${icon('i-hangar')}${esc(H.standalone)}</a>
-    <a class="btn" href="${urlFor('sim', lang)}">${icon('i-fleet')}${esc(c.sim.title)}</a>
     <a class="btn" href="${urlFor('home', lang)}">${icon('i-home')}${esc(H.backHome)}</a>
   </p>
 </section>`
   return shell({ c, lang, key: 'hangar', title: `${H.title} — ${c.meta.siteName}`, desc: H.intro, body, head: IMPORT_MAP })
-}
-
-/* --- Showroom -------------------------------------------------------------
-   The sourced models, each named with its author and licence, in a curated
-   order: the airline's own type first, then the best-built of the rest. */
-const SHOWROOM_ORDER = ['b789-exterior', 'b744-exterior', 'a321-exterior', 'b738-exterior-alt', 'g650-exterior', 'b2-exterior', 'f22-exterior', 'f35-exterior', 'b52-exterior', 'b738-exterior', 'c172-fg', 'f16-fg', 'conc-fg', 'a32x-fg', 'b738-fg', 'b789-fg', 'b744-fg', 'f22-fg', 'f35-fg']
-function showroomModels(c) {
-  const out = []
-  for (const id of SHOWROOM_ORDER) {
-    const a = ASSET_INDEX.assets[id]
-    if (!a || a.kind !== 'model') continue
-    const cr = ASSET_INDEX.credits.find(x => x.id === id) || {}
-    const type = (a.types || [])[0]
-    const t = SIM_TYPES[type] || {}
-    let stats = { parts: null, triangles: null, textures: null, animations: null }
-    const glbPath = join(ASSETS_REPO, 'public', a.url)
-    if (existsSync(glbPath)) {
-      const { json } = parseGlb(readFileSync(glbPath))
-      const sm = summarize(json)
-      const rig = json.asset && json.asset.extras && json.asset.extras.axzRig
-      stats = { parts: sm.nodeNames.filter(n => n.startsWith('part:')).length, triangles: sm.triangles, textures: sm.images, animations: rig ? rig.parts.reduce((n, p) => n + p.animations.length, 0) : 0 }
-    }
-    out.push({ id, bytes: a.bytes, url: a.url, types: a.types, title: cr.title || id, author: cr.author, authorUrl: cr.authorUrl, license: a.license, source: a.source, modified: cr.modified,
-      name: t.axz ? c.fleet[type].name : t.name, reg: t.axz ? c.fleet[type].reg : t.reg, axz: !!t.axz,
-      spec: { len: t.len, span: t.span, dia: t.dia, h: t.h, engines: t.engines, track: t.track, name: t.name },
-      ...stats, creditHtml: creditLine({ ...cr, license: a.license, source: a.source }).replace(/^<li>|<\/li>$/g, '') })
-  }
-  return out
-}
-function showroomPage(c, lang) {
-  const P = s => parts(s, lang), R = c.showroom
-  const models = showroomModels(c)
-  const labels = { loading: R.loading, offline: R.offline, unsupported: R.unsupported, failed: R.failed, canvasLabel: R.canvas }
-  const picks = models.map((m, i) => `<button class="btn hangar-pick" type="button" data-showroom-pick="${esc(m.id)}" aria-pressed="${i === 0 ? 'true' : 'false'}">${P(m.name)}${m.reg ? ` <span class="code">${esc(m.reg)}</span>` : ''}<span class="ros-tag${m.axz ? ' is-own' : ''}">${esc(R.tagNew)} · ${esc(m.license)}</span></button>`).join('')
-  const first = models[0]
-  const fields = ['length', 'parts', 'triangles', 'animated', 'textures', 'size']
-  const initial = first ? { length: `${first.spec.len.toFixed(2)} m`, parts: String(first.parts ?? '—'), triangles: (first.triangles ?? 0).toLocaleString('en-US'), animated: String(first.animations ?? '—'), textures: String(first.textures ?? '—'), size: `${(first.bytes / 1048576).toFixed(1)} MB` } : {}
-  const cells = fields.map(k => `<div class="sim-cell"><span class="sim-cell__k">${esc(R.fields[k])}</span><span class="sim-cell__v code" data-showroom-field="${k}">${esc(initial[k] || '—')}</span></div>`).join('')
-  const body = `
-<section class="sector wrap">
-  <h1>${P(R.title)}</h1>
-  <p class="record__meta">${esc(R.headerSub)}</p>
-  <p class="prose">${P(R.intro)}</p>
-
-  <div class="hangar" data-showroom-stage
-       data-showroom-src="${esc(SHOWROOM_ENTRY)}"
-       data-showroom-assets="${esc(ASSETS_ORIGIN)}"
-       data-showroom-initial="${esc(first ? first.id : '')}"
-       data-showroom-labels="${esc(JSON.stringify(labels))}"
-       data-showroom-models="${esc(JSON.stringify(models))}">
-    <div class="hangar-picker" role="group" aria-label="${esc(R.pickLabel)}">${picks}</div>
-    <p class="status" role="status" data-showroom-status></p>
-    <div class="hangar-stage" data-showroom-mount>
-      <noscript><p class="hangar-nojs">${P(R.unsupported)}</p></noscript>
-    </div>
-    <p class="record__meta">${P(R.hint)}</p>
-    <p class="btn-row">
-      <button class="btn" type="button" data-showroom-motion aria-pressed="true">${esc(R.motion)}</button>
-      <button class="btn" type="button" data-showroom-rig aria-pressed="true">${esc(R.rig)}</button>
-    </p>
-    <div class="sim-grid hangar-readout">${cells}</div>
-    <h2>${esc(R.creditTitle)}</h2>
-    <p class="prose" data-showroom-credit>${first ? first.creditHtml : ''}</p>
-  </div>
-
-  <h2>${esc(R.aboutTitle)}</h2>
-  <p class="prose">${P(R.aboutBody)}</p>
-
-  <p class="btn-row btn-row--foot">
-    <a class="btn" href="${urlFor('sim3', lang)}">${icon('i-fleet')}${esc(R.openSim)}</a>
-    <a class="btn" href="${urlFor('hangar', lang)}">${icon('i-hangar')}${esc(c.hangar.title)}</a>
-    <a class="btn" href="${urlFor('home', lang)}">${icon('i-home')}${esc(R.backHome)}</a>
-  </p>
-</section>`
-  return shell({ c, lang, key: 'showroom', title: `${R.title} — ${c.meta.siteName}`, desc: R.intro, body, head: IMPORT_MAP })
 }
 
 /* --- Accessibility -------------------------------------------------------- */
@@ -1799,8 +1784,51 @@ function aprilfools(c, lang) {
   })
 }
 
+/* --- Simulator 1.0, offline -------------------------------------------------
+   The owner asked for a 1.0 that runs from a download (2026-09-29). It is the
+   archive page itself, made whole: stylesheet, fonts, wordmarks, the ten
+   warning recordings and the engine all inlined into one HTML file per
+   language, so double-clicking it opens a working simulator with no network.
+   The engine is the same fifteen files the archive page imports, joined by
+   inlineModules because a page opened from disk may not import modules.
+   Links to the rest of the site become absolute, and the language switch
+   points at the other file in the same zip. */
+const OFFLINE_FILE = 'axz-sim-1.0-offline.zip'
+const OFFLINE_NAMES = { 'zh-Hans': 'AXZ-Sim-1.0-zh.html', en: 'AXZ-Sim-1.0-en.html' }
+let OFFLINE = null
+{
+  const dataUri = (file, type) => `data:${type};base64,${readFileSync(file).toString('base64')}`
+  const safe = js => js.replace(/<\/(script)/gi, '<\\/$1')
+  const engine = inlineModules(SIM_FILES.map((f, i) => [f, simSources[i]]), 'boot')
+  const audio = Object.fromEntries(audioFiles.map(f => [f, dataUri(join(audioSrc, f), 'audio/mp4')]))
+  /* sound.js fetches AUDIO_BASE + name. Offline the base is a marker, and
+     fetch answers it from the inlined recordings; everything else passes. */
+  const shim = `(function(){var A=${JSON.stringify(audio)};var f=window.fetch.bind(window);window.fetch=function(u,o){if(typeof u==='string'&&u.indexOf('axz-audio:')===0){var d=A[u.slice(10)];return d?f(d):Promise.reject(new Error('missing '+u))}return f(u,o)}})();`
+  const files = []
+  for (const [lang, c] of [['zh-Hans', zh], ['en', en]]) {
+    const other = lang === 'en' ? 'zh-Hans' : 'en'
+    let html = simPage(c, lang, 'classic', { offline: true })
+    const swap = (a, b) => { if (!html.includes(a)) { console.error(`✗ offline 1.0: "${a.slice(0, 60)}" not found`); process.exit(1) } html = html.split(a).join(b) }
+    swap(`<link rel="stylesheet" href="${BASE}/assets/${cssName}">`, `<style>${cssBundle}</style>`)
+    html = html.replace(/<link rel="preload" as="font"[^>]*>\n?/g, '')
+    for (const f of fonts) html = html.split(`url("${BASE}/fonts/${f}")`).join(`url("${dataUri(join(fontDir, f), 'font/woff2')}")`)
+    for (const f of ['wordmark-light.webp', 'wordmark-dark.webp']) swap(`src="${BASE}/img/${f}"`, `src="${dataUri(join(imgSrc, f), 'image/webp')}"`)
+    swap(`data-sim-audio="${esc(AUDIO_BASE)}"`, 'data-sim-audio="axz-audio:"')
+    swap(`<script src="${BASE}/assets/${jsName}" defer></script>`,
+      `<script>${safe(shim)}\nwindow.AXZ_OFFLINE_ENGINE = ${safe(engine)};\n${safe(jsBundle)}</script>`)
+    swap(`href="${urlFor('simclassic', other)}"`, `href="${OFFLINE_NAMES[other]}"`)
+    swap(`href="${urlFor('simclassic', lang)}"`, `href="${OFFLINE_NAMES[lang]}"`)
+    html = html.replace(/(href|src)="\/axz\//g, '$1="https://xiaobrook.com/axz/').replace(/url\("\/axz\//g, 'url("https://xiaobrook.com/axz/')
+    if (/(?:href|src)="\/(?!\/)/.test(html)) { console.error('✗ offline 1.0: a root-relative URL is left in the page'); process.exit(1) }
+    files.push({ name: OFFLINE_NAMES[lang], data: Buffer.from(html) })
+  }
+  const bytes = zip(files)
+  writeFileSync(join(OUT, 'downloads', OFFLINE_FILE), bytes)
+  OFFLINE = { url: `${BASE}/downloads/${OFFLINE_FILE}`, mb: (bytes.length / 1048576).toFixed(1), bytes: bytes.length }
+}
+
 /* --- Emit ----------------------------------------------------------------- */
-const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, sim: simPage, simclassic: (c, lang) => simPage(c, lang, 'classic'), simvintage: (c, lang) => simPage(c, lang, 'vintage'), sim3: (c, lang) => simPage(c, lang, '3.0'), hangar: hangarPage, showroom: showroomPage, accessibility: a11y, aprilfools }
+const RENDER = { home, guestbook, logbook, dispatch: dispatchPage, sim: simPage, simclassic: (c, lang) => simPage(c, lang, 'classic'), simvintage: (c, lang) => simPage(c, lang, 'vintage'), sim3: (c, lang) => simPage(c, lang, '3.0'), hangar: hangarPage, accessibility: a11y, aprilfools }
 let count = 0
 for (const p of PAGES) {
   for (const [lang, cat, sub] of [['zh-Hans', zh, p.zhPath], ['en', en, p.enPath]]) {
@@ -1809,6 +1837,20 @@ for (const p of PAGES) {
     writeFileSync(join(dir, 'index.html'), RENDER[p.key](cat, lang))
     count++
   }
+}
+
+/* The showroom was folded into the hangar on 2026-09-29 at the owner's
+   request. Its old addresses still land somewhere: the parent site redirects
+   them with a 308, and these stubs cover any server that does not. */
+for (const [sub, lang] of [['showroom', 'zh-Hans'], ['en/showroom', 'en']]) {
+  const to = urlFor('hangar', lang)
+  mkdirSync(join(OUT, sub), { recursive: true })
+  writeFileSync(join(OUT, sub, 'index.html'), `<!DOCTYPE html>
+<html lang="${lang}"><head><meta charset="utf-8"><meta name="robots" content="noindex">
+<link rel="canonical" href="https://xiaobrook.com${to}"><meta http-equiv="refresh" content="0; url=${to}">
+<title>${esc((lang === 'en' ? en : zh).hangar.docTitle)}</title></head>
+<body><p><a href="${to}">${esc((lang === 'en' ? en : zh).hangar.title)}</a></p></body></html>
+`)
 }
 
 /* --- The H145 on its own ----------------------------------------------------

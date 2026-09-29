@@ -170,7 +170,15 @@
 没有 WebGL2 转到 1.0，都不会先下 3.0 引擎。2.0 原样保留在 `/axz/sim/vintage/`，
 1.0 在 `/axz/sim/classic/`；`/axz/sim/` 在 3.0 完工前仍是 2.0。
 素材库部署后用 `node scripts/check-axz-assets-live.mjs https://<origin>` 从外部核对：索引可达、每个文件的大小与索引一致、CORS、缓存头。
-每个 FlightGear 机包一条命令：`node scripts/assets/fg-build.mjs <id> <root.xml> <packageRoot> derived/models/<id> [--exclude=…] [--textures=<重绘目录>]`，读 XML 里的绑定、转换每个 .ac、拼成一个带绑定的 GLB；`<condition>`、`<property alias>`、容器 XML 的 select、procedural_light 面片和过大的灯光体都在代码里处理，真实航司或厂家涂装用 `neutralise-livery.mjs` 抹掉并记入清单。陈列室在 `/axz/showroom/`（`axz-src/js/showroom/`），3.0 选机器把每一型标成「3.0 机模」或「2.0 机模」。
+每个 FlightGear 机包一条命令：`node scripts/assets/fg-build.mjs <id> <root.xml> <packageRoot> derived/models/<id> [--exclude=…] [--textures=<重绘目录>]`，读 XML 里的绑定、转换每个 .ac、拼成一个带绑定的 GLB；`<condition>`、`<property alias>`、容器 XML 的 select、procedural_light 面片和过大的灯光体都在代码里处理，真实航司或厂家涂装用 `neutralise-livery.mjs` 抹掉并记入清单。3.0 机模在机库 `/axz/hangar/` 里看（`axz-src/js/hangar/`），3.0 选机器把每一型标成「3.0 机模」或「2.0 机模」。
+
+## 2026-09-29 按站长的建议改的几处
+
+- **陈列室并进机库。** 一个选机器，十六型；每一型在画面下面切换机模：3.0 · FlightGear、3.0 · Sketchfab（有的话）、2.0 · 程序生成。旧的 `/axz/showroom/` 转到机库。
+- **「绑定」换成两个说得清的开关。** 「自动旋转 开/关」和「部件演示 开/关」，状态直接写在按钮上；部件演示只在有动画文件的 3.0 机模上出现，下面一行写明演示的是什么。
+- **1.0 离线版。** 模拟器各页底部有「下载 1.0 离线版」。构建把 1.0 存档页连同样式、字体、警告录音和引擎打进一个网页文件（中英各一个，装在一个 zip 里），解压后双击就能飞，不用联网。浏览器不许从本地文件加载模块，所以引擎由 `scripts/offline.mjs` 的 `inlineModules` 合成一段普通脚本。
+- **默认黑夜。** 所有设备打开都是夜间；自己切到白天后会记住。
+- **操作方式那一句** 改成站长给的原话。
 
 ## 目录
 

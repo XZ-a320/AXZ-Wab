@@ -9,7 +9,11 @@
   var root = document.documentElement
   root.classList.remove('no-js')
 
-  /* --- Theme ------------------------------------------------------------- */
+  /* --- Theme -------------------------------------------------------------
+     Night on every device until the reader says otherwise (the owner's
+     call, 2026-09-29): the build writes data-theme="night" on <html>, so
+     even with scripts off the page opens dark. A saved "day" is applied by
+     one line in <head> before first paint; this repeats it for safety. */
   var THEME_KEY = 'axz-theme'
   try {
     var saved = localStorage.getItem(THEME_KEY)
@@ -815,7 +819,10 @@
 
     choose.then(function (entry) {
       if (!entry) return null
-      return import(entry).then(function (mod) {
+      /* The 1.0 offline edition carries its engine inline, because a page
+         opened from disk may not import module files. */
+      var local = window.AXZ_OFFLINE_ENGINE
+      return (local ? Promise.resolve(local) : import(entry)).then(function (mod) {
         return mod.boot({
         stage: stage,
         labels: labels,
@@ -898,7 +905,9 @@
         stage.setAttribute('data-hangar-state', 'failed')
         return
       }
-      say('')
+      // The page now owns the status line: it may already say a model is
+      // downloading, and that must not be wiped by the loader finishing.
+      if (status && status.textContent === labels.loading) say('')
       stage.setAttribute('data-hangar-state', 'running')
     }).catch(function (err) {
       say(labels.failed, 'error')
@@ -915,41 +924,6 @@
   } else {
     start()
   }
-})();
-
-})();
-;(function(){
-/* ==========================================================================
-   AXZ showroom loader: the same arrangement as the hangar's. Nothing on the
-   other pages; on the showroom page, waits for the stage to come into view,
-   checks WebGL2, then dynamic-imports the viewer, Three.js and all.
-   ========================================================================== */
-;(function () {
-  'use strict'
-  var stage = document.querySelector('[data-showroom-stage]')
-  if (!stage) return
-  var status = stage.querySelector('[data-showroom-status]')
-  var src = stage.getAttribute('data-showroom-src')
-  var models, labels
-  try { models = JSON.parse(stage.getAttribute('data-showroom-models')); labels = JSON.parse(stage.getAttribute('data-showroom-labels')) } catch (e) { return }
-  function hasWebGL2() { try { return !!document.createElement('canvas').getContext('webgl2') } catch (e) { return false } }
-  function say(t, kind) { if (!status) return; status.textContent = t; if (kind) status.setAttribute('data-kind', kind); else status.removeAttribute('data-kind') }
-  var started = false
-  function start() {
-    if (started) return
-    started = true
-    if (!hasWebGL2()) { say(labels.unsupported, 'error'); stage.setAttribute('data-showroom-state', 'unsupported'); return }
-    say(labels.loading); stage.setAttribute('data-showroom-state', 'loading')
-    import(src).then(function (mod) { return mod.boot({ stage: stage, models: models, labels: labels, initial: stage.getAttribute('data-showroom-initial') }) })
-      .then(function (h) {
-        if (!h || h.error) { say(h && h.error === 'no-webgl' ? labels.unsupported : h && h.error === 'offline' ? labels.offline : labels.failed, 'error'); stage.setAttribute('data-showroom-state', 'failed'); return }
-        stage.setAttribute('data-showroom-state', 'running')
-      }).catch(function (err) { say(labels.failed, 'error'); stage.setAttribute('data-showroom-state', 'failed'); if (window.console) console.error('[axz-showroom]', err) })
-  }
-  if ('IntersectionObserver' in window) {
-    var io = new IntersectionObserver(function (entries) { for (var i = 0; i < entries.length; i++) if (entries[i].isIntersecting) { io.disconnect(); start(); return } }, { rootMargin: '200px 0px' })
-    io.observe(stage)
-  } else start()
 })();
 
 })();

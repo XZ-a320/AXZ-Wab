@@ -18,7 +18,8 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = join(HERE, '..', 'axz')
-const PORTFOLIO = '/Users/brookxiao/New/Xiao/Website'
+// AXZ_PORTFOLIO points at a worktree when the main checkout is on other work.
+const PORTFOLIO = process.env.AXZ_PORTFOLIO || '/Users/brookxiao/New/Xiao/Website'
 const DEST = join(PORTFOLIO, 'axz')
 
 if (!existsSync(SRC)) { console.error('✗ build /axz/ first: node scripts/build-axz.mjs'); process.exit(1) }
